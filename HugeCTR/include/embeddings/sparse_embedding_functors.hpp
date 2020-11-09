@@ -72,6 +72,12 @@ class SparseEmbeddingFunctors {
                        const Tensor2<float> &hash_table_value, Tensor2<size_t> &hash_value_index,
                        Tensor2<TypeEmbeddingComp> &embedding_feature, cudaStream_t stream);
 
+  template <typename TypeHashKey, typename TypeEmbeddingComp>
+  void forward_sum_per_gpu(size_t batch_size, size_t slot_num, size_t embedding_vec_size, int combiner,
+                       bool train, const Tensor2<TypeHashKey> &row_offset,
+                       const Tensor2<TypeHashKey> &hash_key, size_t nnz,
+                       const Tensor2<float> &hash_table_value, Tensor2<size_t> &hash_value_index,
+                       Tensor2<TypeEmbeddingComp> &embedding_feature, cudaStream_t stream);
   /**
    * An additional function for the forward propagation when (combiner=mean).
    *  (only for DistributedSlotSparseEmbeddingHash)

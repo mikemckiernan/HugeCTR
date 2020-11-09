@@ -202,6 +202,10 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
     // sync
     functors_.sync_all_gpus(Base::get_resource_manager());
 
+#ifdef ENABLE_MPI
+    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+#endif
+
     // get the mapping table between local value_index and input value_index
     for (size_t id = 0; id < Base::get_resource_manager().get_local_gpu_count(); id++) {
       uint32_t slot_sizes_prefix_sum = 0;
@@ -220,19 +224,19 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         slot_sizes_prefix_sum += slot_size;
       }
     }
-
-    // Check whether the P2P access can be enabled
-    if (Base::get_resource_manager().get_local_gpu_count() > 1 &&
-        !Base::get_resource_manager().all_p2p_enabled()) {
-      throw std::runtime_error(
-          std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
-                      "cannot be used on machine without GPU peer2peer access support. \n"));
-    }
-#ifdef ENABLE_MPI
-    throw std::runtime_error(
-        std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
-                    "cannot support multi-node currently. \n"));
-#endif
+    
+//     // Check whether the P2P access can be enabled
+//     if (Base::get_resource_manager().get_local_gpu_count() > 1 &&
+//         !Base::get_resource_manager().all_p2p_enabled()) {
+//       throw std::runtime_error(
+//           std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
+//                       "cannot be used on machine without GPU peer2peer access support. \n"));
+//     }
+// #ifdef ENABLE_MPI
+//     throw std::runtime_error(
+//         std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
+//                     "cannot support multi-node currently. \n"));
+// #endif
 
     std::shared_ptr<GeneralBuffer2<CudaManagedAllocator>> unified_buf =
         GeneralBuffer2<CudaManagedAllocator>::create();
@@ -247,6 +251,23 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       evaluate_embedding_features_.get_ptr()[id] = Base::get_output_tensors(false)[id].get_ptr();
     }
 
+    // MS TODO: replace with global count > local count
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+    if (Base::get_resource_manager().get_global_gpu_count() > 1) {
+      MESSAGE_("All2All Warmup Start");
+      int warmup_iters = 5;
+      for (int w = 0; w < warmup_iters; w++) {
+        functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), embedding_feature_tensors_,
+            all2all_tensors_, Base::get_resource_manager());
+      }
+      MESSAGE_("All2All Warmup End");
+    }
+#else
+    throw std::runtime_error(
+        std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node");
+#endif
+        
   } catch (const std::runtime_error &rt_err) {
     std::cerr << rt_err.what() << std::endl;
     throw;
@@ -351,6 +372,10 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
   // sync wait
   functors_.sync_all_gpus(Base::get_resource_manager());
 
+#ifdef ENABLE_MPI
+    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+#endif
+
   // do upload
   size_t loop_num = file_size_in_B / hash_table_chunk_size_in_B;
   MESSAGE_("Start to upload embedding table file to GPUs, file size: " +
@@ -426,6 +451,9 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
     }
 
     functors_.sync_all_gpus(Base::get_resource_manager());
+#ifdef ENABLE_MPI
+    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+#endif
 
     // set counter value
     for (size_t id = 0; id < local_gpu_count; id++) {
@@ -515,6 +543,9 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
 
     // sync wait
     functors_.sync_all_gpus(Base::get_resource_manager());
+#ifdef ENABLE_MPI
+    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+#endif
 
   }  // end of if(remain_loop_num)
 
@@ -646,6 +677,7 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::dump_pa
   const int master_node = 0;
 #ifdef ENABLE_MPI
   const int base_tag = 0xed;
+  CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
 #endif
   // TODO: could be optimized ???
   // one pair in the file includes <key,slot_id,value>
