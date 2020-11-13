@@ -173,7 +173,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
    */
   void forward(bool is_train) override {
     CudaDeviceContext context;
-    size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
+    // size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
 
     // if (global_gpu_count == local_gpu_count) {
