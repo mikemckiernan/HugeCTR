@@ -335,6 +335,10 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
     fs.close();
   }
 
+#ifdef ENABLE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   // for SparseEmbeddingCpu eval
   std::unique_ptr<SparseEmbeddingHashCpu<T, TypeEmbeddingComp>> test_embedding_cpu(
       new SparseEmbeddingHashCpu<T, TypeEmbeddingComp>(
