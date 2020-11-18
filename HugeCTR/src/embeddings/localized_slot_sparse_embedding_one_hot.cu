@@ -252,8 +252,8 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
     }
 
     // MS TODO: replace with global count > local count
-#if defined(NCCL_A2A) && defined(ENABLE_MPI)
     if (Base::get_resource_manager().get_global_gpu_count() > 1) {
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
       MESSAGE_("All2All Warmup Start");
       int warmup_iters = 5;
       for (int w = 0; w < warmup_iters; w++) {
@@ -262,11 +262,11 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
             all2all_tensors_, Base::get_resource_manager());
       }
       MESSAGE_("All2All Warmup End");
-    }
 #else
     throw std::runtime_error(
-        std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node");
+        std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
 #endif
+    }
         
   } catch (const std::runtime_error &rt_err) {
     std::cerr << rt_err.what() << std::endl;

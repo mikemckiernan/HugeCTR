@@ -200,8 +200,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       functors_.sync_all_gpus(Base::get_resource_manager());
     }
     else {
-#ifdef NCCL_A2A
-#ifdef ENABLE_MPI
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
         functors_.forward_mapping_per_gpu(
@@ -227,15 +226,13 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
           Base::get_embedding_vec_size(), all2all_tensors_,
           Base::get_output_tensors(is_train), Base::get_resource_manager());
 
-      // store slot ids
-      // functors_.store_slot_id(Base::get_batch_size(is_train), Base::get_slot_num(), slot_num_per_gpu_,
-      //     Base::get_row_offsets_tensors(is_train), hash_value_index_tensors_,
-      //     hash_table_slot_id_tensors_, Base::get_resource_manager());
       functors_.sync_all_gpus(Base::get_resource_manager());
       CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
 
-#endif // ENABLE_MPI
-#endif // NCCL_A2A
+#else
+      throw std::runtime_error(
+          std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
+#endif
     }
     return;
   }
@@ -263,6 +260,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       }
     }
     else {
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
       functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
           Base::get_embedding_vec_size(), Base::get_output_tensors(true),
           all2all_tensors_, Base::get_resource_manager());
@@ -275,10 +273,14 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
                          Base::get_embedding_vec_size(), Base::get_combiner(),
                          Base::get_row_offsets_tensors(true), embedding_feature_tensors_,
                          wgrad_tensors_, Base::get_resource_manager());
+#else
+      throw std::runtime_error(
+          std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
+#endif
+
     }
     return;
   }
-
   /**
    * The second stage of backward propagation of embedding layer, which
    * updates the hash table by wgrad(from backward()) and optimizer.
