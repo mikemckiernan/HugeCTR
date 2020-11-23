@@ -136,7 +136,7 @@ static OptParams<Type> get_optimizer_param(const nlohmann::json& j_optimizer) {
   }
 
   OptHyperParams<Type> opt_hyper_params;
-  memset(&opt_hyper_params, 0, sizeof(opt_hyper_params));
+  memset((void*)&opt_hyper_params, 0, sizeof(opt_hyper_params));
   OptParams<Type> opt_params;
 
   Update_t update_type = Update_t::Local;
