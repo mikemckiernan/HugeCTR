@@ -173,12 +173,10 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
    */
   void forward(bool is_train) override {
     CudaDeviceContext context;
-    // size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
+    size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
 
-    // if (global_gpu_count == local_gpu_count) {
-    // if (false) {
-    if (global_gpu_count == 1) {
+    if (global_gpu_count == local_gpu_count) {
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
         // for forward_fuse method
@@ -244,9 +242,9 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
   void backward() override {
 
     CudaDeviceContext context;
-    // if (global_gpu_count == local_gpu_count) {
-    // if (true) {
-    if (Base::get_resource_manager().get_global_gpu_count() == 1) {
+    size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
+    size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
+    if (global_gpu_count == local_gpu_count) {
       functors_.sync_all_gpus(Base::get_resource_manager());
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());

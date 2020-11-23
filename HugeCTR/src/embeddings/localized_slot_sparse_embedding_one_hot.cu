@@ -250,9 +250,10 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       train_embedding_features_.get_ptr()[id] = Base::get_output_tensors(true)[id].get_ptr();
       evaluate_embedding_features_.get_ptr()[id] = Base::get_output_tensors(false)[id].get_ptr();
     }
-
-    // MS TODO: replace with global count > local count
-    if (Base::get_resource_manager().get_global_gpu_count() > 1) {
+    
+    size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
+    size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
+    if (global_gpu_count > local_gpu_count) {
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
       MESSAGE_("All2All Warmup Start");
       int warmup_iters = 5;
