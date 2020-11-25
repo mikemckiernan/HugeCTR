@@ -25,6 +25,7 @@
 #include <metrics.hpp>
 #include <network.hpp>
 #include <nlohmann/json.hpp>
+#include <device_map.hpp>
 
 namespace HugeCTR {
 
@@ -130,6 +131,7 @@ struct SolverParser {
   std::string model_file;                   /**< name of model file */
   std::vector<std::string> embedding_files; /**< name of embedding file */
   std::vector<std::vector<int>> vvgpu;      /**< device map */
+  DeviceMap::Layout device_layout = DeviceMap::LOCAL_FIRST; /**< device distribution */
   bool use_mixed_precision;
   float scaler;
   std::map<metrics::Type, float> metrics_spec;

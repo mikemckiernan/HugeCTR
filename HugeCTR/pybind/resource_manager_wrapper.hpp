@@ -33,7 +33,7 @@ void ResourceManagerPybind(pybind11::module& m) {
   pybind11::class_<HugeCTR::ResourceManager, std::shared_ptr<HugeCTR::ResourceManager>>(
       m, "ResourceManager")
       .def_static("create", &HugeCTR::ResourceManager::create, pybind11::arg("visible_devices"),
-                  pybind11::arg("seed"))
+                  pybind11::arg("seed"), pybind11::arg("layout"))
       .def("get_num_process", &HugeCTR::ResourceManager::get_num_process)
       .def("get_pid", &HugeCTR::ResourceManager::get_pid)
       .def("get_local_cpu", &HugeCTR::ResourceManager::get_local_cpu)

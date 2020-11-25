@@ -79,7 +79,7 @@ static void check_device(int device_id, int min_major, int min_minor) {
 
 Session::Session(const SolverParser& solver_config, const std::string& config_file,
                  bool use_model_oversubscriber, const std::string temp_embedding_dir)
-    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed)) {
+    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed, solver_config.device_layout)) {
   for (auto dev : resource_manager_->get_local_gpu_device_id_list()) {
     if (solver_config.use_mixed_precision) {
       check_device(dev, 7,

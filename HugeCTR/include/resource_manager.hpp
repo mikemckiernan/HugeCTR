@@ -44,7 +44,7 @@ class ResourceManager {
 
  public:
   static std::shared_ptr<ResourceManager> create(
-      const std::vector<std::vector<int>>& visible_devices, unsigned long long seed);
+      const std::vector<std::vector<int>>& visible_devices, unsigned long long seed, DeviceMap::Layout dist = DeviceMap::LOCAL_FIRST);
   ResourceManager(const ResourceManager&) = delete;
   ResourceManager& operator=(const ResourceManager&) = delete;
 
