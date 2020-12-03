@@ -170,6 +170,8 @@ class AUC : public Metric {
   float _finalize_metric_per_gpu(int device_id);
 
  private:
+  void warm_up(size_t num_local_samples);
+
   const float pred_min_ = 0.0f;
   const float pred_max_ = 1.0f;
   const int num_bins_per_gpu_ = 10000;
