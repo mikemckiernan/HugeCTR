@@ -194,6 +194,10 @@ template void dump<unsigned int>(const char* filename, const Tensor2<unsigned in
                                  const cudaStream_t& stream);
 template void dump<long long>(const char* filename, const Tensor2<long long>& tensor,
                               const cudaStream_t& stream);
+template void dump<float>(const char* filename, const Tensor2<float>& tensor,
+                              const cudaStream_t& stream);
+template void dump<__half>(const char* filename, const Tensor2<__half>& tensor,
+                              const cudaStream_t& stream);
 
 }  // namespace diagnose
 

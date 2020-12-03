@@ -73,6 +73,13 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
                                                                                               : 0);
       slot_num_per_gpu_.push_back(slot_num_per_gpu);
 
+      size_t my_node = size_t(Base::get_resource_manager().get_pid());
+      size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
+      size_t ngpus = Base::get_resource_manager().get_global_gpu_count();
+      size_t num_nodes = Base::get_resource_manager().get_num_process();
+      slot_num_per_node_ = Base::get_slot_num() / num_nodes;
+      slot_num_per_node_ += (my_node < (Base::get_slot_num() % num_nodes)) ? 1 : 0;
+
       // new GeneralBuffer objects
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>> &buf = Base::get_buffer(id);
 
@@ -176,6 +183,19 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         mapping_offsets_per_gpu_tensors_.push_back(tensor);
       }
 
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+      if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+        for (size_t id = 0; id < Base::get_resource_manager().get_local_gpu_count(); id++) {
+          Tensor2<TypeEmbeddingComp> tensor;
+          buf->reserve({Base::get_batch_size_per_lane(true), slot_num_per_node_, Base::get_embedding_vec_size()}, &tensor);
+          train_intra_a2a_output_vec_.push_back(tensor);
+
+          buf->reserve({Base::get_batch_size_per_lane(false), slot_num_per_node_, Base::get_embedding_vec_size()}, &tensor);
+          evaluate_intra_a2a_output_vec_.push_back(tensor);
+        }
+      }
+#endif
+
 // init GenenralBuffers to do real allocation
 #ifndef NDEBUG
       std::cout << " max_feature_num_:" << Base::get_max_feature_num() << std::endl;
@@ -244,13 +264,42 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
                          &train_embedding_features_);
     unified_buf->reserve({Base::get_resource_manager().get_local_gpu_count()},
                          &evaluate_embedding_features_);
-    unified_buf->allocate();
 
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+    if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+
+      inter_node_hier_a2a = std::make_shared<InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>>();
+      inter_node_hier_a2a->init(&Base::get_resource_manager(),
+          Base::get_slot_num(),
+          Base::get_batch_size(true),
+          Base::get_batch_size(false),
+          Base::get_embedding_vec_size());
+
+      unified_buf->reserve({Base::get_resource_manager().get_local_gpu_count()},
+          &train_intra_a2a_output_);
+      unified_buf->reserve({Base::get_resource_manager().get_local_gpu_count()},
+          &evaluate_intra_a2a_output_);
+
+    }
+#endif
+    unified_buf->allocate();
+    
     for (size_t id = 0; id < Base::get_resource_manager().get_local_gpu_count(); id++) {
       train_embedding_features_.get_ptr()[id] = Base::get_output_tensors(true)[id].get_ptr();
       evaluate_embedding_features_.get_ptr()[id] = Base::get_output_tensors(false)[id].get_ptr();
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+      if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+        train_intra_a2a_output_.get_ptr()[id] = train_intra_a2a_output_vec_[id].get_ptr();
+        evaluate_intra_a2a_output_.get_ptr()[id] = evaluate_intra_a2a_output_vec_[id].get_ptr();
+      }
+#endif
     }
-    
+  
+    functors_.sync_all_gpus(Base::get_resource_manager());
+#ifdef ENABLE_MPI
+    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+#endif
+
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
     size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     if (global_gpu_count > local_gpu_count) {
@@ -258,9 +307,14 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       MESSAGE_("All2All Warmup Start");
       int warmup_iters = 5;
       for (int w = 0; w < warmup_iters; w++) {
-        functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
-            Base::get_embedding_vec_size(), embedding_feature_tensors_,
-            all2all_tensors_, Base::get_resource_manager());
+        if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+          inter_node_hier_a2a->fprop(true, train_intra_a2a_output_vec_, all2all_tensors_);
+        }
+        else {
+          functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+              Base::get_embedding_vec_size(), embedding_feature_tensors_,
+              all2all_tensors_, Base::get_resource_manager());
+        }
       }
       MESSAGE_("All2All Warmup End");
 #else

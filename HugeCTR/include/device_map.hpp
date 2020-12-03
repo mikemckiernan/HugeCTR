@@ -35,6 +35,9 @@ namespace HugeCTR {
  * @endverbaim
  */
 class DeviceMap {
+ public:
+  enum Layout { LOCAL_FIRST, NODE_FIRST };
+
  private:
   const std::vector<std::vector<int>> device_list_total_; /**< device list for all the nodes*/
   std::map<int, int> global_local_map_;                   /**< global to device id (gpu id) map */
@@ -45,10 +48,10 @@ class DeviceMap {
   const int my_pid_;                       /**< process id for local node */
   const int num_procs_;
   const std::vector<int> device_list_;     /**< device list for local node */
+  Layout device_layout_;
+ 
  public:
-
-  enum Layout { LOCAL_FIRST, NODE_FIRST };
-
+  
   /**
    * Ctor.
    * Generate the maps.
@@ -57,7 +60,8 @@ class DeviceMap {
       : device_list_total_(device_list_total),
         my_pid_(my_pid),
         num_procs_(device_list_total.size()),
-        device_list_(device_list_total_[my_pid_]) {
+        device_list_(device_list_total_[my_pid_]),
+        device_layout_(layout) {
     try {
       if (device_list_total_.size() <= (unsigned int)my_pid) {
         CK_THROW_(Error_t::WrongInput, "device_list_total_.size() <= my_pid");
@@ -70,7 +74,7 @@ class DeviceMap {
           CK_THROW_(Error_t::WrongInput, "duplicated device id");
         }
       }
-
+      
       if (layout == LOCAL_FIRST) {
 
         int pid = 0;
@@ -204,6 +208,10 @@ class DeviceMap {
     } else {
       return it->second;
     }
+  }
+
+  Layout get_device_layout() const {
+    return device_layout_;
   }
 
   /**

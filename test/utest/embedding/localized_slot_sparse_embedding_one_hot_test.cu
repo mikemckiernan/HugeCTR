@@ -87,7 +87,7 @@ std::vector<size_t> slot_sizes = {100, 100, 100, 100, 100, 100, 100, 100, 100,
 
 template <typename TypeEmbeddingComp>
 void train_and_test(const std::vector<int> &device_list, const Optimizer_t &optimizer,
-                    const Update_t &update_type) {
+                    const Update_t &update_type, const DeviceMap::Layout layout = DeviceMap::LOCAL_FIRST) {
   OptHyperParams<TypeEmbeddingComp> hyper_params;
   hyper_params.sgd.atomic_update = true;
   const OptParams<TypeEmbeddingComp> opt_params = {optimizer, lr, hyper_params, update_type,
@@ -110,7 +110,7 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
   for (int i = 0; i < numprocs; i++) {
     vvgpu.push_back(device_list);
   }
-  const auto &resource_manager = ResourceManager::create(vvgpu, 0);
+  const auto &resource_manager = ResourceManager::create(vvgpu, 0, layout);
 
   if (resource_manager->get_pid() == 0) {
     std::cout << "rank " << resource_manager->get_pid() << " is generating data" << std::endl;
@@ -413,4 +413,36 @@ TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_global_update_1gpu) {
 
 TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_global_update_4gpu) {
   train_and_test<__half>({0, 1, 2, 3}, Optimizer_t::SGD, Update_t::Global);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp32_sgd_1gpu_nf) {
+  train_and_test<float>({0}, Optimizer_t::SGD, Update_t::Local, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp32_sgd_4gpu_nf) {
+  train_and_test<float>({0, 1, 2, 3}, Optimizer_t::SGD, Update_t::Local, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp32_sgd_global_update_1gpu_nf) {
+  train_and_test<float>({0}, Optimizer_t::SGD, Update_t::Global, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp32_sgd_global_update_4gpu_nf) {
+  train_and_test<float>({0, 1, 2, 3}, Optimizer_t::SGD, Update_t::Global, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_1gpu_nf) {
+  train_and_test<__half>({0}, Optimizer_t::SGD, Update_t::Local, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_4gpu_nf) {
+  train_and_test<__half>({0, 1, 2, 3}, Optimizer_t::SGD, Update_t::Local, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_global_update_1gpu_nf) {
+  train_and_test<__half>({0}, Optimizer_t::SGD, Update_t::Global, DeviceMap::NODE_FIRST);
+}
+
+TEST(localized_sparse_embedding_one_hot_test, fp16_sgd_global_update_4gpu_nf) {
+  train_and_test<__half>({0, 1, 2, 3}, Optimizer_t::SGD, Update_t::Global, DeviceMap::NODE_FIRST);
 }

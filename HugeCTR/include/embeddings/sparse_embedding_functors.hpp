@@ -111,6 +111,13 @@ class SparseEmbeddingFunctors {
                        Tensors2<TypeEmbeddingComp> &dst_tensors,
                        const ResourceManager &resource_manager);
 
+  template <typename TypeEmbeddingComp>
+  void forward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size,
+                       size_t total_gpu_count,
+                       const Tensors2<TypeEmbeddingComp> &src_tensors,
+                       Tensors2<TypeEmbeddingComp> &dst_tensors,
+                       const ResourceManager &resource_manager);
+
   /**
    * forward propagation on each GPU for LocalizedSlotSparseEmbeddingOneHot.
    * Because there is no hashtable in this class, so there must be a mapping table
@@ -231,6 +238,13 @@ class SparseEmbeddingFunctors {
    */
   template <typename TypeEmbeddingComp>
   void backward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size,
+                        const Tensors2<TypeEmbeddingComp> &src_tensors,
+                        Tensors2<TypeEmbeddingComp> &dst_tensors,
+                        const ResourceManager &resource_manager);
+  
+  template <typename TypeEmbeddingComp>
+  void backward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size, 
+                        size_t total_gpu_count,
                         const Tensors2<TypeEmbeddingComp> &src_tensors,
                         Tensors2<TypeEmbeddingComp> &dst_tensors,
                         const ResourceManager &resource_manager);

@@ -19,6 +19,7 @@
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/embedding.hpp"
 #include "HugeCTR/include/embeddings/sparse_embedding_functors.hpp"
+#include "HugeCTR/include/embeddings/all2all_hierarchical.hpp"
 #include "HugeCTR/include/utils.hpp"
 
 namespace HugeCTR {
@@ -53,9 +54,19 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
   Tensor2<TypeEmbeddingComp *> evaluate_embedding_features_;
   Tensors2<TypeEmbeddingComp> wgrad_tensors_; /**< the input tensor of the backward(). */
 
+  // vars related to hierarchical A2A
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+  std::shared_ptr<InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>> inter_node_hier_a2a;
+  Tensor2<TypeEmbeddingComp *> train_intra_a2a_output_;
+  Tensor2<TypeEmbeddingComp *> evaluate_intra_a2a_output_;
+  Tensors2<TypeEmbeddingComp> train_intra_a2a_output_vec_;
+  Tensors2<TypeEmbeddingComp> evaluate_intra_a2a_output_vec_;
+#endif
+
   size_t max_vocabulary_size_;
   size_t max_vocabulary_size_per_gpu_;   /**< Max vocabulary size for each GPU. */
   std::vector<size_t> slot_num_per_gpu_; /* slot_num per GPU */
+  size_t slot_num_per_node_;
   std::vector<size_t> slot_size_array_;
 
   SparseEmbeddingFunctors functors_;
@@ -75,6 +86,16 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       return evaluate_embedding_features_;
     }
   }
+
+#if defined(NCCL_A2A) && defined(ENABLE_MPI)
+  Tensor2<TypeEmbeddingComp *> &get_intra_a2a_output(bool is_train) {
+    if (is_train) {
+      return train_intra_a2a_output_;
+    } else {
+      return evaluate_intra_a2a_output_;
+    }
+  }
+#endif
 
   /**
    * Calculate the max vocabulary size per GPU.
@@ -198,39 +219,79 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       functors_.sync_all_gpus(Base::get_resource_manager());
     }
     else {
-#if defined(NCCL_A2A) && defined(ENABLE_MPI)
-      for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
-        context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
-        functors_.forward_mapping_per_gpu(
-            Base::get_batch_size(is_train), slot_num_per_gpu_[i],
-            Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
-            mapping_offsets_per_gpu_tensors_[i], hash_value_index_tensors_[i],
-            Base::get_local_gpu(i).get_stream());
+      #if defined(NCCL_A2A) && defined(ENABLE_MPI)
+      auto device_layout = Base::get_resource_manager().get_device_layout();
+      if (device_layout == DeviceMap::LOCAL_FIRST) {
+        for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
+          context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
+          functors_.forward_mapping_per_gpu(
+              Base::get_batch_size(is_train), slot_num_per_gpu_[i],
+              Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
+              mapping_offsets_per_gpu_tensors_[i], hash_value_index_tensors_[i],
+              Base::get_local_gpu(i).get_stream());
 
-        functors_.forward_sum_per_gpu(
-            Base::get_batch_size(is_train), slot_num_per_gpu_[i], Base::get_embedding_vec_size(),
-            Base::get_combiner(), is_train, Base::get_row_offsets_tensors(is_train)[i],
-            Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
-            hash_table_value_tensors_[i], hash_value_index_tensors_[i], embedding_feature_tensors_[i],
-            Base::get_local_gpu(i).get_stream());
+          functors_.forward_sum_per_gpu(
+              Base::get_batch_size(is_train), slot_num_per_gpu_[i], Base::get_embedding_vec_size(),
+              Base::get_combiner(), is_train, Base::get_row_offsets_tensors(is_train)[i],
+              Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
+              hash_table_value_tensors_[i], hash_value_index_tensors_[i], embedding_feature_tensors_[i],
+              Base::get_local_gpu(i).get_stream());
+
+        }
+
+        functors_.all2all_forward(Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), embedding_feature_tensors_,
+            all2all_tensors_, Base::get_resource_manager());
+
+        functors_.forward_reorder(Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), all2all_tensors_,
+            Base::get_output_tensors(is_train), Base::get_resource_manager());
+
+        functors_.sync_all_gpus(Base::get_resource_manager());
+        CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
 
       }
+      else if (device_layout == DeviceMap::NODE_FIRST) {
 
-      functors_.all2all_forward(Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(),
-          Base::get_embedding_vec_size(), embedding_feature_tensors_,
-          all2all_tensors_, Base::get_resource_manager());
+        for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
+          context.set_device(Base::get_local_gpu(i).get_device_id());
+          functors_.forward_mapping_per_gpu(
+              Base::get_batch_size(is_train), slot_num_per_gpu_[i],
+              Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
+              mapping_offsets_per_gpu_tensors_[i], hash_value_index_tensors_[i],
+              Base::get_local_gpu(i).get_stream());
 
-      functors_.forward_reorder(Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(),
-          Base::get_embedding_vec_size(), all2all_tensors_,
-          Base::get_output_tensors(is_train), Base::get_resource_manager());
+          // fused forward + intra all2all + reorder
+          functors_.forward_fuse_per_gpu(
+              i, Base::get_resource_manager().get_local_gpu_count(), 
+              Base::get_batch_size(is_train), Base::get_batch_size_per_lane(is_train),
+              slot_num_per_node_, slot_num_per_gpu_[i],
+              Base::get_embedding_vec_size(), Base::get_combiner(),
+              Base::get_row_offsets_tensors(is_train)[i], hash_value_index_tensors_[i],
+              hash_table_value_tensors_[i], get_intra_a2a_output(is_train),
+              Base::get_local_gpu(i).get_sm_count(), Base::get_local_gpu(i).get_stream());
+        }
 
-      functors_.sync_all_gpus(Base::get_resource_manager());
-      CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
+        functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: See if we can remove this or move it into the kernel
+        
+        inter_node_hier_a2a->fprop(is_train,
+            is_train ? train_intra_a2a_output_vec_ : evaluate_intra_a2a_output_vec_,
+            all2all_tensors_);
 
-#else
+        functors_.forward_reorder(Base::get_batch_size_per_gpu(is_train), 
+            Base::get_slot_num(), Base::get_embedding_vec_size(), 
+            Base::get_resource_manager().get_num_process(),
+            all2all_tensors_,
+            Base::get_output_tensors(is_train), Base::get_resource_manager());
+        
+        functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: Why is this needed ?
+        CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
+      }
+
+      #else
       throw std::runtime_error(
           std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
-#endif
+      #endif
     }
     return;
   }
@@ -244,6 +305,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     CudaDeviceContext context;
     size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
+
     if (global_gpu_count == local_gpu_count) {
       functors_.sync_all_gpus(Base::get_resource_manager());
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
@@ -259,18 +321,42 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     }
     else {
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
-      functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
-          Base::get_embedding_vec_size(), Base::get_output_tensors(true),
-          all2all_tensors_, Base::get_resource_manager());
+      auto device_layout = Base::get_resource_manager().get_device_layout();
+      if (device_layout == DeviceMap::LOCAL_FIRST) {
+        functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), Base::get_output_tensors(true),
+            all2all_tensors_, Base::get_resource_manager());
 
-      functors_.all2all_backward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
-                                 Base::get_embedding_vec_size(), all2all_tensors_,
-                                 embedding_feature_tensors_, Base::get_resource_manager());
+        functors_.all2all_backward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), all2all_tensors_,
+            embedding_feature_tensors_, Base::get_resource_manager());
 
-      functors_.backward(Base::get_batch_size(true), slot_num_per_gpu_,
-                         Base::get_embedding_vec_size(), Base::get_combiner(),
-                         Base::get_row_offsets_tensors(true), embedding_feature_tensors_,
-                         wgrad_tensors_, Base::get_resource_manager());
+        functors_.backward(Base::get_batch_size(true), slot_num_per_gpu_,
+            Base::get_embedding_vec_size(), Base::get_combiner(),
+            Base::get_row_offsets_tensors(true), embedding_feature_tensors_,
+            wgrad_tensors_, Base::get_resource_manager());
+      }
+      else if (device_layout == DeviceMap::NODE_FIRST) {
+
+        functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), Base::get_resource_manager().get_num_process(),
+            Base::get_output_tensors(true), all2all_tensors_, Base::get_resource_manager());
+
+        inter_node_hier_a2a->bprop(all2all_tensors_, train_intra_a2a_output_vec_);
+      
+        functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: Eliminate this sync
+
+        for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
+          context.set_device(Base::get_local_gpu(i).get_device_id());
+
+          functors_.backward_fuse_per_gpu(
+              i, Base::get_resource_manager().get_local_gpu_count(), Base::get_batch_size(true),
+              Base::get_batch_size_per_lane(true), slot_num_per_node_, slot_num_per_gpu_[i],
+              Base::get_embedding_vec_size(), Base::get_combiner(), 
+              get_intra_a2a_output(true), wgrad_tensors_[i], 
+              Base::get_local_gpu(i).get_sm_count(), Base::get_local_gpu(i).get_stream());
+        }
+      }
 #else
       throw std::runtime_error(
           std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));

@@ -31,6 +31,7 @@ std::shared_ptr<ResourceManager> ResourceManager::create(
     const std::vector<std::vector<int>>& visible_devices, unsigned long long seed,
     DeviceMap::Layout layout) {
   int size = 1, rank = 0;
+
 #ifdef ENABLE_MPI
   CK_MPI_THROW_(MPI_Comm_size(MPI_COMM_WORLD, &size));
   CK_MPI_THROW_(MPI_Comm_rank(MPI_COMM_WORLD, &rank));

@@ -71,6 +71,10 @@ class Embedding : public IEmbedding {
     return get_batch_size(is_train) / resource_manager_->get_global_gpu_count();
   }
 
+  size_t get_batch_size_per_lane(bool is_train) const {
+    return get_batch_size(is_train) / resource_manager_->get_local_gpu_count();
+  }
+
   size_t get_universal_batch_size_per_gpu() const {
     return get_universal_batch_size() / resource_manager_->get_global_gpu_count();
   }
