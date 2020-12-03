@@ -483,24 +483,6 @@ void CUB_allocate_and_launch(AUCStorage& st, CUB_Func func) {
 }
 
 
-AUCBarrier::AUCBarrier(std::size_t thread_count) : 
-  threshold_(thread_count), 
-  count_(thread_count), 
-  generation_(0) {
-}
-
-void AUCBarrier::wait() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  auto gen = generation_;
-  if (!--count_) {
-    generation_++;
-    count_ = threshold_;
-    cond_.notify_all();
-  } else {
-    cond_.wait(lock, [this, gen] { return gen != generation_; });
-  }
-}
-
 template <typename T>
 AUC<T>::AUC(int batch_size_per_gpu, int n_batches,
             const std::shared_ptr<ResourceManager>& resource_manager)
@@ -513,7 +495,6 @@ AUC<T>::AUC(int batch_size_per_gpu, int n_batches,
       num_bins_(num_global_gpus_ * num_bins_per_gpu_),
       num_partitions_(num_global_gpus_),
       num_total_samples_(0),
-      barrier_(num_local_gpus_),
       storage_(num_local_gpus_),
       offsets_(num_local_gpus_, 0) {
 
@@ -697,7 +678,7 @@ float AUC<T>::_finalize_metric_per_gpu(int local_id) {
   st.realloc_redistributed(num_redistributed_samples, stream);
 
   // 5.3 Synchronize threads before all to all to prevent hangs
-  barrier_.wait();
+  #pragma omp barrier
 
   // 5.4 All to all
   metric_comm::all_to_all(st.d_partitioned_labels(), st.d_presorted_labels(),

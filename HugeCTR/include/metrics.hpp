@@ -152,21 +152,6 @@ class AUCStorage {
     void realloc_ptr(void** ptr, size_t old_size, size_t new_size, cudaStream_t stream);
 };
 
-class AUCBarrier {
-public:
-    AUCBarrier(std::size_t thread_count);
-    void wait();
-
-private:
-    std::mutex mutex_;
-    std::condition_variable cond_;
-    std::size_t threshold_;
-    std::size_t count_;
-    std::size_t generation_;
-};
-
-
-
 template <typename T>
 class AUC : public Metric {
  public:
@@ -198,8 +183,6 @@ class AUC : public Metric {
   int num_bins_;
   int num_partitions_;
   size_t num_total_samples_;
-
-  AUCBarrier barrier_;
 
   std::vector<size_t> offsets_;
   std::vector<AUCStorage> storage_;
