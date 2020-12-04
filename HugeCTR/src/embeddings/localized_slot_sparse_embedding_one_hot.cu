@@ -317,6 +317,7 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         }
       }
       MESSAGE_("All2All Warmup End");
+      functors_.sync_all_gpus(Base::get_resource_manager());
 #else
     throw std::runtime_error(
         std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
