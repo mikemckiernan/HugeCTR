@@ -307,17 +307,19 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       MESSAGE_("All2All Warmup Start");
       int warmup_iters = 5;
       for (int w = 0; w < warmup_iters; w++) {
-        if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+        functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
+            Base::get_embedding_vec_size(), embedding_feature_tensors_,
+            all2all_tensors_, Base::get_resource_manager());
+      }
+      functors_.sync_all_gpus(Base::get_resource_manager());
+
+      if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
+        for (int w = 0; w < warmup_iters; w++) {
           inter_node_hier_a2a->fprop(true, train_intra_a2a_output_vec_, all2all_tensors_);
         }
-        else {
-          functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
-              Base::get_embedding_vec_size(), embedding_feature_tensors_,
-              all2all_tensors_, Base::get_resource_manager());
-        }
       }
-      MESSAGE_("All2All Warmup End");
       functors_.sync_all_gpus(Base::get_resource_manager());
+      MESSAGE_("All2All Warmup End");
 #else
     throw std::runtime_error(
         std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
