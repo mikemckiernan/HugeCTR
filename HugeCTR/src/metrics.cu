@@ -66,10 +66,10 @@ void copy_all<__half>(float* y_pred, float* y_label, __half* x_pred, float* x_la
   copy_all_kernel<<<grid, block, 0, stream>>>(y_pred, y_label, x_pred, x_label, num_elems);
 }
 
-__global__ void mock_kernel(float* predictions, int num_values, int num_elems) {
+__global__ void mock_kernel(float* predictions, int num_elems) {
   int gid_base = blockIdx.x * blockDim.x + threadIdx.x;
   for (int gid = gid_base; gid < num_elems; gid += blockDim.x * gridDim.x) {
-    predictions[gid] = (gid % num_values) * (1.0f / num_values);
+    predictions[gid] = gid / (float)num_elems;
   }
 }
 
@@ -570,6 +570,7 @@ void AUC<T>::warm_up(size_t num_local_samples) {
   dim3 grid(160, 1, 1);
   dim3 block(1024, 1, 1);
 
+  MESSAGE_("Starting AUC NCCL warm-up");
   #pragma omp parallel for num_threads(num_local_gpus_)
   for (int local_id=0; local_id<num_local_gpus_; local_id++) {
     auto gpu_resource = resource_manager_->get_local_gpu(local_id).get();
@@ -579,12 +580,14 @@ void AUC<T>::warm_up(size_t num_local_samples) {
     CudaDeviceContext context(device_id);
     auto& st = storage_[local_id];
 
-    mock_kernel     <<<grid, block, 0, stream>>>(st.d_preds(), num_global_gpus_, num_local_samples);
+    mock_kernel     <<<grid, block, 0, stream>>>(st.d_preds(),  num_local_samples);
     initialize_array<<<grid, block, 0, stream>>>(st.d_labels(), num_local_samples, 0.0f);
     offsets_[local_id] = num_local_samples;
   }
+  num_total_samples_ = num_local_samples*num_global_gpus_;
 
   [[maybe_unused]] float dummy = finalize_metric();
+  MESSAGE_("Warm-up done");
 }
 
 template <typename T>
