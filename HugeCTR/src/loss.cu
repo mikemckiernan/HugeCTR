@@ -233,8 +233,10 @@ void BinaryCrossEntropyLoss<T>::do_compute(T *input, const float *label, float *
                                            float rterm, bool is_train, cudaStream_t stream) {
   int block_size = min(batch_size, 1024);
   size_t smem_size = block_size * sizeof(float);
-  BinaryCrossEntropy_Kernel<<<1, block_size, smem_size, stream>>>(
-      input, label, loss, scaler, batch_size, Loss<T>::get_total_gpu_count(), rterm, is_train);
+  if (block_size > 0) {
+    BinaryCrossEntropy_Kernel<<<1, block_size, smem_size, stream>>>(
+        input, label, loss, scaler, batch_size, Loss<T>::get_total_gpu_count(), rterm, is_train);
+  }
 }
 
 __forceinline__ __device__ __host__ float cross_entropy_loss(float x, float y) {
