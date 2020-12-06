@@ -174,9 +174,11 @@ void CrossEntropyLoss<T>::do_compute(T *input, const float *label, float *loss, 
                                      cudaStream_t stream) {
   int block_size = min(batch_size, 1024);
   size_t smem_size = block_size * sizeof(float);
-  CrossEntropy_Kernel<<<1, block_size, smem_size, stream>>>(input, label, loss, batch_size,
-                                                            Loss<T>::get_total_gpu_count(),
-                                                            feature_dim, scaler, rterm, is_train);
+  if (block_size > 0) {
+    CrossEntropy_Kernel<<<1, block_size, smem_size, stream>>>(input, label, loss, batch_size,
+        Loss<T>::get_total_gpu_count(),
+        feature_dim, scaler, rterm, is_train);
+  }
 }
 
 template <typename T>
