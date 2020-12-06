@@ -283,9 +283,6 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_resource_manager().get_num_process(),
             all2all_tensors_,
             Base::get_output_tensors(is_train), Base::get_resource_manager());
-        
-        functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: Why is this needed ?
-        CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
       }
 
       #else
