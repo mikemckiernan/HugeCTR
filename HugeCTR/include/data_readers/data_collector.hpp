@@ -84,7 +84,6 @@ class DataCollector {
   std::shared_ptr<ResourceManager> resource_manager_;
   int num_params_;
   size_t counter_{0};
-  int pid_{0}, num_procs_{1};
   std::vector<unsigned int> pre_nnz_;
   bool use_mixed_precision_;
   const bool one_hot_;
@@ -254,11 +253,6 @@ DataCollector<TypeKey>::DataCollector(
 
     num_params_ = csr_buffers_.size() / local_gpu_count;
 
-#ifdef ENABLE_MPI
-    CK_MPI_THROW_(MPI_Comm_rank(MPI_COMM_WORLD, &pid_));
-    CK_MPI_THROW_(MPI_Comm_size(MPI_COMM_WORLD, &num_procs_));
-#endif
-
   } catch (const std::runtime_error& rt_err) {
     std::cerr << rt_err.what() << std::endl;
   }
@@ -350,9 +344,9 @@ void DataCollector<TypeKey>::collect_() {
   for (int ix = 0; ix < total_device_count; ix++) {
     int i =
         ((id_ == 0 && !reverse_) || (id_ == 1 && reverse_)) ? ix : (total_device_count - 1 - ix);
-    int pid = resource_manager_->get_pid_from_gpu_global_id(i);
+    int pid = resource_manager_->get_process_id_from_gpu_global_id(i);
     int label_copy_num = (label_dense_buffers[0]).get_num_elements();
-    if (pid == pid_) {
+    if (pid == resource_manager_->get_process_id()) {
       size_t local_id = resource_manager_->get_gpu_local_id_from_global_id(i);
       const auto& local_gpu = resource_manager_->get_local_gpu(local_id);
 
@@ -368,7 +362,7 @@ void DataCollector<TypeKey>::collect_() {
           CK_CUDA_THROW_(cudaMemcpyAsync(
               internal_buffer->csr_buffers_internal[local_id * num_params + j].get_ptr(),
               csr_cpu_buffers[i * num_params + j].get_buffer(), csr_copy_num * sizeof(TypeKey),
-              cudaMemcpyHostToDevice, local_gpu->get_data_copy_stream()));
+              cudaMemcpyHostToDevice, local_gpu->get_memcpy_stream()));
         } else {
           unsigned int offset = csr_cpu_buffers[i * num_params + j].get_num_rows() + 1;
           int csr_copy_num = csr_cpu_buffers[i * num_params + j].get_sizeof_value();
@@ -376,26 +370,26 @@ void DataCollector<TypeKey>::collect_() {
               internal_buffer->csr_buffers_internal[local_id * num_params + j].get_ptr() + offset,
               csr_cpu_buffers[i * num_params + j].get_buffer() + offset,
               csr_copy_num * sizeof(TypeKey), cudaMemcpyHostToDevice,
-              local_gpu->get_data_copy_stream()));
+              local_gpu->get_memcpy_stream()));
         }
         *(internal_buffer->nnz_array_internal[local_id * num_params + j]) = nnz;
       }
       CK_CUDA_THROW_(
           cudaMemcpyAsync(internal_buffer->label_dense_buffers_internal[local_id].get_ptr(),
                           label_dense_buffers[i].get_ptr(), label_copy_num * sizeof(float),
-                          cudaMemcpyHostToDevice, local_gpu->get_data_copy_stream()));
+                          cudaMemcpyHostToDevice, local_gpu->get_memcpy_stream()));
     }
   }
   // sync
   for (int ix = 0; ix < total_device_count; ix++) {
     int i =
         ((id_ == 0 && !reverse_) || (id_ == 1 && reverse_)) ? ix : (total_device_count - 1 - ix);
-    int pid = resource_manager_->get_pid_from_gpu_global_id(i);
-    if (pid_ == pid) {
+    int pid = resource_manager_->get_process_id_from_gpu_global_id(i);
+    if (pid == resource_manager_->get_process_id()) {
       size_t local_id = resource_manager_->get_gpu_local_id_from_global_id(i);
       const auto& local_gpu = resource_manager_->get_local_gpu(local_id);
       CudaDeviceContext context(local_gpu->get_device_id());
-      CK_CUDA_THROW_(cudaStreamSynchronize(local_gpu->get_data_copy_stream()));
+      CK_CUDA_THROW_(cudaStreamSynchronize(local_gpu->get_memcpy_stream()));
     }
   }
 

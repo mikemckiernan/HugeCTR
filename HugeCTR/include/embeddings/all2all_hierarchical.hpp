@@ -144,7 +144,7 @@ namespace HugeCTR {
   template <typename TypeEmbeddingComp>
   size_t InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>::get_slot_num_per_gpu(size_t device) const
   {
-    size_t gid = resource_manager_->get_local_gpu(device)->get_global_gpu_id();
+    size_t gid = resource_manager_->get_local_gpu(device)->get_global_id();
     size_t slot_num_per_gpu = slot_num_ / ngpus_;
     slot_num_per_gpu += (gid < (slot_num_ % ngpus_)) ? 1 : 0;
     return slot_num_per_gpu;
@@ -180,7 +180,7 @@ namespace HugeCTR {
     resource_manager_ = resource_manager;
     local_gpu_count_ = resource_manager->get_local_gpu_count();
     ngpus_ = resource_manager->get_global_gpu_count();
-    pid_ = resource_manager->get_pid();
+    pid_ = resource_manager->get_process_id();
     num_procs_ = resource_manager->get_num_process();
 
     slot_num_ = slot_num;
