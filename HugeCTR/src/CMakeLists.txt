@@ -40,6 +40,8 @@ file(GLOB huge_ctr_src
   layers/add_layer.cu
   layers/reduce_sum_layer.cu
   layers/dot_product_layer.cu
+  layers/adaptor_start_layer.cu
+  layers/adaptor_end_layer.cu
   loss.cu
   network.cu
   network.cpp

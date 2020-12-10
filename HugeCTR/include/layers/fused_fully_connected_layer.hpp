@@ -54,16 +54,21 @@ class FusedFullyConnectedLayer : public Layer {
    */
   Tensor2<__half> train_bottom_tensor_;
   Tensor2<__half> evaluate_bottom_tensor_;
+  Tensor2<__half> bprop_in_tensor_;
 
   /*
    * stores the references to the top tensors of this layer.
    */
-  Tensor2<__half> top_tensor_;
+  Tensor2<__half> top_fprop_tensor_;
+  /*
+   * store the gradient of next layer for backward propgation
+   */
+  Tensor2<__half> top_bprop_tensor_;
 
   /*
    * stores the references to the intermediate top tensors of this layer.
    */
-  Tensor2<__half> middle_tensor_;
+  // Tensor2<__half> middle_tensor_;
 
   /*
    * stores the references to the intermediate bias grad tensors of this layer.
@@ -115,7 +120,9 @@ class FusedFullyConnectedLayer : public Layer {
       const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
       const Tensor2<__half>& train_bottom_tensor, const Tensor2<__half>& evaluate_bottom_tensor,
-      const Tensor2<__half>& top_tensor, const std::shared_ptr<GPUResource>& gpu_resource,
+      const Tensor2<__half>& bprop_in_tensor,
+      const Tensor2<__half>& top_fprop_tensor, const Tensor2<__half>& top_bprop_tensor,
+      const std::shared_ptr<GPUResource>& gpu_resource,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());
   FusedFullyConnectedLayer(const FusedFullyConnectedLayer&) = delete;
   FusedFullyConnectedLayer& operator=(const FusedFullyConnectedLayer&);
