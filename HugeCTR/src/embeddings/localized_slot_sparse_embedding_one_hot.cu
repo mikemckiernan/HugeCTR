@@ -245,18 +245,13 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       }
     }
     
-//     // Check whether the P2P access can be enabled
-//     if (Base::get_resource_manager().get_local_gpu_count() > 1 &&
-//         !Base::get_resource_manager().all_p2p_enabled()) {
-//       throw std::runtime_error(
-//           std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
-//                       "cannot be used on machine without GPU peer2peer access support. \n"));
-//     }
-// #ifdef ENABLE_MPI
-//     throw std::runtime_error(
-//         std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
-//                     "cannot support multi-node currently. \n"));
-// #endif
+    // Check whether the P2P access can be enabled
+    if (Base::get_resource_manager().get_local_gpu_count() > 1 &&
+        !Base::get_resource_manager().all_p2p_enabled()) {
+      throw std::runtime_error(
+          std::string("[HCDEBUG][ERROR] Runtime error: Localized_slot_sparse_embedding_one_hot "
+                      "cannot be used on machine without GPU peer2peer access support. \n"));
+    }
 
     std::shared_ptr<GeneralBuffer2<CudaManagedAllocator>> unified_buf =
         GeneralBuffer2<CudaManagedAllocator>::create();
