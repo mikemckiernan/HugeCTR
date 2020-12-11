@@ -66,6 +66,13 @@ void copy_all<__half>(float* y_pred, float* y_label, __half* x_pred, float* x_la
   copy_all_kernel<<<grid, block, 0, stream>>>(y_pred, y_label, x_pred, x_label, num_elems);
 }
 
+__global__ void mock_kernel(float* predictions, int num_elems) {
+  int gid_base = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int gid = gid_base; gid < num_elems; gid += blockDim.x * gridDim.x) {
+    predictions[gid] = gid / (float)num_elems;
+  }
+}
+
 
 __global__ void find_pivots_kernel(const CountType* bins_sum, int num_bins,
                                    CountType num_samples, int* pivots) {
@@ -483,24 +490,6 @@ void CUB_allocate_and_launch(AUCStorage& st, CUB_Func func) {
 }
 
 
-AUCBarrier::AUCBarrier(std::size_t thread_count) : 
-  threshold_(thread_count), 
-  count_(thread_count), 
-  generation_(0) {
-}
-
-void AUCBarrier::wait() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  auto gen = generation_;
-  if (!--count_) {
-    generation_++;
-    count_ = threshold_;
-    cond_.notify_all();
-  } else {
-    cond_.wait(lock, [this, gen] { return gen != generation_; });
-  }
-}
-
 template <typename T>
 AUC<T>::AUC(int batch_size_per_gpu, int n_batches,
             const std::shared_ptr<ResourceManager>& resource_manager)
@@ -513,7 +502,6 @@ AUC<T>::AUC(int batch_size_per_gpu, int n_batches,
       num_bins_(num_global_gpus_ * num_bins_per_gpu_),
       num_partitions_(num_global_gpus_),
       num_total_samples_(0),
-      barrier_(num_local_gpus_),
       storage_(num_local_gpus_),
       offsets_(num_local_gpus_, 0) {
 
@@ -527,6 +515,8 @@ AUC<T>::AUC(int batch_size_per_gpu, int n_batches,
     st.alloc_main(max_num_local_samples, num_bins_, num_partitions_, num_global_gpus_);
     st.realloc_workspace(num_partitions_*sizeof(CountType));
   }
+
+  warm_up(max_num_local_samples);
 }
 
 template <typename T>
@@ -576,11 +566,35 @@ void AUC<T>::global_reduce(int n_nets) {
 }
 
 template <typename T>
+void AUC<T>::warm_up(size_t num_local_samples) {
+  dim3 grid(160, 1, 1);
+  dim3 block(1024, 1, 1);
+
+  MESSAGE_("Starting AUC NCCL warm-up");
+  #pragma omp parallel for num_threads(num_local_gpus_)
+  for (int local_id=0; local_id<num_local_gpus_; local_id++) {
+    auto gpu_resource = resource_manager_->get_local_gpu(local_id).get();
+    int device_id = gpu_resource->get_device_id();
+    auto& stream  = gpu_resource->get_stream();
+
+    CudaDeviceContext context(device_id);
+    auto& st = storage_[local_id];
+
+    mock_kernel     <<<grid, block, 0, stream>>>(st.d_preds(),  num_local_samples);
+    initialize_array<<<grid, block, 0, stream>>>(st.d_labels(), num_local_samples, 0.0f);
+    offsets_[local_id] = num_local_samples;
+  }
+  num_total_samples_ = num_local_samples*num_global_gpus_;
+
+  [[maybe_unused]] float dummy = finalize_metric();
+  MESSAGE_("Warm-up done");
+}
+
+template <typename T>
 float AUC<T>::finalize_metric() {
 
-  int num_local_gpus = resource_manager_->get_local_gpu_count();
-  float result[num_local_gpus];
-  #pragma omp parallel num_threads(num_local_gpus)
+  float result[num_local_gpus_];
+  #pragma omp parallel num_threads(num_local_gpus_)
   {
     result[omp_get_thread_num()] = _finalize_metric_per_gpu(omp_get_thread_num());
   }
@@ -697,7 +711,7 @@ float AUC<T>::_finalize_metric_per_gpu(int local_id) {
   st.realloc_redistributed(num_redistributed_samples, stream);
 
   // 5.3 Synchronize threads before all to all to prevent hangs
-  barrier_.wait();
+  #pragma omp barrier
 
   // 5.4 All to all
   metric_comm::all_to_all(st.d_partitioned_labels(), st.d_presorted_labels(),
