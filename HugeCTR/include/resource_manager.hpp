@@ -32,6 +32,7 @@ class ResourceManager {
   int num_process_;
   int pid_;
   DeviceMap device_map_;
+  DeviceMap::Layout device_layout_;
   std::shared_ptr<CPUResource> cpu_resource_;
   std::vector<std::shared_ptr<GPUResource>> gpu_resources_; /**< GPU resource vector */
   std::vector<std::vector<bool>> p2p_matrix_;
@@ -44,12 +45,14 @@ class ResourceManager {
 
  public:
   static std::shared_ptr<ResourceManager> create(
-      const std::vector<std::vector<int>>& visible_devices, unsigned long long seed);
+      const std::vector<std::vector<int>>& visible_devices, unsigned long long seed, DeviceMap::Layout dist = DeviceMap::LOCAL_FIRST);
   ResourceManager(const ResourceManager&) = delete;
   ResourceManager& operator=(const ResourceManager&) = delete;
 
   int get_num_process() const { return num_process_; }
   int get_pid() const { return pid_; }
+
+  DeviceMap::Layout get_device_layout() const { return device_map_.get_device_layout(); }
 
   const std::shared_ptr<CPUResource>& get_local_cpu() const { return cpu_resource_; }
 

@@ -72,6 +72,12 @@ class SparseEmbeddingFunctors {
                        const Tensor2<float> &hash_table_value, Tensor2<size_t> &hash_value_index,
                        Tensor2<TypeEmbeddingComp> &embedding_feature, cudaStream_t stream);
 
+  template <typename TypeHashKey, typename TypeEmbeddingComp>
+  void forward_sum_per_gpu(size_t batch_size, size_t slot_num, size_t embedding_vec_size, int combiner,
+                       bool train, const Tensor2<TypeHashKey> &row_offset,
+                       const Tensor2<TypeHashKey> &hash_key, size_t nnz,
+                       const Tensor2<float> &hash_table_value, Tensor2<size_t> &hash_value_index,
+                       Tensor2<TypeEmbeddingComp> &embedding_feature, cudaStream_t stream);
   /**
    * An additional function for the forward propagation when (combiner=mean).
    *  (only for DistributedSlotSparseEmbeddingHash)
@@ -101,6 +107,13 @@ class SparseEmbeddingFunctors {
    */
   template <typename TypeEmbeddingComp>
   void forward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size,
+                       const Tensors2<TypeEmbeddingComp> &src_tensors,
+                       Tensors2<TypeEmbeddingComp> &dst_tensors,
+                       const ResourceManager &resource_manager);
+
+  template <typename TypeEmbeddingComp>
+  void forward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size,
+                       size_t total_gpu_count,
                        const Tensors2<TypeEmbeddingComp> &src_tensors,
                        Tensors2<TypeEmbeddingComp> &dst_tensors,
                        const ResourceManager &resource_manager);
@@ -225,6 +238,13 @@ class SparseEmbeddingFunctors {
    */
   template <typename TypeEmbeddingComp>
   void backward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size,
+                        const Tensors2<TypeEmbeddingComp> &src_tensors,
+                        Tensors2<TypeEmbeddingComp> &dst_tensors,
+                        const ResourceManager &resource_manager);
+  
+  template <typename TypeEmbeddingComp>
+  void backward_reorder(size_t batch_size_per_gpu, size_t slot_num, size_t embedding_vec_size, 
+                        size_t total_gpu_count,
                         const Tensors2<TypeEmbeddingComp> &src_tensors,
                         Tensors2<TypeEmbeddingComp> &dst_tensors,
                         const ResourceManager &resource_manager);

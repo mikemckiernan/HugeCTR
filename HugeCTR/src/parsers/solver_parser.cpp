@@ -149,6 +149,22 @@ SolverParser::SolverParser(const std::string& file) {
       vvgpu.push_back(vgpu);
     }
 
+    if (has_key_(j, "device_layout")) {
+      std::string device_layout_str = get_value_from_json<std::string>(j, "device_layout");
+      if (device_layout_str == "LocalFirst") {
+        device_layout = DeviceMap::LOCAL_FIRST;
+      }
+      else if (device_layout_str == "NodeFirst") {
+        device_layout = DeviceMap::NODE_FIRST;
+      }
+      else {
+        CK_THROW_(Error_t::WrongInput, "Invalid device layout. Options are: LocalFirst, NodeFirst");
+      }
+    }
+    else {
+      device_layout = DeviceMap::LOCAL_FIRST;
+    }
+
     const std::map<std::string, metrics::Type> metrics_map = {
         {"AverageLoss", metrics::Type::AverageLoss}, {"AUC", metrics::Type::AUC}};
 
