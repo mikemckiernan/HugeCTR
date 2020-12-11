@@ -252,7 +252,7 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
         one_hot = false;
       } else if (param.type == DataReaderSparse_t::Localized) {
         size_t mod_slots = static_cast<size_t>(param.slot_num) % total_gpu_count;  // ceiling
-        size_t global_id = resource_manager_->get_local_gpu(i)->get_global_gpu_id();
+        size_t global_id = resource_manager_->get_local_gpu(i)->get_global_id();
         if (global_id < mod_slots) {
           slots = param.slot_num / total_gpu_count + 1;
         } else {
