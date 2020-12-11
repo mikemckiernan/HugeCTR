@@ -99,47 +99,83 @@
       "top": "concat1"
     },
     {
-      "name": "fc1",
-      "type": "InnerProduct",
+      "name": "adaptorstart1",
+      "type": "AdaptorStart",
       "bottom": "concat1",
-      "top": "fc1",
+      "top": [
+          "adaptorstart11",
+          "adaptorstart12"
+      ]
+    },
+    {
+      "name": "fusedfc1",
+      "type": "FusedInnerProduct",
+      "bottom": [
+          "adaptorstart11",
+          "adaptorstart12"
+      ],
+      "top": [
+          "fusedfc11",
+          "fusedfc12"
+      ],
       "fc_param": {
-        "num_output": 1024
+          "num_output": 1024
       }
     },
     {
-      "name": "relu1",
-      "type": "ReLU",
-      "bottom": "fc1",
-      "top": "relu1"
+      "name": "adaptorend1",
+      "type": "AdaptorEnd",
+      "bottom": [
+          "fusedfc11",
+          "fusedfc12"
+      ],
+      "top": "adaptorend1"
     },
     {
       "name": "dropout1",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "relu1",
+      "bottom": "adaptorend1",
       "top": "dropout1"
     },
     {
-      "name": "fc2",
-      "type": "InnerProduct",
+      "name": "adaptorstart2",
+      "type": "AdaptorStart",
       "bottom": "dropout1",
-      "top": "fc2",
+      "top": [
+          "adaptorstart21",
+          "adaptorstart22"
+      ]
+    },
+    {
+      "name": "fusedfc2",
+      "type": "FusedInnerProduct",
+      "bottom": [
+          "adaptorstart21",
+          "adaptorstart22"
+      ],
+      "top": [
+          "fusedfc21",
+          "fusedfc22"
+      ],
       "fc_param": {
-        "num_output": 1024
+          "num_output": 1024
       }
     },
     {
-      "name": "relu2",
-      "type": "ReLU",
-      "bottom": "fc2",
-      "top": "relu2"
+      "name": "adaptorend2",
+      "type": "AdaptorEnd",
+      "bottom": [
+          "fusedfc21",
+          "fusedfc22"
+      ],
+      "top": "adaptorend2"
     },
     {
       "name": "dropout2",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "relu2",
+      "bottom": "adaptorend2",
       "top": "dropout2"
     },
     {
