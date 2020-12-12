@@ -107,283 +107,157 @@
       "top": "concat1"
     },
     {
-      "name": "adaptorstart1",
-      "type": "AdaptorStart",
+      "name": "fc1",
+      "type": "InnerProduct",
       "bottom": "concat1",
-      "top": [
-          "adaptorstart11",
-          "adaptorstart12"
-      ]
-    },
-    {
-      "name": "fusedfc1",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart11",
-          "adaptorstart12"
-      ],
-      "top": [
-          "fusedfc11",
-          "fusedfc12"
-      ],
+      "top": "fc1",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend1",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc11",
-          "fusedfc12"
-      ],
-      "top": "adaptorend1"
+      "name": "relu1",
+      "type": "ReLU",
+      "bottom": "fc1",
+      "top": "relu1"
     },
     {
       "name": "dropout1",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend1",
+      "bottom": "relu1",
       "top": "dropout1"
     },
     {
-      "name": "adaptorstart2",
-      "type": "AdaptorStart",
+      "name": "fc2",
+      "type": "InnerProduct",
       "bottom": "dropout1",
-      "top": [
-          "adaptorstart21",
-          "adaptorstart22"
-      ]
-    },
-    {
-      "name": "fusedfc2",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart21",
-          "adaptorstart22"
-      ],
-      "top": [
-          "fusedfc21",
-          "fusedfc22"
-      ],
+      "top": "fc2",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend2",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc21",
-          "fusedfc22"
-      ],
-      "top": "adaptorend2"
+      "name": "relu2",
+      "type": "ReLU",
+      "bottom": "fc2",
+      "top": "relu2"
     },
     {
       "name": "dropout2",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend2",
+      "bottom": "relu2",
       "top": "dropout2"
     },
     {
-      "name": "adaptorstart3",
-      "type": "AdaptorStart",
+      "name": "fc3",
+      "type": "InnerProduct",
       "bottom": "dropout2",
-      "top": [
-          "adaptorstart31",
-          "adaptorstart32"
-      ]
-    },
-    {
-      "name": "fusedfc3",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart31",
-          "adaptorstart32"
-      ],
-      "top": [
-          "fusedfc31",
-          "fusedfc32"
-      ],
+      "top": "fc3",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend3",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc31",
-          "fusedfc32"
-      ],
-      "top": "adaptorend3"
+      "name": "relu3",
+      "type": "ReLU",
+      "bottom": "fc3",
+      "top": "relu3"
     },
     {
       "name": "dropout3",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend3",
+      "bottom": "relu3",
       "top": "dropout3"
     },
     {
-      "name": "adaptorstart4",
-      "type": "AdaptorStart",
+      "name": "fc4",
+      "type": "InnerProduct",
       "bottom": "dropout3",
-      "top": [
-          "adaptorstart41",
-          "adaptorstart42"
-      ]
-    },
-    {
-      "name": "fusedfc4",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart41",
-          "adaptorstart42"
-      ],
-      "top": [
-          "fusedfc41",
-          "fusedfc42"
-      ],
+      "top": "fc4",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend4",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc41",
-          "fusedfc42"
-      ],
-      "top": "adaptorend4"
+      "name": "relu4",
+      "type": "ReLU",
+      "bottom": "fc4",
+      "top": "relu4"
     },
     {
       "name": "dropout4",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend4",
+      "bottom": "relu4",
       "top": "dropout4"
     },
     {
-      "name": "adaptorstart5",
-      "type": "AdaptorStart",
+      "name": "fc5",
+      "type": "InnerProduct",
       "bottom": "dropout4",
-      "top": [
-          "adaptorstart51",
-          "adaptorstart52"
-      ]
-    },
-    {
-      "name": "fusedfc5",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart51",
-          "adaptorstart52"
-      ],
-      "top": [
-          "fusedfc51",
-          "fusedfc52"
-      ],
+      "top": "fc5",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend5",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc51",
-          "fusedfc52"
-      ],
-      "top": "adaptorend5"
+      "name": "relu5",
+      "type": "ReLU",
+      "bottom": "fc5",
+      "top": "relu5"
     },
     {
       "name": "dropout5",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend5",
+      "bottom": "relu5",
       "top": "dropout5"
     },
     {
-      "name": "adaptorstart6",
-      "type": "AdaptorStart",
+      "name": "fc6",
+      "type": "InnerProduct",
       "bottom": "dropout5",
-      "top": [
-          "adaptorstart61",
-          "adaptorstart62"
-      ]
-    },
-    {
-      "name": "fusedfc6",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart61",
-          "adaptorstart62"
-      ],
-      "top": [
-          "fusedfc61",
-          "fusedfc62"
-      ],
+      "top": "fc6",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend6",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc61",
-          "fusedfc62"
-      ],
-      "top": "adaptorend6"
+      "name": "relu6",
+      "type": "ReLU",
+      "bottom": "fc6",
+      "top": "relu6"
     },
     {
       "name": "dropout6",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend6",
+      "bottom": "relu6",
       "top": "dropout6"
     },
     {
-      "name": "adaptorstart7",
-      "type": "AdaptorStart",
+      "name": "fc7",
+      "type": "InnerProduct",
       "bottom": "dropout6",
-      "top": [
-          "adaptorstart71",
-          "adaptorstart72"
-      ]
-    },
-    {
-      "name": "fusedfc7",
-      "type": "FusedInnerProduct",
-      "bottom": [
-          "adaptorstart71",
-          "adaptorstart72"
-      ],
-      "top": [
-          "fusedfc71",
-          "fusedfc72"
-      ],
+      "top": "fc7",
       "fc_param": {
-          "num_output": 1024
+        "num_output": 1024
       }
     },
     {
-      "name": "adaptorend7",
-      "type": "AdaptorEnd",
-      "bottom": [
-          "fusedfc71",
-          "fusedfc72"
-      ],
-      "top": "adaptorend7"
+      "name": "relu7",
+      "type": "ReLU",
+      "bottom": "fc7",
+      "top": "relu7"
     },
     {
       "name": "dropout7",
       "type": "Dropout",
       "rate": 0.5,
-      "bottom": "adaptorend7",
+      "bottom": "relu7",
       "top": "dropout7"
     },
     {

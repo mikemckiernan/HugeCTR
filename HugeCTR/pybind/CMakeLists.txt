@@ -46,8 +46,6 @@ file(GLOB huge_ctr_src
   ../src/layers/add_layer.cu
   ../src/layers/reduce_sum_layer.cu
   ../src/layers/dot_product_layer.cu
-  ../src/layers/adaptor_start_layer.cu
-  ../src/layers/adaptor_end_layer.cu
   ../src/loss.cu
   ../src/network.cu
   ../src/network.cpp

@@ -37,7 +37,6 @@ GPUResource::GPUResource(int device_id, size_t global_id, unsigned long long rep
       curandSetPseudoRandomGeneratorSeed(replica_variant_curand_generator_, replica_variant_seed));
   CK_CURAND_THROW_(curandSetStream(replica_variant_curand_generator_, computation_stream_));
   CK_CUBLAS_THROW_(cublasCreate(&cublas_handle_));
-  CK_CUBLAS_THROW_(cublasLtCreate(&cublaslt_handle_));
   CK_CUBLAS_THROW_(cublasSetStream(cublas_handle_, computation_stream_));
   CK_CUDNN_THROW_(cudnnCreate(&cudnn_handle_));
   CK_CUDNN_THROW_(cudnnSetStream(cudnn_handle_, computation_stream_));

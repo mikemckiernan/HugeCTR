@@ -39,15 +39,15 @@ __global__ void add_bias_and_re_kernel(__half* top, __half* middle, const __half
 }
 
 template <int BLOCK_WIDTH>
-__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* top_fprop, const __half* top_bprop,
+__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, const __half* top,
                                                int ldn) {
   __shared__ __half2 elem[32][BLOCK_WIDTH + 1];
   __shared__ __half2 accu[BLOCK_WIDTH];
 
   const __half2 zero = TypeFunc<__half2>::zero();
 
-  __half2* top_fprop2 = reinterpret_cast<__half2*>(top_fprop);
-  const __half2* top_bprop2 = reinterpret_cast<const __half2*>(top_bprop);
+  __half2* middle2 = reinterpret_cast<__half2*>(middle);
+  const __half2* top2 = reinterpret_cast<const __half2*>(top);
 
   int lx, ly, gi;
   int gx_offset = blockIdx.x * BLOCK_WIDTH;
@@ -58,11 +58,11 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* top_fprop, c
     ly = (i + threadIdx.x) / BLOCK_WIDTH;
     gi = (ly + gy_offset) * ldn + (lx + gx_offset);
 
-    __half2 t = top_fprop2[gi];
+    __half2 t = middle2[gi];
     __half2 mask = __hgt2(t, zero);
-    t = __hmul2(__ldg(top_bprop2 + gi), mask);
+    t = __hmul2(__ldg(top2 + gi), mask);
 
-    top_fprop2[gi] = t;
+    middle2[gi] = t;
     elem[ly][lx] = t;
   }
 
@@ -95,16 +95,14 @@ FusedFullyConnectedLayer::FusedFullyConnectedLayer(
     const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
     const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
     const Tensor2<__half>& train_bottom_tensor, const Tensor2<__half>& evaluate_bottom_tensor,
-    const Tensor2<__half>& bprop_in_tensor,
-    const Tensor2<__half>& top_fprop_tensor, const Tensor2<__half>& top_bprop_tensor,
-    const std::shared_ptr<GPUResource>& gpu_resource,
+    const Tensor2<__half>& top_tensor, const std::shared_ptr<GPUResource>& gpu_resource,
     std::vector<Initializer_t> initializer_types)
     : Layer(gpu_resource, initializer_types),
       falgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP) {
   const auto& bottom_tensor_dim = train_bottom_tensor.get_dimensions();
-  const auto& top_tensor_dim = top_fprop_tensor.get_dimensions();
+  const auto& top_tensor_dim = top_tensor.get_dimensions();
 
   if (bottom_tensor_dim.size() != 2 || top_tensor_dim.size() != 2) {
     CK_THROW_(Error_t::WrongInput, "input or output tensor doesn't has two dimensions");
@@ -156,9 +154,8 @@ FusedFullyConnectedLayer::FusedFullyConnectedLayer(
 
   train_bottom_tensor_ = train_bottom_tensor;
   evaluate_bottom_tensor_ = evaluate_bottom_tensor;
-  bprop_in_tensor_ = bprop_in_tensor;
-  top_fprop_tensor_ = top_fprop_tensor;
-  top_bprop_tensor_ = top_bprop_tensor;
+  top_tensor_ = top_tensor;
+  blobs_buff->reserve(top_tensor_.get_dimensions(), &middle_tensor_);
   blobs_buff->reserve(bias_dim, &bias_grad_tensor_);
 }
 
@@ -168,11 +165,11 @@ void FusedFullyConnectedLayer::fprop(bool is_train) {
   const __half* kernel = weights_half_[0].get_ptr();
   const __half* bias = weights_half_[1].get_ptr();
   const __half* bottom = get_bottom_tensor(is_train).get_ptr();
-  __half* top_fprop = top_fprop_tensor_.get_ptr();
-  __half* top_bprop = top_bprop_tensor_.get_ptr();
+  __half* middle = middle_tensor_.get_ptr();
+  __half* top = top_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor(is_train).get_dimensions();
-  const auto& top_tensor_dim = top_fprop_tensor_.get_dimensions();
+  const auto& top_tensor_dim = top_tensor_.get_dimensions();
 
   size_t m = bottom_tensor_dim[0];
   size_t n = top_tensor_dim[1];
@@ -182,13 +179,13 @@ void FusedFullyConnectedLayer::fprop(bool is_train) {
   const float beta = 0.0f;
 
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k,
-                                &alpha, kernel, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta, top_bprop,
+                                &alpha, kernel, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta, middle,
                                 CUDA_R_16F, n, CUDA_R_32F, falgo_k_));
 
   const size_t max_threads = 1024;
   const size_t blocks = m;
   const size_t threads = min(n / 2, max_threads);
-  add_bias_and_re_kernel<<<blocks, threads, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, bias, n / 2,
+  add_bias_and_re_kernel<<<blocks, threads, 0, get_gpu().get_stream()>>>(top, middle, bias, n / 2,
                                                                          n / 2);
 
 #ifndef NDEBUG
@@ -201,16 +198,15 @@ void FusedFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
-  const __half* bprop_out = top_bprop_tensor_.get_ptr();
-  __half* top_fprop = top_fprop_tensor_.get_ptr();
+  const __half* top = top_tensor_.get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
   __half* bias_grad = weights_grad_[1].get_ptr();
   __half* bottom = get_bottom_tensor(true).get_ptr();
-  __half* bprop_in = bprop_in_tensor_.get_ptr();
+  __half* middle = middle_tensor_.get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor(true).get_dimensions();
-  const auto& top_tensor_dim = top_fprop_tensor_.get_dimensions();
+  const auto& top_tensor_dim = top_tensor_.get_dimensions();
 
   int m = bottom_tensor_dim[0];
   int n = top_tensor_dim[1];
@@ -225,18 +221,18 @@ void FusedFullyConnectedLayer::bprop() {
 
   dim3 blocks(n / 64, m / 32);
   reverse_add_bias_and_re_kernel<32>
-      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, top_fprop, bprop_out, n / 2);
+      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, middle, top, n / 2);
 
   convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
                                                                          n);
 
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
-                                &alpha, top_fprop, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
+                                &alpha, middle, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
-                                &alpha, kernel, CUDA_R_16F, n, top_fprop, CUDA_R_16F, n, &beta_x,
-                                bprop_in, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
+                                &alpha, kernel, CUDA_R_16F, n, middle, CUDA_R_16F, n, &beta_x,
+                                bottom, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
@@ -251,7 +247,7 @@ void FusedFullyConnectedLayer::search_algorithm() {
 
   // Device Tensors to be used
   __half* bottom = get_bottom_tensor(true).get_ptr();
-  __half* top = top_fprop_tensor_.get_ptr();
+  __half* top = top_tensor_.get_ptr();
   __half* kernel = weights_half_[0].get_ptr();
   __half* bias = weights_half_[1].get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
@@ -259,7 +255,7 @@ void FusedFullyConnectedLayer::search_algorithm() {
 
   // Tensor dim
   const auto& bottom_tensor_dim = get_bottom_tensor(true).get_dimensions();
-  const auto& top_tensor_dim = top_fprop_tensor_.get_dimensions();
+  const auto& top_tensor_dim = top_tensor_.get_dimensions();
 
   size_t m = bottom_tensor_dim[0];
   size_t n = top_tensor_dim[1];
@@ -391,7 +387,7 @@ void FusedFullyConnectedLayer::search_algorithm() {
 
 std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_uniform_initializer(const int index) {
   size_t bottom_dim = get_bottom_tensor(true).get_dimensions()[1];
-  size_t top_dim = top_fprop_tensor_.get_dimensions()[1];
+  size_t top_dim = top_tensor_.get_dimensions()[1];
 
   float limit = 1.0f / ((0 == index ? bottom_dim : 0) + top_dim);
   return std::make_unique<UniformDataSimulator>(-1 * limit, limit);
@@ -400,7 +396,7 @@ std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_uniform_initializer
 std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_xavier_uniform_initializer(
     const int index) {
   size_t bottom_dim = get_bottom_tensor(true).get_dimensions()[1];
-  size_t top_dim = top_fprop_tensor_.get_dimensions()[1];
+  size_t top_dim = top_tensor_.get_dimensions()[1];
 
   return std::make_unique<VarianceScalingSimulator>(1.f, data_simu::Mode_t::Fan_avg,
                                                     data_simu::Distribution_t::Uniform,
@@ -410,7 +406,7 @@ std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_xavier_uniform_init
 std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_xavier_norm_initializer(
     const int index) {
   size_t bottom_dim = get_bottom_tensor(true).get_dimensions()[1];
-  size_t top_dim = top_fprop_tensor_.get_dimensions()[1];
+  size_t top_dim = top_tensor_.get_dimensions()[1];
 
   return std::make_unique<VarianceScalingSimulator>(1.f, data_simu::Mode_t::Fan_avg,
                                                     data_simu::Distribution_t::Norm,
@@ -419,7 +415,7 @@ std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_xavier_norm_initial
 
 std::unique_ptr<DataSimulator> FusedFullyConnectedLayer::get_default_initializer(const int index) {
   size_t bottom_dim = get_bottom_tensor(true).get_dimensions()[1];
-  size_t top_dim = top_fprop_tensor_.get_dimensions()[1];
+  size_t top_dim = top_tensor_.get_dimensions()[1];
 
   std::unique_ptr<DataSimulator> simu(nullptr);
   if (0 == index) {
