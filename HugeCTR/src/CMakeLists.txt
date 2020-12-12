@@ -29,7 +29,6 @@ file(GLOB huge_ctr_src
   layers/fully_connected_layer.cu
   layers/fully_connected_layer_half.cu
   layers/fused_fully_connected_layer.cu
-  layers/fused_relu_bias_fully_connected_layer.cu
   layers/interaction_layer.cu
   layers/relu_layer.cu
   layers/reshape_layer.cu
@@ -40,8 +39,6 @@ file(GLOB huge_ctr_src
   layers/add_layer.cu
   layers/reduce_sum_layer.cu
   layers/dot_product_layer.cu
-  layers/adaptor_start_layer.cu
-  layers/adaptor_end_layer.cu
   loss.cu
   network.cu
   network.cpp
@@ -102,10 +99,10 @@ set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_static STATIC ${huge_ctr_src})
 
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf)
+  target_link_libraries(huge_ctr_static PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf)
+  target_link_libraries(huge_ctr_static PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf)
 endif()
 
 target_link_libraries(huge_ctr_static PRIVATE nlohmann_json::nlohmann_json)
