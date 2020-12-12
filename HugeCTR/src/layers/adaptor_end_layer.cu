@@ -38,9 +38,6 @@
    // assert(in_tensor.get_num_elements() == out_tensor.get_num_elements());
    assert(fprop_in_tensor.get_num_elements() % 2 == 0);
  
-   // The output tensor is a copy of backward in_tensor.
-   out_tensor = bprop_in_tensor;
- 
    in_tensors_.push_back(fprop_in_tensor);
    in_tensors_.push_back(bprop_in_tensor);
    out_tensors_.push_back(out_tensor);
@@ -49,21 +46,18 @@
  
  template <typename T>
  void AdaptorEndLayer<T>::fprop(bool is_train) {
-  CudaDeviceContext context(get_device_id());
+  size_t len = out_tensors_[0].get_num_elements();
 
-  int len = in_tensors_[0].get_num_elements();
-
-  CUDA_CHECK(cudaMemcpy(out_tensors_[0].get_ptr(), in_tensors_[0].get_ptr(),
-      len*sizeof(T), cudaMemcpyDeviceToDevice));
-
-#ifndef NDEBUG
-  // cudaDeviceSynchronize();
-  CK_CUDA_THROW_(cudaGetLastError());
-#endif
+  CK_CUDA_THROW_(cudaMemcpyAsync(out_tensors_[0].get_ptr(), in_tensors_[0].get_ptr(),
+      len*sizeof(T), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
  }
  
  template <typename T>
  void AdaptorEndLayer<T>::bprop() {
+  size_t len = out_tensors_[0].get_num_elements();
+
+  CK_CUDA_THROW_(cudaMemcpyAsync(in_tensors_[1].get_ptr(), out_tensors_[0].get_ptr(),
+      len*sizeof(T), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
  }
  
  template class AdaptorEndLayer<float>;

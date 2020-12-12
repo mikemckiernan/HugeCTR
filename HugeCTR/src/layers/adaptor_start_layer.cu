@@ -31,6 +31,7 @@ namespace HugeCTR {
 
 template <typename T>
 AdaptorStartLayer<T>::AdaptorStartLayer(const Tensor2<T>& in_tensor,
+        const Tensor2<T>& evaluate_in_tensor,
         Tensor2<T>& fprop_out_tensors,
         Tensor2<T>& bprop_out_tensors,
         const std::shared_ptr<GPUResource>& gpu_resource)
@@ -39,18 +40,28 @@ AdaptorStartLayer<T>::AdaptorStartLayer(const Tensor2<T>& in_tensor,
   assert(in_tensor.get_num_elements() % 2 == 0);
 
   fprop_out_tensors = in_tensor;
-  bprop_out_tensors = in_tensor;
   in_tensors_.push_back(in_tensor);
+  evaluate_in_tensors_.push_back(evaluate_in_tensor);
   out_tensors_.push_back(fprop_out_tensors);
   out_tensors_.push_back(bprop_out_tensors);
 }
 
 template <typename T>
 void AdaptorStartLayer<T>::fprop(bool is_train) {
+  if (!is_train) {
+    size_t len = out_tensors_[0].get_num_elements();
+    CK_CUDA_THROW_(cudaMemcpyAsync(out_tensors_[0].get_ptr(), evaluate_in_tensors_[0].get_ptr(),
+      len*sizeof(T), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
+  }
 }
 
 template <typename T>
 void AdaptorStartLayer<T>::bprop() {
+  
+  size_t len = out_tensors_[1].get_num_elements();
+
+  CK_CUDA_THROW_(cudaMemcpyAsync(in_tensors_[0].get_ptr(), out_tensors_[1].get_ptr(),
+      len*sizeof(T), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
 }
 
 template class AdaptorStartLayer<float>;

@@ -29,6 +29,7 @@ class AdaptorStartLayer : public Layer {
    * stores the references to the input tensors of this layer.
    */
   Tensors2<T> in_tensors_;
+  Tensors2<T> evaluate_in_tensors_;
   /*
    * stores the references to the output tensors of this layer.
    */
@@ -43,6 +44,7 @@ class AdaptorStartLayer : public Layer {
    * @param device_id the id of GPU where this layer belongs
    */
   AdaptorStartLayer(const Tensor2<T>& in_tensor,
+        const Tensor2<T>& evaluate_in_tensor,
         Tensor2<T>& fprop_out_tensors,
         Tensor2<T>& bprop_out_tensors,
         const std::shared_ptr<GPUResource>& gpu_resource);
