@@ -134,7 +134,9 @@ enum class Layer_t {
   ReduceSum,
   MultiCross,
   Cast,
-  DotProduct
+  DotProduct,
+  AdaptorStart,
+  AdaptorEnd
 };
 
 enum class Embedding_t {

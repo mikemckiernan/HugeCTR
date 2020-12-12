@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "HugeCTR/include/layers/fused_fully_connected_layer.hpp"
+#include "HugeCTR/include/layers/fused_relu_bias_fully_connected_layer.hpp"
 #include <cmath>
 #include <cstdlib>
 #include <vector>
@@ -95,9 +95,9 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
   blobs_buff->reserve({m, n}, &top_tensor);
   blobs_buff->reserve({m, n}, &bprop_out_tensor);
 
-  FusedFullyConnectedLayer fully_connected_layer(
+  FusedReluBiasFullyConnectedLayer fully_connected_layer(
       master_weights_buff, weights_buff, weights_grad_buff, blobs_buff, bottom_tensor,
-      bottom_tensor, bprop_in_tensor, top_tensor, bprop_out_tensor, test::get_default_gpu());
+      bprop_in_tensor, bottom_tensor, top_tensor, bprop_out_tensor, test::get_default_gpu());
 
   // Initialize tensors to 0 and choose cublas algorithms
   blobs_buff->allocate();
@@ -194,14 +194,14 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
       << " bprop cross_check bias_grad fail" << endl;
 }
 
-TEST(fused_fully_connected_layer, fp16_32x64x32) { fully_connected_layer_test(32, 64, 32); }
-TEST(fused_fully_connected_layer, fp16_2048x512x16) { fully_connected_layer_test(2048, 512, 16); }
-TEST(fused_fully_connected_layer, fp16_2048x1024x480) {
+TEST(fused_relu_bias_fully_connected_layer, fp16_32x64x32) { fully_connected_layer_test(32, 64, 32); }
+TEST(fused_relu_bias_fully_connected_layer, fp16_2048x512x16) { fully_connected_layer_test(2048, 512, 16); }
+TEST(fused_relu_bias_fully_connected_layer, fp16_2048x1024x480) {
   fully_connected_layer_test(2048, 1024, 480);
 }
-TEST(fused_fully_connected_layer, fp16_2048x512x1024) {
+TEST(fused_relu_bias_fully_connected_layer, fp16_2048x512x1024) {
   fully_connected_layer_test(2048, 512, 1024);
 }
-TEST(fused_fully_connected_layer, fp16_2048x1024x1024) {
+TEST(fused_relu_bias_fully_connected_layer, fp16_2048x1024x1024) {
   fully_connected_layer_test(2048, 1024, 1024);
 }

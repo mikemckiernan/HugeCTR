@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cublas_v2.h>
+#include <cublasLt.h>
 #include <functional>
 #include <layer.hpp>
 #include <vector>
@@ -26,11 +27,20 @@ namespace HugeCTR {
  * @brief
  * This class implements the fully connected layer.
  */
-class FusedFullyConnectedLayer : public Layer {
+class FusedReluBiasFullyConnectedLayer : public Layer {
   // Optimized cublasGemmEx algorithm selection
-  cublasGemmAlgo_t falgo_k_{CUBLAS_GEMM_DEFAULT};
+  cublasLtMatmulAlgo_t falgo_k_;
   cublasGemmAlgo_t balgo_k_{CUBLAS_GEMM_DEFAULT};
   cublasGemmAlgo_t balgo_x_{CUBLAS_GEMM_DEFAULT};
+
+  cublasLtMatrixLayout_t cublas_kernel_desc_ = NULL;
+  cublasLtMatrixLayout_t cublas_top_desc_ = NULL;
+  cublasLtMatrixLayout_t cublas_bottom_desc_ = NULL;
+  cublasLtMatmulDesc_t cublas_op_desc_ = NULL;
+
+  cublasLtMatmulPreference_t cublas_preference_ = NULL;
+  size_t cublaslt_workspace_size_ = 1024*1024*8;
+  void* cublaslt_workspace_;
 
   /*
    * stores the weight tensors for compute of this layer.
@@ -52,23 +62,15 @@ class FusedFullyConnectedLayer : public Layer {
   /*
    * stores the references to the bottom tensors of this layer.
    */
-  Tensor2<__half> train_bottom_tensor_;
+  Tensor2<__half> train_bottom_tensor_fprop_;
+  Tensor2<__half> train_bottom_tensor_bprop_;
   Tensor2<__half> evaluate_bottom_tensor_;
-  Tensor2<__half> bprop_in_tensor_;
 
   /*
    * stores the references to the top tensors of this layer.
    */
-  Tensor2<__half> top_fprop_tensor_;
-  /*
-   * store the gradient of next layer for backward propgation
-   */
-  Tensor2<__half> top_bprop_tensor_;
-
-  /*
-   * stores the references to the intermediate top tensors of this layer.
-   */
-  // Tensor2<__half> middle_tensor_;
+  Tensor2<__half> top_tensor_fprop_;
+  Tensor2<__half> top_tensor_bprop_;
 
   /*
    * stores the references to the intermediate bias grad tensors of this layer.
@@ -80,9 +82,17 @@ class FusedFullyConnectedLayer : public Layer {
   std::unique_ptr<DataSimulator> get_xavier_norm_initializer(const int index) override;
   std::unique_ptr<DataSimulator> get_default_initializer(const int index) override;
 
-  Tensor2<__half>& get_bottom_tensor(bool is_train) {
+  Tensor2<__half>& get_bottom_tensor_fprop(bool is_train) {
     if (is_train) {
-      return train_bottom_tensor_;
+      return train_bottom_tensor_fprop_;
+    } else {
+      return evaluate_bottom_tensor_;
+    }
+  }
+
+  Tensor2<__half>& get_bottom_tensor_bprop(bool is_train) {
+    if (is_train) {
+      return train_bottom_tensor_bprop_;
     } else {
       return evaluate_bottom_tensor_;
     }
@@ -101,6 +111,8 @@ class FusedFullyConnectedLayer : public Layer {
    * algorithm search for cublasGemmEx
    */
   void search_algorithm() final;
+  void initialize() final;
+
   /**
    * This is the constructor of the FullyConnectedLayer.
    * It will check whether the format combination of all tensors is supported or not.
@@ -114,17 +126,19 @@ class FusedFullyConnectedLayer : public Layer {
    * @param tensor_format: specifies the format of the weight tensor, either HW (row major) or WH
    * (col-major)
    */
-  FusedFullyConnectedLayer(
+  FusedReluBiasFullyConnectedLayer(
       const std::shared_ptr<BufferBlock2<float>>& master_weights_buff,
       const std::shared_ptr<BufferBlock2<__half>>& weights_buff,
       const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
-      const Tensor2<__half>& train_bottom_tensor, const Tensor2<__half>& evaluate_bottom_tensor,
-      const Tensor2<__half>& bprop_in_tensor,
-      const Tensor2<__half>& top_fprop_tensor, const Tensor2<__half>& top_bprop_tensor,
+      const Tensor2<__half>& train_bottom_tensor_fprop,
+      const Tensor2<__half>& train_bottom_tensor_bprop,
+      const Tensor2<__half>& evaluate_bottom_tensor_fprop,
+      const Tensor2<__half>& top_tensor_fprop, 
+      const Tensor2<__half>& top_tensor_bprop, 
       const std::shared_ptr<GPUResource>& gpu_resource,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());
-  FusedFullyConnectedLayer(const FusedFullyConnectedLayer&) = delete;
-  FusedFullyConnectedLayer& operator=(const FusedFullyConnectedLayer&);
+  FusedReluBiasFullyConnectedLayer(const FusedReluBiasFullyConnectedLayer&) = delete;
+  FusedReluBiasFullyConnectedLayer& operator=(const FusedReluBiasFullyConnectedLayer&);
 };
 }  // namespace HugeCTR

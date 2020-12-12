@@ -31,6 +31,7 @@
 #include <layers/fully_connected_layer.hpp>
 #include <layers/fully_connected_layer_half.hpp>
 #include <layers/fused_fully_connected_layer.hpp>
+#include <layers/fused_relu_bias_fully_connected_layer.hpp>
 #include <layers/interaction_layer.hpp>
 #include <layers/multi_cross_layer.hpp>
 #include <layers/multiply_layer.hpp>
@@ -38,6 +39,8 @@
 #include <layers/relu_layer.hpp>
 #include <layers/reshape_layer.hpp>
 #include <layers/slice_layer.hpp>
+#include <layers/adaptor_start_layer.hpp>
+#include <layers/adaptor_end_layer.hpp>
 #include <loss.hpp>
 #include <metrics.hpp>
 #include <optimizer.hpp>
@@ -244,7 +247,9 @@ const std::map<std::string, Layer_t> LAYER_TYPE_MAP = {
     {"Add", Layer_t::Add},
     {"ReduceSum", Layer_t::ReduceSum},
     {"MultiCross", Layer_t::MultiCross},
-    {"DotProduct", Layer_t::DotProduct}};
+    {"DotProduct", Layer_t::DotProduct},
+    {"AdaptorStart", Layer_t::AdaptorStart},
+    {"AdaptorEnd", Layer_t::AdaptorEnd}};
 const std::map<std::string, Layer_t> LAYER_TYPE_MAP_MP = {
     {"BinaryCrossEntropyLoss", Layer_t::BinaryCrossEntropyLoss},
     {"Concat", Layer_t::Concat},
@@ -256,6 +261,8 @@ const std::map<std::string, Layer_t> LAYER_TYPE_MAP_MP = {
     {"Slice", Layer_t::Slice},
     {"ReLU", Layer_t::ReLU},
     {"Dropout", Layer_t::Dropout},
+    {"AdaptorStart", Layer_t::AdaptorStart},
+    {"AdaptorEnd", Layer_t::AdaptorEnd},
     {"Add", Layer_t::Add}};
 const std::map<std::string, Embedding_t> EMBEDDING_TYPE_MAP = {
     {"DistributedSlotSparseEmbeddingHash", Embedding_t::DistributedSlotSparseEmbeddingHash},
@@ -528,16 +535,21 @@ Network* create_network(const nlohmann::json& j_array, const nlohmann::json& j_o
         if (use_mixed_precision) {
           Tensor2<__half> train_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<__half> bprop_out_tensor =
+              Tensor2<__half>::stretch_from(input_output_info.train_input[1]);
           Tensor2<__half> evaluate_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.evaluate_input[0]);
-          Tensor2<__half> fc_out_tensor;
+          Tensor2<__half> fc_out_tensor, bprop_in_tensor;
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &fc_out_tensor);
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &bprop_in_tensor);
           output_tensor_pairs.push_back({fc_out_tensor.shrink(), input_output_info.output[0]});
+          output_tensor_pairs.push_back({bprop_in_tensor.shrink(), input_output_info.output[1]});
 
           // establish layer
-          layers.emplace_back(new FusedFullyConnectedLayer(
+          layers.emplace_back(new FusedReluBiasFullyConnectedLayer(
               weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff, train_in_tensor,
-              evaluate_in_tensor, fc_out_tensor, gpu_resource, initializer_types));
+              bprop_out_tensor, evaluate_in_tensor, fc_out_tensor, bprop_in_tensor,
+              gpu_resource, initializer_types));
         } else {
           CK_THROW_(Error_t::WrongInput, "FusedInnerProduct support half only");
         }
@@ -750,6 +762,60 @@ Network* create_network(const nlohmann::json& j_array, const nlohmann::json& j_o
 
         break;
       }
+      case Layer_t::AdaptorStart: {
+        if (use_mixed_precision) {
+          Tensor2<__half> in_tensor =
+              Tensor2<__half>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<__half> evaluate_in_tensor =
+              Tensor2<__half>::stretch_from(input_output_info.evaluate_input[0]);
+          Tensor2<__half> fprop_out_tensor, bprop_out_tensor;
+          blobs_buff->reserve(in_tensor.get_dimensions(), &bprop_out_tensor);
+          layers.emplace_back(new AdaptorStartLayer<__half>(in_tensor, evaluate_in_tensor,
+              fprop_out_tensor, bprop_out_tensor, gpu_resource));
+          output_tensor_pairs.push_back({fprop_out_tensor.shrink(), input_output_info.output[0]});
+          output_tensor_pairs.push_back({bprop_out_tensor.shrink(), input_output_info.output[1]});
+        } else {
+          // establish out tensor
+          Tensor2<float> in_tensor =
+              Tensor2<float>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<float> evaluate_in_tensor =
+              Tensor2<float>::stretch_from(input_output_info.evaluate_input[0]);
+          Tensor2<float> fprop_out_tensor, bprop_out_tensor;
+          blobs_buff->reserve(in_tensor.get_dimensions(), &bprop_out_tensor);
+          layers.emplace_back(new AdaptorStartLayer<float>(in_tensor, evaluate_in_tensor,
+              fprop_out_tensor, bprop_out_tensor, gpu_resource));
+          output_tensor_pairs.push_back({fprop_out_tensor.shrink(), input_output_info.output[0]});
+          output_tensor_pairs.push_back({bprop_out_tensor.shrink(), input_output_info.output[1]});
+        }
+
+        break;
+      }
+      case Layer_t::AdaptorEnd: {
+        if (use_mixed_precision) {
+          Tensor2<__half> fprop_in_tensor =
+              Tensor2<__half>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<__half> bprop_in_tensor =
+              Tensor2<__half>::stretch_from(input_output_info.train_input[1]);              
+          Tensor2<__half> out_tensor;
+          blobs_buff->reserve(fprop_in_tensor.get_dimensions(), &out_tensor);
+          layers.emplace_back(new AdaptorEndLayer<__half>(fprop_in_tensor, 
+              bprop_in_tensor, out_tensor, gpu_resource));
+          output_tensor_pairs.push_back({out_tensor.shrink(), input_output_info.output[0]});
+        } else {
+          // establish out tensor
+          Tensor2<float> fprop_in_tensor =
+              Tensor2<float>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<float> bprop_in_tensor =
+              Tensor2<float>::stretch_from(input_output_info.train_input[1]);               
+          Tensor2<float> out_tensor;
+          blobs_buff->reserve(fprop_in_tensor.get_dimensions(), &out_tensor);
+          layers.emplace_back(new AdaptorEndLayer<float>(fprop_in_tensor,
+              bprop_in_tensor, out_tensor, gpu_resource));
+          output_tensor_pairs.push_back({out_tensor.shrink(), input_output_info.output[0]});
+        }
+
+        break;
+      }            
       case Layer_t::Reshape: {
         auto selected_it = j.find("selected");
         // selective reshape

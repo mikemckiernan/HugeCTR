@@ -60,81 +60,106 @@
             }
         },
         {
-            "name": "fc1",
+          "name": "adaptorstart1",
+          "type": "AdaptorStart",
+          "bottom": "dense",
+          "top": ["adaptorstart11","adaptorstart12"]
+        },
+
+        {
+            "name": "fusedfc1",
             "type": "FusedInnerProduct",
-            "bottom": "dense",
-            "top": "fc1",
-            "fc_param": {
-                "num_output": 512
-            }
+            "bottom": ["adaptorstart11","adaptorstart12"],
+            "top": ["fusedfc11","fusedfc12"],
+             "fc_param": {
+           "num_output": 512
+             }
+        },
+    	{
+            "name": "fusedfc2",
+            "type": "FusedInnerProduct",
+            "bottom": ["fusedfc11","fusedfc12"],
+            "top": ["fusedfc21","fusedfc22"],
+             "fc_param": {
+           "num_output": 256
+             }
         },
         {
-            "name": "fc2",
-            "type": "FusedInnerProduct",
-            "bottom": "fc1",
-            "top": "fc2",
-            "fc_param": {
-                "num_output": 256
-            }
+          "name": "fusedfc3",
+          "type": "FusedInnerProduct",
+          "bottom": ["fusedfc21","fusedfc22"],
+          "top": ["fusedfc31","fusedfc32"],
+          "fc_param": {
+              "num_output": 128
+          }
         },
         {
-            "name": "fc3",
-            "type": "FusedInnerProduct",
-            "bottom": "fc2",
-            "top": "fc3",
-            "fc_param": {
-                "num_output": 128
-            }
+            "name": "adaptorend1",
+            "type": "AdaptorEnd",
+            "bottom": ["fusedfc31","fusedfc32"],
+            "top": "adaptorend1"
         },
         {
             "name": "interaction1",
             "type": "Interaction",
             "bottom": [
-                "fc3",
+                "adaptorend1",
                 "sparse_embedding1"
             ],
             "top": "interaction1"
         },
         {
-            "name": "fc4",
-            "type": "FusedInnerProduct",
-            "bottom": "interaction1",
-            "top": "fc4",
-            "fc_param": {
-                "num_output": 1024
-            }
+          "name": "adaptorstart2",
+          "type": "AdaptorStart",
+          "bottom": "interaction1",
+          "top": ["adaptorstart21","adaptorstart22"]
         },
         {
-            "name": "fc5",
-            "type": "FusedInnerProduct",
-            "bottom": "fc4",
-            "top": "fc5",
-            "fc_param": {
-                "num_output": 1024
-            }
+          "name": "fusedfc4",
+          "type": "FusedInnerProduct",
+          "bottom": ["adaptorstart21","adaptorstart22"],
+          "top": ["fusedfc41","fusedfc42"],
+          "fc_param": {
+              "num_output": 1024
+          }
         },
         {
-            "name": "fc6",
-            "type": "FusedInnerProduct",
-            "bottom": "fc5",
-            "top": "fc6",
-            "fc_param": {
-                "num_output": 512
-            }
+          "name": "fusedfc5",
+          "type": "FusedInnerProduct",
+          "bottom": ["fusedfc41","fusedfc42"],
+          "top": ["fusedfc51","fusedfc52"],
+          "fc_param": {
+              "num_output": 1024
+          }
         },
         {
-            "name": "fc7",
-            "type": "FusedInnerProduct",
-            "bottom": "fc6",
-            "top": "fc7",
-            "fc_param": {
-                "num_output": 256
-            }
+          "name": "fusedfc6",
+          "type": "FusedInnerProduct",
+          "bottom": ["fusedfc51","fusedfc52"],
+          "top": ["fusedfc61","fusedfc62"],
+          "fc_param": {
+              "num_output": 512
+          }
+        },
+        {
+          "name": "fusedfc7",
+          "type": "FusedInnerProduct",
+          "bottom": ["fusedfc61","fusedfc62"],
+          "top": ["fusedfc71","fusedfc72"],
+          "fc_param": {
+              "num_output": 256
+          }
+        },
+        {     
+          "name": "adaptorend2",
+          "type": "AdaptorEnd",
+          "bottom": ["fusedfc71","fusedfc72"],
+          "top": "adaptorend2"
         },
         {
             "name": "fc8",
             "type": "InnerProduct",
-            "bottom": "fc7",
+            "bottom": "adaptorend2",
             "top": "fc8",
             "fc_param": {
                 "num_output": 1
