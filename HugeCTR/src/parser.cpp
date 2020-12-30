@@ -245,7 +245,7 @@ const std::map<std::string, Layer_t> LAYER_TYPE_MAP = {
     {"Add", Layer_t::Add},
     {"ReduceSum", Layer_t::ReduceSum},
     {"MultiCross", Layer_t::MultiCross},
-    {"DotProduct", Layer_t::DotProduct},
+    {"DotProduct", Layer_t::DotProduct}};
 const std::map<std::string, Layer_t> LAYER_TYPE_MAP_MP = {
     {"BinaryCrossEntropyLoss", Layer_t::BinaryCrossEntropyLoss},
     {"Concat", Layer_t::Concat},
