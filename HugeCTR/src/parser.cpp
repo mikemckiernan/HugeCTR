@@ -31,6 +31,7 @@
 #include <layers/fully_connected_layer.hpp>
 #include <layers/fully_connected_layer_half.hpp>
 #include <layers/fused_fully_connected_layer.hpp>
+#include <layers/fused_relu_bias_fully_connected_layer.hpp>
 #include <layers/interaction_layer.hpp>
 #include <layers/multi_cross_layer.hpp>
 #include <layers/multiply_layer.hpp>
@@ -244,7 +245,7 @@ const std::map<std::string, Layer_t> LAYER_TYPE_MAP = {
     {"Add", Layer_t::Add},
     {"ReduceSum", Layer_t::ReduceSum},
     {"MultiCross", Layer_t::MultiCross},
-    {"DotProduct", Layer_t::DotProduct}};
+    {"DotProduct", Layer_t::DotProduct},
 const std::map<std::string, Layer_t> LAYER_TYPE_MAP_MP = {
     {"BinaryCrossEntropyLoss", Layer_t::BinaryCrossEntropyLoss},
     {"Concat", Layer_t::Concat},
@@ -523,21 +524,50 @@ Network* create_network(const nlohmann::json& j_array, const nlohmann::json& j_o
             initializer_types[1] = bias_init_type;
           }
         }
+        // check the position of this layer
+        std::string pos_str;
+        int input_size = input_output_info.train_input.size();
+        int output_size = input_output_info.output.size();
+        if (has_key_(j, "position")) {
+          pos_str = get_value_from_json<std::string>(j, "position");
+          if (pos_str=="Head" && input_size==1 && output_size==2) {}
+          else if (pos_str=="Body" && input_size==2 && output_size==2) {}
+          else if (pos_str=="Tail" && input_size==2 && output_size==1) {}
+          else if (pos_str=="Isolated" && input_size==1 && output_size==1) {}
+          else
+            CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
+        } else
+        {
+          if (input_size!=1 || output_size!=1)
+            CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
+          pos_str = "Isolated";
+        }
         // establish out tensor
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
         if (use_mixed_precision) {
           Tensor2<__half> train_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.train_input[0]);
+          Tensor2<__half> bprop_out_tensor;
+          if(pos_str!="Head" && pos_str!="Isolated")
+              bprop_out_tensor = Tensor2<__half>::stretch_from(input_output_info.train_input[1]);
           Tensor2<__half> evaluate_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.evaluate_input[0]);
-          Tensor2<__half> fc_out_tensor;
+          Tensor2<__half> fc_out_tensor, bprop_in_tensor;
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &fc_out_tensor);
-          output_tensor_pairs.push_back({fc_out_tensor.shrink(), input_output_info.output[0]});
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &bprop_in_tensor);
+          if(pos_str=="Tail" || pos_str=="Isolated")
+            output_tensor_pairs.push_back({bprop_in_tensor.shrink(), input_output_info.output[0]});
+          else
+          {
+            output_tensor_pairs.push_back({fc_out_tensor.shrink(), input_output_info.output[0]});
+            output_tensor_pairs.push_back({bprop_in_tensor.shrink(), input_output_info.output[1]});
+          }
 
           // establish layer
-          layers.emplace_back(new FusedFullyConnectedLayer(
+          layers.emplace_back(new FusedReluBiasFullyConnectedLayer(
               weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff, train_in_tensor,
-              evaluate_in_tensor, fc_out_tensor, gpu_resource, initializer_types));
+              bprop_out_tensor, evaluate_in_tensor, fc_out_tensor, bprop_in_tensor,
+              gpu_resource, pos_str, initializer_types));
         } else {
           CK_THROW_(Error_t::WrongInput, "FusedInnerProduct support half only");
         }
@@ -749,7 +779,7 @@ Network* create_network(const nlohmann::json& j_array, const nlohmann::json& j_o
         }
 
         break;
-      }
+      }          
       case Layer_t::Reshape: {
         auto selected_it = j.find("selected");
         // selective reshape
