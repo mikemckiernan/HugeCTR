@@ -98,13 +98,13 @@ RUN pip install --no-cache-dir https://github.com/mlperf/logging/archive/9ea0afa
 # Install HugeCTR framework
 WORKDIR /opt
 RUN ln -s /usr/local/cuda/compat/lib.real/libcuda.so.1 ${CONDA_PREFIX}/lib/libcuda.so.1
-ARG HUGE_CTR_VERSION=mlperf_multi-node_ib
-RUN echo "HugeCTR version: $HUGE_CTR_VERSION"
-RUN git clone -b ${HUGE_CTR_VERSION} https://mlperf:QsT63rsMF_wjShftze2z@gitlab-master.nvidia.com/zehuanw/hugectr.git HugeCTR &&\
-    cd HugeCTR && \
+
+COPY . HugeCTR
+
+RUN cd HugeCTR && \
     git submodule update --init --recursive && \
     mkdir build && cd build &&\
-   cmake -DCMAKE_BUILD_TYPE=Release -DSM="70;80" \
+    cmake -DCMAKE_BUILD_TYPE=Release -DSM="70;80" \
          -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
          -DVAL_MODE=OFF -DENABLE_MULTINODES=ON -DENABLE_MPI=ON -DNCCL_A2A=ON -DUCX_INCLUDE_DIR=/usr/local/ucx/include/ -DUCX_LIBRARIES=/usr/local/ucx/lib/ .. && \
     make -j$(nproc) &&\
