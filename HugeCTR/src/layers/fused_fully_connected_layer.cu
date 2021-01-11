@@ -160,6 +160,8 @@ FusedFullyConnectedLayer::FusedFullyConnectedLayer(
 }
 
 void FusedFullyConnectedLayer::fprop(bool is_train) {
+  PROFILE_RECORD("fused_fully_connected.start", get_gpu().get_stream())
+
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
@@ -178,20 +180,27 @@ void FusedFullyConnectedLayer::fprop(bool is_train) {
   const float alpha = 1.0f;
   const float beta = 0.0f;
 
+  PROFILE_RECORD("fused_fully_connected.cublasGemm.start", get_gpu().get_stream())
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k,
                                 &alpha, kernel, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta, middle,
                                 CUDA_R_16F, n, CUDA_R_32F, falgo_k_));
+  PROFILE_RECORD("fused_fully_connected.cublasGemm.stop", get_gpu().get_stream())
 
   const size_t max_threads = 1024;
   const size_t blocks = m;
   const size_t threads = min(n / 2, max_threads);
+
+  PROFILE_RECORD("fused_fully_connected.add_bias_and_re_kernel.start", get_gpu().get_stream())
   add_bias_and_re_kernel<<<blocks, threads, 0, get_gpu().get_stream()>>>(top, middle, bias, n / 2,
                                                                          n / 2);
+  PROFILE_RECORD("fused_fully_connected.add_bias_and_re_kernel.stop", get_gpu().get_stream())
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
+
+  PROFILE_RECORD("fused_fully_connected.stop", get_gpu().get_stream())
 }
 
 void FusedFullyConnectedLayer::bprop() {

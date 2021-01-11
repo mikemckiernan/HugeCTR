@@ -21,7 +21,7 @@ class InlineProfiler {
 
   struct GPUEvent : Event {
     unsigned int device_id;
-    unsigned int stream_name;
+    unsigned int stream_id;
   };
 
   struct CPUEvent : Event { };
@@ -52,26 +52,29 @@ class InlineProfiler {
 
  private:
   std::string host_name_;
-  unsigned int current_iter_;
-  unsigned int warmup_iters_;
-  std::vector<std::string> interested_event_names_;
-  //std::queue<unsigned int> measure_times;
-  // stream
-  std::vector<cudaStream_t> gpu_streams_;
-  std::vector<std::string> gpu_stream_names_;
-  std::vector<Event> events_;
+  unsigned int warmup_iterations_;
+  unsigned int current_iteration_;
+  unsigned int current_schedule_idx_;
+
+  std::vector<std::pair<std::string, unsigned int>> scheduled_events_;
+
+  std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_gpu_timer_;
+  std::map<cudaStream_t, unsigned int> map_stream_id_;
+
+  std::vector<std::shared_ptr<Event>> events_;
   unsigned int events_num_;
+
+  std::map<int, std::shared_ptr<GPUTimer>> map_event_id_current_gpu_timer_;
+
   std::mutex mtx_; // for thread safe
-  std::vector<std::shared_ptr<GPUTimer>> gpu_timers_;
-  std::vector<std::shared_ptr<CPUTimer>> cpu_timers_;
 
  public:
   InlineProfiler();
   void initialize(std::string schedule_file);
-  void prepare_settings();
-  // expect the event_name to be in format of 'xxx.xxx.start' or 'xxx.xxx.stop', number of x
-  // can be variant
   void record_event(std::string event_label, cudaStream_t streams);
+  void iter_start();
+  void iter_end()
+  int find_event(std::string event_name);
 }
 
 namespace Helpers {
