@@ -19,7 +19,7 @@
   global_profiler.record_event(__VA_ARGS__); \
 } while (0);
 #else
-#define PROFILE_RECORD(x) do {} while (0);
+#define PROFILE_RECORD(...) do {} while (0);
 #endif
 
 namespace HugeCTR {
