@@ -1,22 +1,35 @@
+#pragma once
 
+#include <vector>
+#include <cstdlib>
+#include <string>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <mutex>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+#include <common.hpp>
 
 #ifdef ENABLE_PROFILING
 #define PROFILE_RECORD(...) do \
 { \
   global_profiler.record_event(__VA_ARGS__); \
-} while (0)
+} while (0);
 #else
-#define PROFILE_RECORD(x) do {} while (0)
+#define PROFILE_RECORD(x) do {} while (0);
 #endif
 
 namespace HugeCTR {
-class InlineProfiler {
+class Profiler {
   struct Event {
-    char* name;
+    std::string name;
     unsigned int start_index;
     unsigned int  end_index;
     // std::vector<unsigned int> on_iters;
-    std::vector<float> measured_time;
+    std::vector<float> measured_times;
   };
 
   struct GPUEvent : Event {
@@ -26,29 +39,46 @@ class InlineProfiler {
 
   struct CPUEvent : Event { };
 
-  class Timer {
-   public:
-    virtual Event* record_event() = 0;
-    virtual void event_start() = 0;
-    virtual void event_stop() = 0;
-    virtual float get_result() = 0;
-  };
-
-  class GPUTimer : public Timer {
+  class GPUTimer {
    private:
-    cudaEvent_t start_;
-    cudaEvent_t stop_;
+    cudaEvent_t* start_;
+    cudaEvent_t* stop_;
     cudaStream_t stream_;
 
    public:
-    void GPUTimer(cudaStream_t);
-    void reset();
+    GPUTimer(cudaStream_t);
+    ~GPUTimer();
     // stream is a pointer itself
-    void event_start(cudaStream_t stream);
-    void event_stop(cudaStream_t stream);
+    void event_start();
+    void event_stop();
+    float get_result();
   };
 
-  class CPUTimer : public Timer { };
+  class CPUTimer {};
+
+  static std::vector<std::string> split_string(std::string str, char delim = '.') {
+    std::stringstream ss(str);
+    std::vector<std::string> result;
+    std::string token;
+    while (std::getline(ss, token, delim)) {
+        result.push_back(token);
+    }
+    return result;
+  }
+
+  static int get_device_id(cudaStream_t stream) {
+    CUcontext ctx;
+    CUdevice device;
+    cuStreamGetCtx(stream, &ctx);
+    cuCtxPushCurrent(ctx);
+    cuCtxGetDevice(&device);
+    cuCtxPopCurrent(&ctx);
+    int device_id;
+    //CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_BUS_ID;
+    CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID;
+    cuDeviceGetAttribute(&device_id, attr, device);
+    return device_id;
+  }
 
  private:
   std::string host_name_;
@@ -69,38 +99,14 @@ class InlineProfiler {
   std::mutex mtx_; // for thread safe
 
  public:
-  InlineProfiler();
-  void initialize(std::string schedule_file);
-  void record_event(std::string event_label, cudaStream_t streams);
+  void initialize(const char* schedule_file);
+  void record_event(const char* event_label_char, cudaStream_t stream);
   void iter_start();
-  void iter_end()
-  int find_event(std::string event_name);
-}
+  void iter_end();
+  int find_event(std::string& event_name, cudaStream_t stream);
+  std::string write_result(const char* result_file);
+};
 
-namespace Helpers {
-  std::shared_ptr<std::vector<std::string>> split_string(std::string str, char delim = '.') {
-    std::stringstream ss(str);
-    std::shared_ptr<std::vector<std::string>> result = std::make_shared(new std::vector<std::string>());
-    std::string token;
-    while (std::getline(ss, token, delim)) {
-        result->push_back(token);
-    }
-    return result;
-  }
+extern Profiler global_profiler;
 
-  int get_device_id(cudaStream_t stream) {
-    CUcontext* pctx;
-    CUdevice device;
-    cuStreamGetCtx(stream, pctx);
-    cuCtxPushCurrent(*pctx);
-    cuCtxGetDevice(&device);
-    cuCtpopCurrent(pctx);
-    unsigned int device_id;
-    //CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_BUS_ID;
-    CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID;
-    cuDeviceGetAttribute(&device_id, attr, device);
-    return device_id;
-  }
-
-}  // namespace Helpers
 }  // namespace HugeCTR

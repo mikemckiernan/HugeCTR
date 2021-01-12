@@ -146,6 +146,10 @@ void train(std::string config_file) {
   timer_data_reading.start();
 #endif
 
+#ifdef ENABLE_PROFILING
+  HugeCTR::global_profiler.initialize(std::getenv("PROFILING_SCHEDULE_FILE"));
+#endif
+
   // train
   if (pid == 0) {
     std::cout << "HugeCTR training start:" << std::endl;

@@ -96,13 +96,6 @@ file(GLOB huge_ctr_src
   profiler.cpp
 )
 
-if(ENABLE_PROFILING)
-  set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DENABLE_PROFILING")
-  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DENABLE_PROFILING")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DENABLE_PROFILING")
-endif()
-
-
 set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_static STATIC ${huge_ctr_src})
 

@@ -30,6 +30,8 @@
 #include <mpi.h>
 #endif
 
+#include <profiler.hpp>
+
 #define PYTORCH_INIT
 
 namespace HugeCTR {

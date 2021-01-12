@@ -201,6 +201,11 @@ Error_t Session::init_or_load_params_for_sparse_(
 
 bool Session::train() {
   try {
+
+#ifdef ENABLE_PROFILING
+    global_profiler.iter_start();
+#endif
+
     if (data_reader_->is_started() == false) {
       CK_THROW_(Error_t::IllegalCall,
                 "Start the data reader first before calling Session::train()");
@@ -243,6 +248,11 @@ bool Session::train() {
 #else
     data_reader_->read_a_batch_to_device();
 #endif
+
+#ifdef ENABLE_PROFILING
+    global_profiler.iter_end();
+#endif
+
   } catch (const internal_runtime_error& err) {
     std::cerr << err.what() << std::endl;
     throw err;
@@ -432,3 +442,4 @@ Session::~Session() {
 }
 
 }  // namespace HugeCTR
+
