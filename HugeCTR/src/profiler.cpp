@@ -12,6 +12,8 @@
 
 #include <profiler.hpp>
 #include <common.hpp>
+#include <nlohmann/json.hpp>
+using nlohmann::json;
 
 namespace HugeCTR {
 
@@ -49,6 +51,7 @@ namespace HugeCTR {
 
     // TBD how to get host_name in CPP ?
 
+    MESSAGE_(std::string("Profiler initializing using ") + schedule_file + " ...");
     std::ifstream schedule_f(schedule_file);
     int line_no = 0;
     for (std::string line; getline(schedule_f, line);) {
@@ -79,7 +82,7 @@ namespace HugeCTR {
     }
     if (current_schedule_idx_ >= scheduled_events_.size()) {
         auto result_file = write_result(std::getenv("PROFILING_RESULT_DIR"));
-        std::cout << "Profiling complete! Result file is writing to " << result_file << ". Program exit." << std::endl;
+        MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
         std::exit(0);
     }
     current_iteration_++;
@@ -136,10 +139,12 @@ namespace HugeCTR {
         events_[find_event(event_name, stream)]->end_index = events_num_;
       }
       events_num_++;
+      MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + "stream_id");
       mtx_.unlock();
     } else {
       if (scheduled_events_[current_schedule_idx_].first != event_name || \
           current_iteration_ != scheduled_events_[current_schedule_idx_].second) { return; }
+      MESSAGE_("Timing on event " + event_label);
       auto gpu_timer = map_stream_gpu_timer_[stream];
       if (event_type == "start") {
         gpu_timer->event_start();
@@ -166,9 +171,28 @@ namespace HugeCTR {
     return -1;
   }
 
-  std::string Profiler::write_result(const char* result_file) {
+  std::string Profiler::write_result(const char* result_dir) {
     // TBD dump events_ to json file
-    return std::string();
+    json result = json::array();
+    for (auto& event_p : events_) {
+      GPUEvent* gep = static_cast<GPUEvent*>(event_p.get());
+      json j;
+      j["name"] = gep->name;
+      j["start_index"] = gep->start_index;
+      j["end_index"] = gep->end_index;
+      j["measured_times"] = gep->measured_times;
+      j["device_id"] = gep->device_id;
+      j["stream_id"] = gep->stream_id;
+
+      result.push_back(j);
+    }
+    std::string result_jstring = result.dump();
+    std::ofstream outfile;
+    std::string result_file = std::string(result_dir) + "/" + "prof_result.json";
+    outfile.open(result_file);
+    outfile << result_jstring;
+    outfile.close();
+    return result_file;
   }
 
   // A global variable

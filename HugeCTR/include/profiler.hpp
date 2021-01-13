@@ -16,10 +16,10 @@
 #ifdef ENABLE_PROFILING
 #define PROFILE_RECORD(...) do \
 { \
-  global_profiler.record_event(__VA_ARGS__); \
+  global_profiler.record_event(__VA_ARGS__) \
 } while (0);
 #else
-#define PROFILE_RECORD(...) do {} while (0);
+#define PROFILE_RECORD(...) do {} while (0)
 #endif
 
 namespace HugeCTR {
@@ -104,7 +104,7 @@ class Profiler {
   void iter_start();
   void iter_end();
   int find_event(std::string& event_name, cudaStream_t stream);
-  std::string write_result(const char* result_file);
+  std::string write_result(const char* result_dir);
 };
 
 extern Profiler global_profiler;
