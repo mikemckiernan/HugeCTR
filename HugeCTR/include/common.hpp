@@ -30,8 +30,6 @@
 #include <mpi.h>
 #endif
 
-#include <profiler.hpp>
-
 #define PYTORCH_INIT
 
 namespace HugeCTR {
@@ -261,6 +259,16 @@ typedef struct DataSetHeader_ {
   } while (0)
 #endif
 
+#define CK_CU_RESULT_(x)                                                \
+  do {                                                                  \
+    if (!x) {                                                           \
+      throw internal_runtime_error(                                     \
+        Error_t::CudaError,                                             \
+        std::string("CUresult Error, error code: ") + std::to_string(x) \
+        + ", " + __FILE__ + ":" + std::to_string(__LINE__) + " \n");    \
+    }                                                                   \
+  } while (0)
+
 #define CK_CUBLAS_THROW_(x)                                                                        \
   do {                                                                                             \
     cublasStatus_t retval = (x);                                                                   \
@@ -344,3 +352,5 @@ inline void LOG(const Args&... args) {
 }
 
 }  // namespace HugeCTR
+
+#include <profiler.hpp>

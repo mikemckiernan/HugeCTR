@@ -127,7 +127,7 @@ if(ENABLE_MULTINODES)
   include_directories(${UCX_INC_PATHS})
 endif()
 
-set(ENABLE_PROFILING false)
+option(ENABLE_PROFILING "Profiling mode: whether to turn on inline profiling" OFF)
 if(ENABLE_PROFILING)
   message("STATUS" "-- PROFILING is ON")
   set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DENABLE_PROFILING")

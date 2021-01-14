@@ -19,26 +19,26 @@ namespace HugeCTR {
 
   Profiler::GPUTimer::GPUTimer(cudaStream_t stream) {
     stream_ = stream;
-    cudaEventCreate(start_);
-    cudaEventCreate(stop_);
+    cudaEventCreate(&start_);
+    cudaEventCreate(&stop_);
   }
 
   Profiler::GPUTimer::~GPUTimer() {
-    cudaEventDestroy(*start_);
-    cudaEventDestroy(*stop_);
+    cudaEventDestroy(start_);
+    cudaEventDestroy(stop_);
   }
 
   void Profiler::GPUTimer::event_start() {
-    cudaEventRecord(*start_, stream_);
+    cudaEventRecord(start_, stream_);
   }
 
   void Profiler::GPUTimer::event_stop() {
-    cudaEventRecord(*stop_, stream_);
+    cudaEventRecord(stop_, stream_);
   }
 
   float Profiler::GPUTimer::get_result() {
     float elapsed_time;
-    cudaEventElapsedTime(&elapsed_time, *start_, *stop_);
+    cudaEventElapsedTime(&elapsed_time, start_, stop_);
     return elapsed_time;
   }
 
@@ -68,10 +68,13 @@ namespace HugeCTR {
   }
 
   void Profiler::iter_start() {
+    MESSAGE_("global_profiler.iter_start");
     map_event_id_current_gpu_timer_.clear();
+    MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
   void Profiler::iter_end() {
+    MESSAGE_("global_profiler.iter_end");
     if (current_iteration_ > warmup_iterations_) {
       // get result;
       for(auto& it : map_event_id_current_gpu_timer_) {
@@ -80,6 +83,10 @@ namespace HugeCTR {
       }
       current_schedule_idx_++;
     }
+
+    // hack!
+    write_result("../experiment/prof/");
+
     if (current_schedule_idx_ >= scheduled_events_.size()) {
         auto result_file = write_result(std::getenv("PROFILING_RESULT_DIR"));
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
@@ -89,76 +96,94 @@ namespace HugeCTR {
   }
 
   void Profiler::record_event(const char* event_label_char, cudaStream_t stream) {
-    // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
-    auto event_label = std::string(event_label_char);
-    int dot_pos = event_label.find_last_of(std::string("."));
-    std::string event_type = event_label.substr(dot_pos + 1);
-    if (event_type != "start" || event_type != "stop") {
-      throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
-      std::string("Invalid event name. Should end with .start or .stop"));
-    }
-    std::string event_name = event_label.substr(0, dot_pos);
-
-    if (current_iteration_ <= warmup_iterations_) {
-      // parse the event label, register it and create resources.
+    try{
       mtx_.lock();
+      // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
+      auto event_label = std::string(event_label_char);
+      int dot_pos = event_label.find_last_of(std::string("."));
+      std::string event_type = event_label.substr(dot_pos + 1);
 
-      auto it = scheduled_events_.begin();
-      for (; it != scheduled_events_.end(); it++) {
-        if (it->first == event_name) { break;}
-      }
-      if (it == scheduled_events_.end()) { return; }
-
-      auto map_iter = map_stream_gpu_timer_.find(stream);
-      unsigned int stream_id = map_stream_id_[stream];
-
-      if(map_iter == map_stream_gpu_timer_.end()) {
-        auto gpu_timer = std::make_shared<GPUTimer>(stream);
-        map_stream_gpu_timer_[stream] = gpu_timer;
-        map_iter = map_stream_gpu_timer_.end();
-        stream_id = distance(map_stream_gpu_timer_.begin(), map_iter);
-        map_stream_id_[stream] = stream_id;
+      if (event_type != "start" && event_type != "stop") {
+        throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
+        std::string("Invalid event name. Should end with .start or .stop"));
       }
 
-      // get device id from stream
-      unsigned int device_id = get_device_id(stream);
-
-      if (event_type == "start") {
-        // create new event
-        auto gpu_event = new GPUEvent;
-        gpu_event->name = event_name;
-        gpu_event->start_index = events_num_;
-        gpu_event->end_index = 0; // wait for stop event to set,
-        gpu_event->measured_times = std::vector<float>();
-        gpu_event->device_id = device_id;
-        gpu_event->stream_id = stream_id;
-
-        events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
-      } else { // event_name == "end"
-        // only update the end_index
-        events_[find_event(event_name, stream)]->end_index = events_num_;
-      }
-      events_num_++;
-      MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + "stream_id");
-      mtx_.unlock();
-    } else {
-      if (scheduled_events_[current_schedule_idx_].first != event_name || \
-          current_iteration_ != scheduled_events_[current_schedule_idx_].second) { return; }
-      MESSAGE_("Timing on event " + event_label);
-      auto gpu_timer = map_stream_gpu_timer_[stream];
-      if (event_type == "start") {
-        gpu_timer->event_start();
-      } else {
-        gpu_timer->event_stop();
-        int event_idx = find_event(event_name, stream);
-        if (event_idx < 0) {
-          throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
-            std::string("Current event ") + event_name + std::string(" not registered!"));
+      std::string event_name = event_label.substr(0, dot_pos);
+      if (current_iteration_ <= warmup_iterations_) {
+        // parse the event label, register it and create resources.
+        auto it = scheduled_events_.begin();
+        for (; it != scheduled_events_.end(); it++) {
+          if (it->first == event_name) { break;}
         }
-        mtx_.lock();
-        map_event_id_current_gpu_timer_[event_idx] = gpu_timer;
-        mtx_.unlock();
+        if (it == scheduled_events_.end()) {
+          mtx_.unlock();
+          return;
+        }
+
+        auto map_iter = map_stream_gpu_timer_.find(stream);
+        unsigned int stream_id = map_stream_id_[stream];
+
+        if(map_iter == map_stream_gpu_timer_.end()) {
+          auto gpu_timer = std::make_shared<GPUTimer>(stream);
+          map_stream_gpu_timer_[stream] = gpu_timer;
+          map_iter = map_stream_gpu_timer_.end();
+          stream_id = distance(map_stream_gpu_timer_.begin(), map_iter);
+          map_stream_id_[stream] = stream_id;
+        }
+
+        // get device id from stream
+        unsigned int device_id = get_device_id(stream);
+
+
+        // event exist!
+        if(find_event(event_name, stream) >= 0) {
+          mtx_.unlock();
+          return;
+        }
+
+        if (event_type == "start") {
+          // create new event
+          auto gpu_event = new GPUEvent;
+          gpu_event->name = event_name;
+          gpu_event->start_index = events_num_;
+          gpu_event->end_index = 0; // wait for stop event to set,
+          gpu_event->measured_times = std::vector<float>();
+          gpu_event->device_id = device_id;
+          gpu_event->stream_id = stream_id;
+
+          events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
+
+        } else { // event_name == "end"
+          // only update the end_index
+          events_[find_event(event_name, stream)]->end_index = events_num_;
+        }
+        events_num_++;
+        MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + std::to_string(stream_id));
+
+      } else {
+        if (scheduled_events_[current_schedule_idx_].first != event_name || \
+            current_iteration_ != scheduled_events_[current_schedule_idx_].second) {
+              mtx_.unlock();
+              return;
+        }
+        MESSAGE_("Timing on event " + event_label);
+        auto gpu_timer = map_stream_gpu_timer_[stream];
+        if (event_type == "start") {
+          gpu_timer->event_start();
+        } else {
+          gpu_timer->event_stop();
+          int event_idx = find_event(event_name, stream);
+          if (event_idx < 0) {
+            throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
+              std::string("Current event ") + event_name + std::string(" not registered!"));
+          }
+          map_event_id_current_gpu_timer_[event_idx] = gpu_timer;
+        }
       }
+      mtx_.unlock();
+    } catch (const std::runtime_error& rt_err) {
+      std::cerr << rt_err.what() << std::endl;
+      throw;
     }
   }
 
@@ -188,7 +213,8 @@ namespace HugeCTR {
     }
     std::string result_jstring = result.dump();
     std::ofstream outfile;
-    std::string result_file = std::string(result_dir) + "/" + "prof_result.json";
+    // hack!
+    std::string result_file = std::string(result_dir) + "/" +  std::to_string(current_iteration_) + "prof_result.json";
     outfile.open(result_file);
     outfile << result_jstring;
     outfile.close();

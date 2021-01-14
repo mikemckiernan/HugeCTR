@@ -5,6 +5,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <iostream>
 #include <sstream>
 #include <mutex>
 
@@ -14,10 +15,10 @@
 #include <common.hpp>
 
 #ifdef ENABLE_PROFILING
-#define PROFILE_RECORD(...) do \
-{ \
-  global_profiler.record_event(__VA_ARGS__) \
-} while (0);
+#define PROFILE_RECORD(...) do               \
+{                                            \
+  global_profiler.record_event(__VA_ARGS__); \
+} while (0)
 #else
 #define PROFILE_RECORD(...) do {} while (0)
 #endif
@@ -41,8 +42,8 @@ class Profiler {
 
   class GPUTimer {
    private:
-    cudaEvent_t* start_;
-    cudaEvent_t* stop_;
+    cudaEvent_t start_;
+    cudaEvent_t stop_;
     cudaStream_t stream_;
 
    public:
@@ -55,30 +56,6 @@ class Profiler {
   };
 
   class CPUTimer {};
-
-  static std::vector<std::string> split_string(std::string str, char delim = '.') {
-    std::stringstream ss(str);
-    std::vector<std::string> result;
-    std::string token;
-    while (std::getline(ss, token, delim)) {
-        result.push_back(token);
-    }
-    return result;
-  }
-
-  static int get_device_id(cudaStream_t stream) {
-    CUcontext ctx;
-    CUdevice device;
-    cuStreamGetCtx(stream, &ctx);
-    cuCtxPushCurrent(ctx);
-    cuCtxGetDevice(&device);
-    cuCtxPopCurrent(&ctx);
-    int device_id;
-    //CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_BUS_ID;
-    CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID;
-    cuDeviceGetAttribute(&device_id, attr, device);
-    return device_id;
-  }
 
  private:
   std::string host_name_;
@@ -105,6 +82,40 @@ class Profiler {
   void iter_end();
   int find_event(std::string& event_name, cudaStream_t stream);
   std::string write_result(const char* result_dir);
+
+  static std::vector<std::string> split_string(std::string str, char delim = '.') {
+    std::stringstream ss(str);
+    std::vector<std::string> result;
+    std::string token;
+    while (std::getline(ss, token, delim)) {
+        result.push_back(token);
+    }
+    return result;
+  }
+
+  static int get_device_id(cudaStream_t stream) {
+    // TBD, below code seems problem
+    // std::cout << "getting in !!" << std::endl;
+    // CUcontext ctx;
+    // std::cout << "1" << std::endl;
+    // CUdevice device;
+    // std::cout << "2" << std::endl;
+    // CK_CU_RESULT_(cuStreamGetCtx(stream, &ctx));
+    // std::cout << "3" << std::endl;
+    // CK_CU_RESULT_(cuCtxPushCurrent(ctx));
+    // std::cout << "4" << std::endl;
+    // CK_CU_RESULT_(cuCtxGetDevice(&device));
+    // std::cout << "5" << std::endl;
+    // CK_CU_RESULT_(cuCtxPopCurrent(&ctx));
+    // std::cout << "6" << std::endl;
+    // int device_id;
+    // //CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_BUS_ID;
+    // CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID;
+    // std::cout << "7" << std::endl;
+    // CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, attr, device));
+    // std::cout << "8" << std::endl;
+    return 1;
+  }
 };
 
 extern Profiler global_profiler;

@@ -244,13 +244,14 @@ bool Session::train() {
       one_embedding->backward();
       one_embedding->update_params();
     }
-    return true;
-#else
-    data_reader_->read_a_batch_to_device();
-#endif
 
 #ifdef ENABLE_PROFILING
     global_profiler.iter_end();
+#endif
+
+    return true;
+#else
+    data_reader_->read_a_batch_to_device();
 #endif
 
   } catch (const internal_runtime_error& err) {
