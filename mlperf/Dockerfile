@@ -31,7 +31,9 @@ RUN apt-get update -y && \
         libboost-all-dev \
         vim \
         wget \
-        zlib1g-dev && \
+        zlib1g-dev \
+        numactl \
+        libnuma-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # CMake version 3.14.3

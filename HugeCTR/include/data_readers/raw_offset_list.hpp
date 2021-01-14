@@ -15,11 +15,6 @@
  */
 
 #pragma once
-// #include <fcntl.h>
-// #include <sys/io.h>
-// #include <sys/mman.h>
-// #include <sys/stat.h>
-// #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
 #include <random>
@@ -90,8 +85,8 @@ class RawOffsetList {
   FileOffset get_offset(long long round, int worker_id) {
     size_t counter = (round * num_workers_ + worker_id) % offsets_.size();
     
-    int partition = (int)offsets_.size() / num_workers_;
-    counter = partition * worker_id + (round % partition);
+    //int partition = (int)offsets_.size() / num_workers_;
+    //counter = partition * worker_id + (round % partition);
     
     if (worker_id >= num_workers_) {
       CK_THROW_(Error_t::WrongInput, "worker_id >= num_workers_");

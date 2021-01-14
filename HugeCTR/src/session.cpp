@@ -250,6 +250,7 @@ bool Session::train() {
     std::cerr << err.what() << std::endl;
     throw err;
   }
+  return true;
 }
 
 bool Session::eval() {
