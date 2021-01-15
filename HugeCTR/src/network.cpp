@@ -64,7 +64,9 @@ void Network::train(long long current_batchsize) {
   if (full_fp16_) {
     conv_weight_();
   }
-
+#ifdef ENABLE_PROFILING
+      enable_cuda_graph_ = false;
+#endif
   if (enable_cuda_graph_) {
     if (!train_fprop_graph_created_) {
       CK_CUDA_THROW_(
@@ -76,9 +78,7 @@ void Network::train(long long current_batchsize) {
       CK_CUDA_THROW_(
           cudaGraphInstantiate(&train_fprop_instance_, train_fprop_graph_, NULL, NULL, 0));
       train_fprop_graph_created_ = true;
-#ifdef ENABLE_PROFILING
-      train_fprop_graph_created_ = false;
-#endif
+
     }
     CK_CUDA_THROW_(cudaGraphLaunch(train_fprop_instance_, gpu_resource_->get_stream()));
   } else {
@@ -102,9 +102,6 @@ void Network::train(long long current_batchsize) {
       CK_CUDA_THROW_(
           cudaGraphInstantiate(&train_bprop_instance_, train_bprop_graph_, NULL, NULL, 0));
       train_bprop_graph_created_ = true;
-#ifdef ENABLE_PROFILING
-      train_bprop_graph_created_ = false;
-#endif
     }
     CK_CUDA_THROW_(cudaGraphLaunch(train_bprop_instance_, gpu_resource_->get_stream()));
   } else {

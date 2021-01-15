@@ -30,7 +30,7 @@ class Profiler {
     unsigned int start_index;
     unsigned int  end_index;
     // std::vector<unsigned int> on_iters;
-    std::vector<float> measured_times;
+    std::vector<float> measured_times_ms;
   };
 
   struct GPUEvent : Event {
@@ -49,6 +49,7 @@ class Profiler {
    public:
     GPUTimer(cudaStream_t);
     ~GPUTimer();
+    void reset();
     // stream is a pointer itself
     void event_start();
     void event_stop();
@@ -93,9 +94,9 @@ class Profiler {
     return result;
   }
 
-  static int get_device_id(cudaStream_t stream) {
+  static int get_device_id() {
     // TBD, below code seems problem
-    // std::cout << "getting in !!" << std::endl;
+    // std::cout << "get_device_id" << std::endl;
     // CUcontext ctx;
     // std::cout << "1" << std::endl;
     // CUdevice device;
@@ -114,7 +115,16 @@ class Profiler {
     // std::cout << "7" << std::endl;
     // CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, attr, device));
     // std::cout << "8" << std::endl;
-    return 1;
+
+    //char device_info[20];
+    //CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID, device));
+    //CK_CU_RESULT_(cuDeviceGetPCIBusId(device_info, 20, device));
+    //CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID, device));
+    // MESSAGE_(std::to_string(device_id));
+
+    int device_id;
+    cudaGetDevice(&device_id);
+    return device_id;
   }
 };
 

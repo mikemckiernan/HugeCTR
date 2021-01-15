@@ -261,7 +261,7 @@ typedef struct DataSetHeader_ {
 
 #define CK_CU_RESULT_(x)                                                \
   do {                                                                  \
-    if (!x) {                                                           \
+    if (x > 0) {                                                           \
       throw internal_runtime_error(                                     \
         Error_t::CudaError,                                             \
         std::string("CUresult Error, error code: ") + std::to_string(x) \
