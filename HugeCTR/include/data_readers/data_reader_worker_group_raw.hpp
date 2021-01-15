@@ -23,7 +23,7 @@ namespace HugeCTR {
 
 template <typename TypeKey>
 class DataReaderWorkerGroupRaw : public DataReaderWorkerGroup {
-  std::shared_ptr<MmapOffsetList> file_offset_list_;
+  std::shared_ptr<RawOffsetList> file_offset_list_;
 
  public:
   // Ctor
@@ -46,7 +46,7 @@ class DataReaderWorkerGroupRaw : public DataReaderWorkerGroup {
       }
       size_t stride = slots * sizeof(int) +
                       (label_dim + dense_dim) * (float_label_dense ? sizeof(float) : sizeof(int));
-      file_offset_list_.reset(new MmapOffsetList(file_name, num_samples, stride, batchsize,
+      file_offset_list_.reset(new RawOffsetList(file_name, num_samples, stride, batchsize,
                                                  data_shuffle, csr_heap->get_size()));
     }
 

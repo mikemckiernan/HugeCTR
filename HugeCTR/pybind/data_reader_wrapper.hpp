@@ -41,7 +41,7 @@ void DataReaderPybind(pybind11::module& m) {
       .def("skip_read", &HugeCTR::ParquetDataReaderWorker<long long>::skip_read);
   pybind11::class_<HugeCTR::DataReaderWorkerRaw<long long>, HugeCTR::IDataReaderWorker>(
       m, "DataReaderWorkerRaw64")
-      .def(pybind11::init<unsigned int, unsigned int, std::shared_ptr<MmapOffsetList>&,
+      .def(pybind11::init<unsigned int, unsigned int, std::shared_ptr<RawOffsetList>&,
                           const std::shared_ptr<HeapEx<CSRChunk<long long>>>&, const std::string,
                           const std::vector<DataReaderSparseParam>&, const std::vector<long long>&,
                           int, bool>(),
