@@ -21,7 +21,7 @@
 #include <data_readers/csr_chunk.hpp>
 #include <data_readers/data_reader_worker_interface.hpp>
 #include <data_readers/heapex.hpp>
-#include <data_readers/mmap_source.hpp>
+#include <data_readers/raw_source.hpp>
 #include <fstream>
 #include <vector>
 
@@ -48,7 +48,7 @@ class DataReaderWorkerRaw : public IDataReaderWorker {
    * Ctor
    */
   DataReaderWorkerRaw(unsigned int worker_id, unsigned int worker_num,
-                      std::shared_ptr<MmapOffsetList>& file_offset_list,
+                      std::shared_ptr<RawOffsetList>& file_offset_list,
                       const std::shared_ptr<HeapEx<CSRChunk<T>>>& csr_heap,
                       const std::string& file_name,
                       const std::vector<DataReaderSparseParam>& params,
@@ -73,7 +73,7 @@ class DataReaderWorkerRaw : public IDataReaderWorker {
     }
     feature_ids_ = new int[slots_]();
 
-    source_ = std::make_shared<MmapSource>(file_offset_list, worker_id);
+    source_ = std::make_shared<RawSource>(file_offset_list, worker_id);
   }
   /**
    * read a batch of data from data set to heap.

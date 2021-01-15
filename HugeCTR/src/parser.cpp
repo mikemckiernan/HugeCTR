@@ -1317,7 +1317,8 @@ static void create_pipeline_internal(std::shared_ptr<IDataReader>& data_reader,
         const int NUM_THREADS = 1;
 #else
         const int NUM_THREADS =
-            format == DataReaderType_t::Parquet ? resource_manager->get_local_gpu_count() : 12;
+            (format == DataReaderType_t::Parquet) ? resource_manager->get_local_gpu_count() 
+              : ((format == DataReaderType_t::Raw) ? 32 : 12);
 #endif
 
         DataReader<TypeKey> *data_reader_tk = new DataReader<TypeKey>(

@@ -60,7 +60,7 @@ void data_reader_worker_raw_test_impl(bool float_label_dense) {
       new HeapEx<CSRChunk<T>>(1, num_devices, batchsize, label_dim + dense_dim, params));
 
   // setup a data reader
-  auto file_offset_list = std::make_shared<MmapOffsetList>(
+  auto file_offset_list = std::make_shared<RawOffsetList>(
       file_name, num_samples, (label_dim + dense_dim + slot_num) * sizeof(int), batchsize, false,
       1);
 

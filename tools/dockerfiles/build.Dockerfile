@@ -15,7 +15,9 @@ RUN apt-get update -y && \
         software-properties-common \
         lsb-release \
         libboost-all-dev \
-        zlib1g-dev && \
+        zlib1g-dev \
+        numactl \
+        libnuma-dev && \
     add-apt-repository ppa:git-core/ppa -y && \
     apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git && \
