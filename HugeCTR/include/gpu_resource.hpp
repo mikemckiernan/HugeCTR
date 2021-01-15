@@ -64,6 +64,7 @@ class GPUResource {
   size_t get_sm_count() const { return sm_count_; }
   int get_cc_major() const { return cc_major_; }
   int get_cc_minor() const { return cc_minor_; }
+  bool support_nccl() const { return comm_ != nullptr; }
 };
 
 }  // namespace HugeCTR
