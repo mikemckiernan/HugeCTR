@@ -64,9 +64,7 @@ void Network::train(long long current_batchsize) {
   if (full_fp16_) {
     conv_weight_();
   }
-#ifdef ENABLE_PROFILING
-      enable_cuda_graph_ = false;
-#endif
+
   if (enable_cuda_graph_) {
     if (!train_fprop_graph_created_) {
       CK_CUDA_THROW_(

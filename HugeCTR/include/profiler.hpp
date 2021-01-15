@@ -27,15 +27,15 @@ namespace HugeCTR {
 class Profiler {
   struct Event {
     std::string name;
-    unsigned int start_index;
-    unsigned int  end_index;
-    // std::vector<unsigned int> on_iters;
+    int start_index;
+    int  end_index;
+    // std::vector<int> on_iters;
     std::vector<float> measured_times_ms;
   };
 
   struct GPUEvent : Event {
-    unsigned int device_id;
-    unsigned int stream_id;
+    int device_id;
+    int stream_id;
   };
 
   struct CPUEvent : Event { };
@@ -44,15 +44,14 @@ class Profiler {
    private:
     cudaEvent_t start_;
     cudaEvent_t stop_;
-    cudaStream_t stream_;
+    float measured_time_ms_;
 
    public:
-    GPUTimer(cudaStream_t);
+    GPUTimer();
     ~GPUTimer();
-    void reset();
     // stream is a pointer itself
-    void event_start();
-    void event_stop();
+    void event_start(cudaStream_t stream);
+    void event_stop(cudaStream_t stream);
     float get_result();
   };
 
@@ -60,17 +59,17 @@ class Profiler {
 
  private:
   std::string host_name_;
-  unsigned int warmup_iterations_;
-  unsigned int current_iteration_;
-  unsigned int current_schedule_idx_;
+  int warmup_iterations_;
+  int current_iteration_;
+  int current_schedule_idx_;
 
-  std::vector<std::pair<std::string, unsigned int>> scheduled_events_;
+  std::vector<std::pair<std::string, int>> scheduled_events_;
 
   std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_gpu_timer_;
-  std::map<cudaStream_t, unsigned int> map_stream_id_;
+  std::map<cudaStream_t, int> map_stream_id_;
 
   std::vector<std::shared_ptr<Event>> events_;
-  unsigned int events_num_;
+  int events_num_;
 
   std::map<int, std::shared_ptr<GPUTimer>> map_event_id_current_gpu_timer_;
 

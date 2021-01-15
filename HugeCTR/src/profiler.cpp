@@ -19,10 +19,9 @@ using nlohmann::json;
 
 namespace HugeCTR {
 
-  Profiler::GPUTimer::GPUTimer(cudaStream_t stream) {
-    stream_ = stream;
-    cudaEventCreate(&start_);
-    cudaEventCreate(&stop_);
+  Profiler::GPUTimer::GPUTimer() {
+    cudaEventCreateWithFlags(&start_, cudaEventBlockingSync);
+    cudaEventCreateWithFlags(&stop_, cudaEventBlockingSync);
   }
 
   Profiler::GPUTimer::~GPUTimer() {
@@ -30,26 +29,19 @@ namespace HugeCTR {
     cudaEventDestroy(stop_);
   }
 
-  void Profiler::GPUTimer::reset() {
-    cudaEventDestroy(start_);
-    cudaEventDestroy(stop_);
-    cudaEventCreate(&start_);
-    cudaEventCreate(&stop_);
+  void Profiler::GPUTimer::event_start(cudaStream_t stream) {
+    cudaEventRecord(start_, stream);
   }
 
-  void Profiler::GPUTimer::event_start() {
-    cudaEventRecord(start_, stream_);
-  }
-
-  void Profiler::GPUTimer::event_stop() {
-    cudaEventRecord(stop_, stream_);
+  void Profiler::GPUTimer::event_stop(cudaStream_t stream) {
+    cudaEventRecord(stop_, stream);
+    cudaEventSynchronize(stop_);
+    cudaEventElapsedTime(&measured_time_ms_, start_, stop_);
+    MESSAGE_("Result " + std::to_string(measured_time_ms_));
   }
 
   float Profiler::GPUTimer::get_result() {
-    float elapsed_time;
-    cudaEventSynchronize(stop_);
-    cudaEventElapsedTime(&elapsed_time, start_, stop_);
-    return elapsed_time;
+    return measured_time_ms_;
   }
 
   void Profiler::initialize(const char* schedule_file) {
@@ -79,23 +71,27 @@ namespace HugeCTR {
 
   void Profiler::iter_start() {
     map_event_id_current_gpu_timer_.clear();
-    for(auto& it : map_stream_gpu_timer_) {
-      it.second.reset();
-    }
     MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
   void Profiler::iter_end() {
     if (current_iteration_ > warmup_iterations_) {
-      // get result;
+
       for(auto& it : map_event_id_current_gpu_timer_) {
+
+        // hack
+        // const void * address = static_cast<const void*>(it.second.get());
+        // std::stringstream ss;
+        // ss << address;
+        // MESSAGE_(std::to_string(it.first) + "  " + ss.str());
+
         float result = it.second->get_result();
         events_[it.first]->measured_times_ms.push_back(result);
       }
       current_schedule_idx_++;
     }
 
-    if (current_schedule_idx_ >= scheduled_events_.size()) {
+    if (current_schedule_idx_ >= int(scheduled_events_.size())) {
         auto result_file = write_result("prof.json");
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
         std::exit(0);
@@ -105,7 +101,6 @@ namespace HugeCTR {
 
   void Profiler::record_event(const char* event_label_char, cudaStream_t stream) {
     try{
-      mtx_.lock();
       // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
       auto event_label = std::string(event_label_char);
       int dot_pos = event_label.find_last_of(std::string("."));
@@ -118,6 +113,7 @@ namespace HugeCTR {
 
       std::string event_name = event_label.substr(0, dot_pos);
       if (current_iteration_ <= warmup_iterations_) {
+        mtx_.lock();
         // parse the event label, register it and create resources.
         auto it = scheduled_events_.begin();
         for (; it != scheduled_events_.end(); it++) {
@@ -129,7 +125,7 @@ namespace HugeCTR {
         }
 
         auto map_iter = map_stream_gpu_timer_.find(stream);
-        unsigned int stream_id = map_stream_id_[stream];
+        int stream_id = map_stream_id_[stream];
 
         if(map_iter == map_stream_gpu_timer_.end()) {
 
@@ -147,7 +143,7 @@ namespace HugeCTR {
           // }
           // hack!
 
-          auto gpu_timer = std::make_shared<GPUTimer>(stream);
+          auto gpu_timer = std::make_shared<GPUTimer>();
           map_stream_gpu_timer_[stream] = gpu_timer;
           map_iter = map_stream_gpu_timer_.end();
           stream_id = distance(map_stream_gpu_timer_.begin(), map_iter);
@@ -155,7 +151,7 @@ namespace HugeCTR {
         }
 
         // get device id from stream
-        unsigned int device_id = get_device_id();
+        int device_id = get_device_id();
 
         int event_idx = find_event(event_name, stream);
 
@@ -195,28 +191,29 @@ namespace HugeCTR {
           }
 
         }
+        mtx_.unlock();
       } else {
         if (scheduled_events_[current_schedule_idx_].first != event_name || \
-            current_iteration_ != scheduled_events_[current_schedule_idx_].second) {
-              mtx_.unlock();
-              return;
-        }
-        MESSAGE_("Timing on event " + event_label);
+            current_iteration_ != scheduled_events_[current_schedule_idx_].second) { return; }
         auto gpu_timer = map_stream_gpu_timer_[stream];
         if (event_type == "start") {
-          gpu_timer->event_start();
+          gpu_timer->event_start(stream);
         } else {
-          gpu_timer->event_stop();
+          mtx_.lock();
+          const void * address = static_cast<const void*>(stream);
+          std::stringstream ss;
+          ss << address;
+          MESSAGE_(std::string("Timing on ") + event_name + ". Stream: " + ss.str() + " Thread: " + std::to_string(omp_get_thread_num()) + " Device: " + std::to_string(get_device_id()));
+          gpu_timer->event_stop(stream);
           int event_idx = find_event(event_name, stream);
           if (event_idx < 0) {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
               std::string("Current event ") + event_name + std::string(" not registered!"));
           }
-          MESSAGE_("It is called!!");
           map_event_id_current_gpu_timer_[event_idx] = gpu_timer;
+          mtx_.unlock();
         }
       }
-      mtx_.unlock();
     } catch (const std::runtime_error& rt_err) {
       std::cerr << rt_err.what() << std::endl;
       throw;
