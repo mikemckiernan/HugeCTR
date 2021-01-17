@@ -20,8 +20,8 @@ using nlohmann::json;
 namespace HugeCTR {
 
   Profiler::GPUTimer::GPUTimer() {
-    cudaEventCreateWithFlags(&start_, cudaEventBlockingSync);
-    cudaEventCreateWithFlags(&stop_, cudaEventBlockingSync);
+    CK_CUDA_THROW_(cudaEventCreateWithFlags(&start_, cudaEventBlockingSync));
+    CK_CUDA_THROW_(cudaEventCreateWithFlags(&stop_, cudaEventBlockingSync));
   }
 
   Profiler::GPUTimer::~GPUTimer() {
@@ -30,13 +30,13 @@ namespace HugeCTR {
   }
 
   void Profiler::GPUTimer::event_start(cudaStream_t stream) {
-    cudaEventRecord(start_, stream);
+    CK_CUDA_THROW_(cudaEventRecord(start_, stream));
   }
 
   void Profiler::GPUTimer::event_stop(cudaStream_t stream) {
-    cudaEventRecord(stop_, stream);
-    cudaEventSynchronize(stop_);
-    cudaEventElapsedTime(&measured_time_ms_, start_, stop_);
+    CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
+    CK_CUDA_THROW_(cudaEventSynchronize(stop_));
+    CK_CUDA_THROW_(cudaEventElapsedTime(&measured_time_ms_, start_, stop_));
     MESSAGE_("Result " + std::to_string(measured_time_ms_));
   }
 
@@ -99,7 +99,7 @@ namespace HugeCTR {
     current_iteration_++;
   }
 
-  void Profiler::record_event(const char* event_label_char, cudaStream_t stream) {
+  void Profiler::record_event(const char* event_label_char, cudaStream_t stream, int device_id) {
     try{
       // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
       auto event_label = std::string(event_label_char);
@@ -150,9 +150,6 @@ namespace HugeCTR {
           map_stream_id_[stream] = stream_id;
         }
 
-        // get device id from stream
-        int device_id = get_device_id();
-
         int event_idx = find_event(event_name, stream);
 
         if (event_type == "start") {
@@ -174,7 +171,8 @@ namespace HugeCTR {
 
           events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
           events_num_++;
-          MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + std::to_string(stream_id));
+          MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + std::to_string(stream_id) \
+                    + ", on device " + std::to_string(device_id));
 
         } else { // event_name == "stop"
           // only update the end_index
@@ -183,7 +181,8 @@ namespace HugeCTR {
             if (event->end_index == 0) {
               event->end_index = events_num_;
               events_num_++;
-              MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + std::to_string(stream_id));
+              MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + std::to_string(stream_id) \
+                       + ", on device " + std::to_string(device_id));
             }
           } else {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
@@ -203,7 +202,7 @@ namespace HugeCTR {
           const void * address = static_cast<const void*>(stream);
           std::stringstream ss;
           ss << address;
-          MESSAGE_(std::string("Timing on ") + event_name + ". Stream: " + ss.str() + " Thread: " + std::to_string(omp_get_thread_num()) + " Device: " + std::to_string(get_device_id()));
+          MESSAGE_(std::string("Timing on ") + event_name + ". Stream: " + ss.str() + " Thread: " + std::to_string(omp_get_thread_num()) + " Device: " + std::to_string(device_id));
           gpu_timer->event_stop(stream);
           int event_idx = find_event(event_name, stream);
           if (event_idx < 0) {
