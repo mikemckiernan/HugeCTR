@@ -16,10 +16,12 @@
 
 #include <cuda_profiler_api.h>
 #include <sys/time.h>
+
 #include <algorithm>
 #include <fstream>
 #include <functional>
 #include <random>
+
 #include "HugeCTR/include/data_generator.hpp"
 #include "HugeCTR/include/data_readers/data_reader.hpp"
 #include "HugeCTR/include/embeddings/localized_slot_sparse_embedding_one_hot.hpp"
@@ -87,7 +89,8 @@ std::vector<size_t> slot_sizes = {100, 100, 100, 100, 100, 100, 100, 100, 100,
 
 template <typename TypeEmbeddingComp>
 void train_and_test(const std::vector<int> &device_list, const Optimizer_t &optimizer,
-                    const Update_t &update_type, const DeviceMap::Layout layout = DeviceMap::LOCAL_FIRST) {
+                    const Update_t &update_type,
+                    const DeviceMap::Layout layout = DeviceMap::LOCAL_FIRST) {
   OptHyperParams<TypeEmbeddingComp> hyper_params;
   hyper_params.sgd.atomic_update = true;
   const OptParams<TypeEmbeddingComp> opt_params = {optimizer, lr, hyper_params, update_type,
@@ -113,7 +116,8 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
   const auto &resource_manager = ResourceManager::create(vvgpu, 0, layout);
 
   if (resource_manager->is_master_process()) {
-    std::cout << "rank " << resource_manager->get_process_id() << " is generating data" << std::endl;
+    std::cout << "rank " << resource_manager->get_process_id() << " is generating data"
+              << std::endl;
     {
       // re-generate the dataset files
       std::ifstream file(train_file_list_name);
@@ -218,7 +222,7 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
       train_batchsize, test_batchsize, 0,        slot_sizes, embedding_vec_size,
       max_feature_num, slot_num,       combiner, opt_params};
 
-  std::unique_ptr<Embedding<T, TypeEmbeddingComp>> embedding(
+  std::unique_ptr<LocalizedSlotSparseEmbeddingOneHot<T, TypeEmbeddingComp>> embedding(
       new LocalizedSlotSparseEmbeddingOneHot<T, TypeEmbeddingComp>(
           train_data_reader->get_row_offsets_tensors(), train_data_reader->get_value_tensors(),
           train_data_reader->get_nnz_array(), test_data_reader->get_row_offsets_tensors(),
@@ -256,7 +260,9 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
 
   buf->allocate();
 
-  typedef struct TypeHashValue_ { float data[embedding_vec_size]; } TypeHashValue;
+  typedef struct TypeHashValue_ {
+    float data[embedding_vec_size];
+  } TypeHashValue;
 
   for (int i = 0; i < train_batch_num; i++) {
     printf("Rank%d: Round %d start training:\n", resource_manager->get_process_id(), i);
@@ -336,7 +342,7 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
   }
 
 #ifdef ENABLE_MPI
-    MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   // for SparseEmbeddingCpu eval
@@ -354,7 +360,8 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
     printf("\nRank%d: Round start eval:\n", resource_manager->get_process_id());
 
     // call read a batch
-    printf("Rank%d: data_reader_eval->read_a_batch_to_device()\n", resource_manager->get_process_id());
+    printf("Rank%d: data_reader_eval->read_a_batch_to_device()\n",
+           resource_manager->get_process_id());
     test_data_reader->read_a_batch_to_device();
 
     // GPU forward

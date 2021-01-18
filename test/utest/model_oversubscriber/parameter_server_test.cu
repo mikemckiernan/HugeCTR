@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <fstream>
+#include <set>
+
 #include "HugeCTR/include/data_generator.hpp"
 #include "HugeCTR/include/data_readers/data_reader.hpp"
 #include "HugeCTR/include/embeddings/distributed_slot_sparse_embedding_hash.hpp"
@@ -21,9 +24,6 @@
 #include "HugeCTR/include/utils.hpp"
 #include "gtest/gtest.h"
 #include "utest/test_utils.h"
-
-#include <fstream>
-#include <set>
 
 using namespace HugeCTR;
 
@@ -148,7 +148,7 @@ void do_upload_and_download_snapshot(size_t batch_num_train, size_t embedding_ve
       batchsize,       batchsize, vocabulary_size, {},        embedding_vector_size,
       max_feature_num, slot_num,  combiner,        opt_params};
 
-  std::unique_ptr<Embedding<KeyType, EmbeddingCompType>> embedding(
+  std::unique_ptr<DistributedSlotSparseEmbeddingHash<KeyType, EmbeddingCompType>> embedding(
       new DistributedSlotSparseEmbeddingHash<KeyType, EmbeddingCompType>(
           data_reader_train->get_row_offsets_tensors(), data_reader_train->get_value_tensors(),
           data_reader_train->get_nnz_array(), data_reader_eval->get_row_offsets_tensors(),
@@ -193,9 +193,9 @@ void do_upload_and_download_snapshot(size_t batch_num_train, size_t embedding_ve
   // transfer the internal embedding table to the snapshot
   parameter_server.dump_to_snapshot(snapshot_dst_file);
 
-  MESSAGE_("Batch_num: " + std::to_string(batch_num_train) + ", embedding_vec_size: " +
-           std::to_string(embedding_vector_size) + ", elapsed time: " +
-           std::to_string(timer_ps.elapsedSeconds()) + "s");
+  MESSAGE_("Batch_num: " + std::to_string(batch_num_train) +
+           ", embedding_vec_size: " + std::to_string(embedding_vector_size) +
+           ", elapsed time: " + std::to_string(timer_ps.elapsedSeconds()) + "s");
 
   // Check if the result is correct
   std::ifstream fs_src(snapshot_src_file);

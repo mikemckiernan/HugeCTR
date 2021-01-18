@@ -34,16 +34,15 @@ namespace HugeCTR {
  * embedding tables) to/from GPUs from/to host file stream, which are named as
  * load_parameters() and dump_parameters().
  */
-template <typename TypeKey, typename TypeEmbeddingComp>
-class Embedding : public IEmbedding {
-  SparseEmbeddingHashParams<TypeEmbeddingComp>
-      embedding_params_;                                 /**< Sparse embedding hash params. */
-  std::vector<OptParams<TypeEmbeddingComp>> opt_params_; /**< Optimizer params. */
+template <typename T, typename TypeKey, typename TypeEmbedding>
+class EmbeddingBase : public T {
+  SparseEmbeddingHashParams<TypeEmbedding> embedding_params_; /**< Sparse embedding hash params. */
+  std::vector<OptParams<TypeEmbedding>> opt_params_;          /**< Optimizer params. */
 
   std::vector<std::shared_ptr<GeneralBuffer2<CudaAllocator>>>
-      bufs_;                                         /**< The buffer for storing output tensors. */
-  Tensors2<TypeEmbeddingComp> train_output_tensors_; /**< The output tensors. */
-  Tensors2<TypeEmbeddingComp> evaluate_output_tensors_; /**< The output tensors. */
+      bufs_;                                        /**< The buffer for storing output tensors. */
+  Tensors2<TypeEmbedding> train_output_tensors_;    /**< The output tensors. */
+  Tensors2<TypeEmbedding> evaluate_output_tensors_; /**< The output tensors. */
   Tensors2<TypeKey> train_row_offsets_tensors_; /**< The row_offsets tensors of the input data. */
   Tensors2<TypeKey> train_value_tensors_;       /**< The value tensors of the input data. */
   std::vector<std::shared_ptr<size_t>> train_nnz_array_;
@@ -87,11 +86,9 @@ class Embedding : public IEmbedding {
 
   const Update_t& get_update_type() const { return embedding_params_.opt_params.update_type; }
 
-  OptParams<TypeEmbeddingComp>& get_opt_params(int i) { return opt_params_[i]; }
+  OptParams<TypeEmbedding>& get_opt_params(int i) { return opt_params_[i]; }
 
-  const OptParams<TypeEmbeddingComp>& get_opt_params() const {
-    return embedding_params_.opt_params;
-  }
+  const OptParams<TypeEmbedding>& get_opt_params() const { return embedding_params_.opt_params; }
 
   size_t get_embedding_vec_size() const { return embedding_params_.embedding_vec_size; }
 
@@ -109,7 +106,7 @@ class Embedding : public IEmbedding {
     return bufs_[i];
   }
 
-  Tensors2<TypeEmbeddingComp>& get_output_tensors(bool is_train) {
+  Tensors2<TypeEmbedding>& get_output_tensors(bool is_train) {
     if (is_train) {
       return train_output_tensors_;
     } else {
@@ -154,14 +151,14 @@ class Embedding : public IEmbedding {
    * @param resource_manager the GPU device resource group
    * @param scaler scaler factor for mixed precision
    */
-  Embedding(const Tensors2<TypeKey>& train_row_offsets_tensors,
-            const Tensors2<TypeKey>& train_value_tensors,
-            const std::vector<std::shared_ptr<size_t>>& train_nnz_array,
-            const Tensors2<TypeKey>& evaluate_row_offsets_tensors,
-            const Tensors2<TypeKey>& evaluate_value_tensors,
-            const std::vector<std::shared_ptr<size_t>>& evaluate_nnz_array,
-            const SparseEmbeddingHashParams<TypeEmbeddingComp>& embedding_params,
-            const std::shared_ptr<ResourceManager>& resource_manager)
+  EmbeddingBase(const Tensors2<TypeKey>& train_row_offsets_tensors,
+                const Tensors2<TypeKey>& train_value_tensors,
+                const std::vector<std::shared_ptr<size_t>>& train_nnz_array,
+                const Tensors2<TypeKey>& evaluate_row_offsets_tensors,
+                const Tensors2<TypeKey>& evaluate_value_tensors,
+                const std::vector<std::shared_ptr<size_t>>& evaluate_nnz_array,
+                const SparseEmbeddingHashParams<TypeEmbedding>& embedding_params,
+                const std::shared_ptr<ResourceManager>& resource_manager)
       : embedding_params_(embedding_params),
         train_row_offsets_tensors_(train_row_offsets_tensors),
         train_value_tensors_(train_value_tensors),
@@ -195,7 +192,7 @@ class Embedding : public IEmbedding {
       }
 
       for (size_t id = 0; id < local_gpu_count; id++) {
-        OptParams<TypeEmbeddingComp> opt_params;
+        OptParams<TypeEmbedding> opt_params;
         opt_params.optimizer = embedding_params_.opt_params.optimizer;
         opt_params.lr = embedding_params_.opt_params.lr;
         opt_params.update_type = embedding_params_.opt_params.update_type;
@@ -209,7 +206,7 @@ class Embedding : public IEmbedding {
             GeneralBuffer2<CudaAllocator>::create();
         bufs_.push_back(buf);
 
-        Tensor2<TypeEmbeddingComp> tensor;
+        Tensor2<TypeEmbedding> tensor;
         buf->reserve({get_batch_size_per_gpu(true), get_slot_num(), get_embedding_vec_size()},
                      &tensor);
         train_output_tensors_.push_back(tensor);
@@ -228,65 +225,10 @@ class Embedding : public IEmbedding {
   /**
    * The declaration for indicating that there is no default copy construtor in this class.
    */
-  Embedding(const Embedding&) = delete;
-  Embedding& operator=(const Embedding&) = delete;
+  EmbeddingBase(const EmbeddingBase&) = delete;
+  EmbeddingBase& operator=(const EmbeddingBase&) = delete;
 
-  virtual ~Embedding() {}
-
-  /**
-   * The forward propagation of embedding layer.
-   */
-  virtual void forward(bool is_train) = 0;
-
-  /**
-   * The first stage of backward propagation of embedding layer,
-   * which only computes the wgrad by the dgrad from the top layer.
-   */
-  virtual void backward() = 0;
-
-  /**
-   * The second stage of backward propagation of embedding layer, which
-   * updates the embedding table weights by wgrad(from backward()) and
-   * optimizer.
-   */
-  virtual void update_params() = 0;
-
-  /**
-   * Initialize the embedding table
-   */
-  virtual void init_params() = 0;
-
-  /**
-   * Read the embedding table from the weight_stream on the host, and
-   * upload it onto multi-GPUs global memory.
-   * @param weight_stream the host file stream for reading data from.
-   */
-  virtual void load_parameters(std::ifstream& stream) = 0;
-
-  virtual void load_parameters(const TensorBag2& keys, const Tensor2<float>& embeddings,
-                               size_t num) = 0;
-
-  /**
-   * Download the embedding table from multi-GPUs global memroy to CPU memory
-   * and write it to the weight_stream on the host.
-   * @param weight_stream the host file stream for writing data to.
-   */
-  virtual void dump_parameters(
-      std::ofstream& weight_stream) const = 0;  // please refer to file format definition of HugeCTR
-
-  virtual void dump_parameters(TensorBag2 keys, Tensor2<float>& embeddings, size_t* num) const = 0;
-
-  /**
-   * Reset the embedding
-   */
-  virtual void reset() = 0;
-
-  /**
-   * Get the total size of embedding tables on all GPUs.
-   */
-  virtual size_t get_params_num() const = 0;
-  virtual size_t get_vocabulary_size() const = 0;
-  virtual size_t get_max_vocabulary_size() const = 0;
+  virtual ~EmbeddingBase() = default;
 
   /**
    * Return the output tensors.
@@ -313,37 +255,8 @@ class Embedding : public IEmbedding {
     }
   }
 
-  const SparseEmbeddingHashParams<TypeEmbeddingComp>& get_embedding_params() const {
+  const SparseEmbeddingHashParams<TypeEmbedding>& get_embedding_params() const {
     return embedding_params_;
   }
-
-  // only used for results check
-  /**
-   * Get the forward() results from GPUs and copy them to the host pointer
-   * embedding_feature. This function is only used for unit test.
-   * @param embedding_feature the host pointer for storing the forward()
-   * results.
-   */
-  virtual void get_forward_results(bool is_train,
-                                   Tensor2<TypeEmbeddingComp>& embedding_feature) = 0;
-
-  /**
-   * Get the backward() results from GPUs and copy them to the host pointer
-   * wgrad. The wgrad on each GPU should be the same. This function is only
-   * used for unit test.
-   * @param wgrad the host pointer for stroing the backward() results.
-   * @param devIndex the GPU device id.
-   */
-  virtual void get_backward_results(Tensor2<TypeEmbeddingComp>& wgrad, int devIndex) = 0;
-
-  /**
-   * Get the update_params() results(the hash table, including hash_table_keys
-   * and hash_table_values) from GPUs and copy them to the host pointers.
-   * This function is only used for unit test.
-   * @param hash_table_key the host pointer for stroing the hash table keys.
-   * @param hash_table_value the host pointer for stroing the hash table values.
-   */
-  virtual void get_update_params_results(Tensor2<TypeKey>& hash_table_key,
-                                         Tensor2<float>& hash_table_value) = 0;
 };
 }  // namespace HugeCTR

@@ -17,30 +17,27 @@
 #pragma once
 
 #include <embedding.hpp>
-#include "HugeCTR/include/embeddings/embedding.hpp"
-#include "HugeCTR/include/model_oversubscriber/parameter_server_manager.hpp"
-#include "HugeCTR/include/model_oversubscriber/model_oversubscriber_impl.hpp"
-
 #include <memory>
 #include <vector>
+
+#include "HugeCTR/include/model_oversubscriber/model_oversubscriber_impl.hpp"
+#include "HugeCTR/include/model_oversubscriber/parameter_server_manager.hpp"
 
 namespace HugeCTR {
 
 class ModelOversubscriber {
-private:
+ private:
   std::unique_ptr<ModelOversubscriberImplBase> impl_base_;
 
-public:
+ public:
   template <typename TypeEmbeddingComp>
-  ModelOversubscriber(
-    std::vector<std::shared_ptr<IEmbedding>>& embeddings,
-    std::vector<SparseEmbeddingHashParams<TypeEmbeddingComp>>& embedding_params,
-    const SolverParser& solver_config,
-    const std::string& temp_embedding_dir) {
+  ModelOversubscriber(std::vector<std::shared_ptr<IEmbedding>>& embeddings,
+                      std::vector<SparseEmbeddingHashParams<TypeEmbeddingComp>>& embedding_params,
+                      const SolverParser& solver_config, const std::string& temp_embedding_dir) {
     if (solver_config.i64_input_key) {
       for (auto& one_embedding : embeddings) {
         embedding_params.push_back(
-            dynamic_cast<Embedding<long long, TypeEmbeddingComp>*>(one_embedding.get())
+            std::dynamic_pointer_cast<IEmbeddingForPrefetcher<TypeEmbeddingComp>>(one_embedding)
                 ->get_embedding_params());
       }
       impl_base_.reset(new ModelOversubscriberImpl<long long, TypeEmbeddingComp>(
@@ -48,7 +45,7 @@ public:
     } else {
       for (auto& one_embedding : embeddings) {
         embedding_params.push_back(
-            dynamic_cast<Embedding<unsigned, TypeEmbeddingComp>*>(one_embedding.get())
+            std::dynamic_pointer_cast<IEmbeddingForPrefetcher<TypeEmbeddingComp>>(one_embedding)
                 ->get_embedding_params());
       }
       impl_base_.reset(new ModelOversubscriberImpl<unsigned, TypeEmbeddingComp>(
@@ -56,17 +53,11 @@ public:
     }
   }
 
-  void store(std::vector<std::string> snapshot_file_list) {
-    impl_base_->store(snapshot_file_list);
-  }
+  void store(std::vector<std::string> snapshot_file_list) { impl_base_->store(snapshot_file_list); }
 
-  void update(std::vector<std::string>& keyset_file_list) {
-    impl_base_->update(keyset_file_list);
-  }
+  void update(std::vector<std::string>& keyset_file_list) { impl_base_->update(keyset_file_list); }
 
-  void update(std::string& keyset_file) {
-    impl_base_->update(keyset_file);
-  }
+  void update(std::string& keyset_file) { impl_base_->update(keyset_file); }
 };
 
 }  // namespace HugeCTR

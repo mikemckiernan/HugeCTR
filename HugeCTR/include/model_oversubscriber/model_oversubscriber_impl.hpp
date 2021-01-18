@@ -17,7 +17,6 @@
 #pragma once
 
 #include <embedding.hpp>
-#include "HugeCTR/include/embeddings/embedding.hpp"
 #include "HugeCTR/include/model_oversubscriber/parameter_server_manager.hpp"
 
 #include <memory>

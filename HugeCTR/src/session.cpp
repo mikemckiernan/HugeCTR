@@ -16,6 +16,7 @@
 
 #include <nvToolsExt.h>
 #include <omp.h>
+
 #include <algorithm>
 #include <embedding.hpp>
 #include <random>
@@ -79,7 +80,8 @@ static void check_device(int device_id, int min_major, int min_minor) {
 
 Session::Session(const SolverParser& solver_config, const std::string& config_file,
                  bool use_model_oversubscriber, const std::string temp_embedding_dir)
-    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed, solver_config.device_layout)) {
+    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed,
+                                                solver_config.device_layout)) {
   for (auto dev : resource_manager_->get_local_gpu_device_id_list()) {
     if (solver_config.use_mixed_precision) {
       check_device(dev, 7,
@@ -106,7 +108,7 @@ Session::Session(const SolverParser& solver_config, const std::string& config_fi
     }
   }
 #endif
-  
+
   init_or_load_params_for_dense_(solver_config.model_file);
   if (use_model_oversubscriber) {
     if (solver_config.use_mixed_precision) {
@@ -413,7 +415,8 @@ std::shared_ptr<ModelOversubscriber> Session::create_model_oversubscriber_(
 
 void Session::check_overflow() const {
   for (auto& one_embedding : embedding_) {
-    one_embedding->check_overflow();
+    std::dynamic_pointer_cast<IHashEmbedding>(one_embedding)
+        ->check_overflow();
   }
 }
 
