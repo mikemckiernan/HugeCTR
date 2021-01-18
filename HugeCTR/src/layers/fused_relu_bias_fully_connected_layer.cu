@@ -80,7 +80,6 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
     const Tensor2<__half>& train_bottom_tensor_fprop, 
     const Tensor2<__half>& train_bottom_tensor_bprop,
-    const Tensor2<__half>& evaluate_bottom_tensor,
     const Tensor2<__half>& top_tensor_fprop, 
     const Tensor2<__half>& top_tensor_bprop, 
     const std::shared_ptr<GPUResource>& gpu_resource,
@@ -149,7 +148,6 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   else if(pos=="Isolated")
     pos_ = ISOLATED;
   train_bottom_tensor_fprop_ = train_bottom_tensor_fprop;
-  evaluate_bottom_tensor_ = evaluate_bottom_tensor;
   if(pos_ == HEAD || pos_ == ISOLATED)
     train_bottom_tensor_bprop_ = train_bottom_tensor_fprop;
   else

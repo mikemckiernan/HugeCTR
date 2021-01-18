@@ -97,7 +97,7 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
 
   FusedReluBiasFullyConnectedLayer fully_connected_layer(
       master_weights_buff, weights_buff, weights_grad_buff, blobs_buff, bottom_tensor,
-      bprop_in_tensor, bottom_tensor, top_tensor, bprop_out_tensor, test::get_default_gpu(), "Body");
+      bprop_in_tensor, top_tensor, bprop_out_tensor, test::get_default_gpu(), "Body");
 
   // Initialize tensors to 0 and choose cublas algorithms
   blobs_buff->allocate();
