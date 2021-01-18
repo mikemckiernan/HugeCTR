@@ -73,8 +73,9 @@
     {
       "name": "fc1",
       "type": "FusedInnerProduct",
+      "position": "Head",
       "bottom": "dense",
-      "top": "fc1",
+      "top": ["fc11","fc12"],
       "fc_param": {
         "num_output": 512
       }
@@ -83,18 +84,20 @@
     {
       "name": "fc2",
       "type": "FusedInnerProduct",
-      "bottom": "fc1",
-      "top": "fc2",
+      "position": "Body",
+      "bottom": ["fc11","fc12"],
+      "top": ["fc21","fc22"],
       "fc_param": {
         "num_output": 256
       }
     },
 
-   
+
     {
       "name": "fc3",
       "type": "FusedInnerProduct",
-      "bottom": "fc2",
+      "position": "Tail",
+      "bottom": ["fc21","fc22"],
       "top": "fc3",
       "fc_param": {
         "num_output": 128
@@ -112,7 +115,8 @@
       "name": "fc4",
       "type": "FusedInnerProduct",
       "bottom": "interaction1",
-      "top": "fc4",
+      "position": "Head",
+      "top": ["fc41","fc42"],
        "fc_param": {
         "num_output": 1024
       }
@@ -121,8 +125,9 @@
     {
       "name": "fc5",
       "type": "FusedInnerProduct",
-      "bottom": "fc4",
-      "top": "fc5",
+      "position": "Body",
+      "bottom": ["fc41","fc42"],
+      "top": ["fc51","fc52"],
       "fc_param": {
         "num_output": 1024
       }
@@ -131,8 +136,9 @@
     {
       "name": "fc6",
       "type": "FusedInnerProduct",
-      "bottom": "fc5",
-      "top": "fc6",
+      "position": "Body",
+      "bottom": ["fc51","fc52"],
+      "top": ["fc61","fc62"],
       "fc_param": {
         "num_output": 512
       }
@@ -141,7 +147,8 @@
     {
       "name": "fc7",
       "type": "FusedInnerProduct",
-      "bottom": "fc6",
+      "position": "Tail",
+      "bottom": ["fc61","fc62"],
       "top": "fc7",
       "fc_param": {
         "num_output": 256

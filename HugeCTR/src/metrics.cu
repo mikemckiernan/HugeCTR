@@ -479,7 +479,7 @@ void AUCStorage::free_all() {
 /// Wrapper to call CUB functions with preallocation
 template<typename CUB_Func>
 void CUB_allocate_and_launch(AUCStorage& st, CUB_Func func) {
-  size_t requested_size;
+  size_t requested_size = 0;
   CK_CUDA_THROW_(func(nullptr, requested_size));
   st.realloc_workspace(requested_size);
   CK_CUDA_THROW_(func(st.d_workspace(), st.temp_storage_bytes()));

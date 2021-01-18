@@ -2,29 +2,29 @@
   "solver": {
     "lr_policy": "fixed",
     "display": 1000,
-    "max_iter":1000000,
-    "gpu": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
-    "batchsize": 32768,
-    "batchsize_eval": 32768,
+    "max_iter": 75868,
+    "gpu": [0,1,2,3,4,5,6,7],
+    "batchsize": 55296,
+    "batchsize_eval": 55296,
     "snapshot": 10000000,
     "snapshot_prefix": "./",
-    "eval_interval": 6400,
-    "eval_batches": 2721,
+    "eval_interval": 3790,
+    "eval_batches": 1613,
     "mixed_precision": 1024,
-    "cuda_graph":false,
     "eval_metrics": ["AUC:0.8025"]
   },
   
   "optimizer": {
     "type": "SGD",
+    "global_update": false,
     "sgd_hparam": {
-      "learning_rate": 18.0,
-      "atomic_update": true,
-      "warmup_steps": 8000,
-      "decay_start": 70000,
-      "decay_steps": 30000,
-      "decay_power": 2.0,
-      "end_lr": 0.0
+	"learning_rate": 24.0,
+	    "atomic_update": true,
+        "warmup_steps": 2750,
+        "decay_start": 49315,
+        "decay_steps": 27772,
+        "decay_power": 2.0,
+        "end_lr": 0.0
     }
   },
 
@@ -39,6 +39,7 @@
 	  "eval_num_samples": 89137319,
       "eval_source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/test_data.bin",
 	  "check": "None",
+      "cache_eval_data": 1613,
 	  "label": {
               "top": "label",
               "label_dim": 1
@@ -52,7 +53,7 @@
 		  "top": "data1",
 		  "type": "LocalizedSlot",
 		  "max_feature_num_per_sample": 26,
-                  "max_nnz": 1,
+          "max_nnz": 1,
 		  "slot_num": 26
               }
 	  ]
@@ -69,13 +70,11 @@
         "combiner": 0
       }
     },
-
     {
       "name": "fc1",
       "type": "FusedInnerProduct",
-      "position": "Head",
       "bottom": "dense",
-      "top": ["fc11","fc12"],
+      "top": "fc1",
       "fc_param": {
         "num_output": 512
       }
@@ -84,20 +83,18 @@
     {
       "name": "fc2",
       "type": "FusedInnerProduct",
-      "position": "Body",
-      "bottom": ["fc11","fc12"],
-      "top": ["fc21","fc22"],
+      "bottom": "fc1",
+      "top": "fc2",
       "fc_param": {
         "num_output": 256
       }
     },
 
-
+   
     {
       "name": "fc3",
       "type": "FusedInnerProduct",
-      "position": "Tail",
-      "bottom": ["fc21","fc22"],
+      "bottom": "fc2",
       "top": "fc3",
       "fc_param": {
         "num_output": 128
@@ -115,8 +112,7 @@
       "name": "fc4",
       "type": "FusedInnerProduct",
       "bottom": "interaction1",
-      "position": "Head",
-      "top": ["fc41","fc42"],
+      "top": "fc4",
        "fc_param": {
         "num_output": 1024
       }
@@ -125,9 +121,8 @@
     {
       "name": "fc5",
       "type": "FusedInnerProduct",
-      "position": "Body",
-      "bottom": ["fc41","fc42"],
-      "top": ["fc51","fc52"],
+      "bottom": "fc4",
+      "top": "fc5",
       "fc_param": {
         "num_output": 1024
       }
@@ -136,9 +131,8 @@
     {
       "name": "fc6",
       "type": "FusedInnerProduct",
-      "position": "Body",
-      "bottom": ["fc51","fc52"],
-      "top": ["fc61","fc62"],
+      "bottom": "fc5",
+      "top": "fc6",
       "fc_param": {
         "num_output": 512
       }
@@ -147,8 +141,7 @@
     {
       "name": "fc7",
       "type": "FusedInnerProduct",
-      "position": "Tail",
-      "bottom": ["fc61","fc62"],
+      "bottom": "fc6",
       "top": "fc7",
       "fc_param": {
         "num_output": 256
@@ -164,12 +157,12 @@
         "num_output": 1
       }
     },
-
+    
     {
       "name": "loss",
       "type": "BinaryCrossEntropyLoss",
       "bottom": ["fc8","label"],
       "top": "loss"
-    }
+    } 
   ]
 }
