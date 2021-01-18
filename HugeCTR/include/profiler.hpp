@@ -35,7 +35,7 @@ class Profiler {
 
   struct GPUEvent : Event {
     int device_id;
-    int stream_id;
+    cudaStream_t stream;
   };
 
   struct CPUEvent : Event { };
@@ -63,15 +63,14 @@ class Profiler {
   int current_iteration_;
   int current_schedule_idx_;
 
-  std::vector<std::pair<std::string, int>> scheduled_events_;
-
-  std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_gpu_timer_;
-  std::map<cudaStream_t, int> map_stream_id_;
-
+  std::vector<std::tuple<std::string, int, std::string, int>> scheduled_events_;
+  std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_to_gpu_timer_;
   std::vector<std::shared_ptr<Event>> events_;
+  std::map<std::string, int> map_event_key_to_event_idx;
   int events_num_;
 
-  std::map<int, std::shared_ptr<GPUTimer>> map_event_id_current_gpu_timer_;
+  // event_name : {stream : how many times does record_event meet this event_name within this stream }
+  std::map<std::string, std::map<cudaStream_t, int>> map_internal_;
 
   std::mutex mtx_; // for thread safe
 
@@ -91,6 +90,21 @@ class Profiler {
         result.push_back(token);
     }
     return result;
+  }
+
+  int safe_access_map_internel(std::string& event_name, cudaStream_t stream) {
+    int times = 0;
+    try {
+      map_internal_.at(event_name);
+    } catch (const std::out_of_range& e) {
+      map_internal_[event_name] = {};
+    }
+    try {
+      times = map_internal_[event_name].at(stream);
+    } catch (const std::out_of_range& e) {
+      map_internal_[event_name][stream] = times;
+    }
+    return times;
   }
 
 //   static int get_device_id() {

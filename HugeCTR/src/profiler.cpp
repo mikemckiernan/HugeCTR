@@ -59,7 +59,7 @@ namespace HugeCTR {
     for (std::string line; getline(schedule_f, line);) {
         if (line_no) {
           auto splited = split_string(line, ' ');
-          scheduled_events_.push_back(std::make_pair(splited[0], unsigned(std::stoi(splited[1]))));
+          scheduled_events_.push_back(std::make_tuple(splited[0], std::stoi(splited[1]), splited[2], std::stoi(splited[3])));
         } else {
           warmup_iterations_ = std::stoi(line);
         }
@@ -70,7 +70,7 @@ namespace HugeCTR {
   }
 
   void Profiler::iter_start() {
-    map_event_id_current_gpu_timer_.clear();
+    map_internal_.clear();
     MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
@@ -110,29 +110,28 @@ namespace HugeCTR {
         throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
         std::string("Invalid event name. Should end with .start or .stop"));
       }
-
       std::string event_name = event_label.substr(0, dot_pos);
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
+        int met_times_within_this_thread = safe_access_map_internel(event_name, stream);
+        std::string
         // parse the event label, register it and create resources.
         auto it = scheduled_events_.begin();
         for (; it != scheduled_events_.end(); it++) {
-          if (it->first == event_name) { break;}
+          if (it[0] == event_name && it[3] == ) { break; }
         }
         if (it == scheduled_events_.end()) {
           mtx_.unlock();
           return;
         }
 
-        auto map_iter = map_stream_gpu_timer_.find(stream);
-        int stream_id = map_stream_id_[stream];
-
-        if(map_iter == map_stream_gpu_timer_.end()) {
+        auto map_iter = map_stream_to_gpu_timer_.find(stream);
+        if(map_iter == map_stream_to_gpu_timer_.end()) {
 
           /// hack!!
           // int tid = omp_get_thread_num();
           // MESSAGE_(std::string("Thread ID : ") + std::to_string(tid));
-          // for(auto it = map_stream_gpu_timer_.begin(); it != map_stream_gpu_timer_.end(); it++) {
+          // for(auto it = map_stream_to_gpu_timer_.begin(); it != map_stream_to_gpu_timer_.end(); it++) {
           //   const void * address = static_cast<const void*>(it->first);
           //   std::stringstream ss;
           //   ss << address;
@@ -144,12 +143,9 @@ namespace HugeCTR {
           // hack!
 
           auto gpu_timer = std::make_shared<GPUTimer>();
-          map_stream_gpu_timer_[stream] = gpu_timer;
-          map_iter = map_stream_gpu_timer_.end();
-          stream_id = distance(map_stream_gpu_timer_.begin(), map_iter);
-          map_stream_id_[stream] = stream_id;
+          map_stream_to_gpu_timer_[stream] = gpu_timer;
         }
-
+        
         int event_idx = find_event(event_name, stream);
 
         if (event_type == "start") {
@@ -194,7 +190,7 @@ namespace HugeCTR {
       } else {
         if (scheduled_events_[current_schedule_idx_].first != event_name || \
             current_iteration_ != scheduled_events_[current_schedule_idx_].second) { return; }
-        auto gpu_timer = map_stream_gpu_timer_[stream];
+        auto gpu_timer = map_stream_to_gpu_timer_[stream];
         if (event_type == "start") {
           gpu_timer->event_start(stream);
         } else {
