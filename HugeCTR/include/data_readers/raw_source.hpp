@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <data_readers/raw_offset_list.hpp>
 #include <data_readers/source.hpp>
+#include <errno.h>
 
 namespace HugeCTR {
 class RawSource : public Source {
@@ -40,7 +41,17 @@ class RawSource : public Source {
 
     fd_ = open(raw_offset_list_->get_file_name().c_str(), O_RDONLY | O_DIRECT);
     if (fd_ == -1) {
-      CK_THROW_(Error_t::BrokenFile, "Error open file for read");
+      if (errno == EINVAL) {
+        // try without O_DIRECT flag
+        fd_ = open(raw_offset_list_->get_file_name().c_str(), O_RDONLY);
+        if (fd_ == -1) {
+          std::cout << "File open error: " << strerror(errno) << std::endl;
+          CK_THROW_(Error_t::BrokenFile, "Error open file for read");
+        }
+      }
+      else {
+        CK_THROW_(Error_t::BrokenFile, "Error open file for read");
+      }
     }
     batch_size_ = raw_offset_list_->get_batch_size();
     stride_ = raw_offset_list_->get_stride();

@@ -73,7 +73,6 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
    */
   Tensor2<__half> train_bottom_tensor_fprop_;
   Tensor2<__half> train_bottom_tensor_bprop_;
-  Tensor2<__half> evaluate_bottom_tensor_;
 
   /*
    * stores the references to the top tensors of this layer.
@@ -97,19 +96,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   std::unique_ptr<DataSimulator> get_default_initializer(const int index) override;
 
   Tensor2<__half>& get_bottom_tensor_fprop(bool is_train) {
-    if (is_train) {
-      return train_bottom_tensor_fprop_;
-    } else {
-      return evaluate_bottom_tensor_;
-    }
+    return train_bottom_tensor_fprop_;
   }
 
   Tensor2<__half>& get_bottom_tensor_bprop(bool is_train) {
-    if (is_train) {
-      return train_bottom_tensor_bprop_;
-    } else {
-      return evaluate_bottom_tensor_;
-    }
+    return train_bottom_tensor_bprop_;
   }
 
  public:
@@ -137,7 +128,6 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
    * @param wgrad_buff: stores the gradient values of the weight calculated in backward pass
    * @param train_bottom_tensor_fprop: stores the tensor from bottom layer for forward propogation
    * @param train_bottom_tensor_fprop: stores the tensor from bottom layer for forward propogation
-   * @param evaluate_bottom_tensor_fprop: stores the tensor from bottom layer for evaluation
    * @param top_tensor_fprop: stores the tensor to top layer when forward propogation
    * @param top_tensor_bprop: stores the tensor to top layer when backward propogation
    * @param pos: stores the position of this layer: HEAD, BODY, TAIL, ISOLATED.
@@ -149,7 +139,6 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
       const Tensor2<__half>& train_bottom_tensor_fprop,
       const Tensor2<__half>& train_bottom_tensor_bprop,
-      const Tensor2<__half>& evaluate_bottom_tensor_fprop,
       const Tensor2<__half>& top_tensor_fprop, 
       const Tensor2<__half>& top_tensor_bprop, 
       const std::shared_ptr<GPUResource>& gpu_resource,
