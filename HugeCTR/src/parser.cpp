@@ -472,8 +472,8 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
         }
         // check the position of this layer
         std::string pos_str;
-        int input_size = input_output_info.train_input.size();
-        int output_size = input_output_info.output.size();
+        int input_size = input_output_info.inputs.size();
+        int output_size = input_output_info.output_names.size();
         if (has_key_(j, "position")) {
           pos_str = get_value_from_json<std::string>(j, "position");
           if (pos_str=="Head" && input_size==1 && output_size==2) {}
@@ -492,19 +492,19 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
         if (use_mixed_precision) {
           Tensor2<__half> train_in_tensor =
-              Tensor2<__half>::stretch_from(input_output_info.train_input[0]);
+              Tensor2<__half>::stretch_from(input_output_info.inputs[0]);
           Tensor2<__half> bprop_out_tensor;
           if(pos_str!="Head" && pos_str!="Isolated")
-              bprop_out_tensor = Tensor2<__half>::stretch_from(input_output_info.train_input[1]);
+              bprop_out_tensor = Tensor2<__half>::stretch_from(input_output_info.inputs[1]);
           Tensor2<__half> fc_out_tensor, bprop_in_tensor;
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &fc_out_tensor);
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &bprop_in_tensor);
           if(pos_str=="Tail" || pos_str=="Isolated")
-            output_tensor_pairs.push_back({bprop_in_tensor.shrink(), input_output_info.output[0]});
+            output_tensor_entries.push_back({input_output_info.output_names[0], bprop_in_tensor.shrink()});
           else
           {
-            output_tensor_pairs.push_back({fc_out_tensor.shrink(), input_output_info.output[0]});
-            output_tensor_pairs.push_back({bprop_in_tensor.shrink(), input_output_info.output[1]});
+            output_tensor_entries.push_back({input_output_info.output_names[0], fc_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[1], bprop_in_tensor.shrink()});
           }
 
           // establish layer

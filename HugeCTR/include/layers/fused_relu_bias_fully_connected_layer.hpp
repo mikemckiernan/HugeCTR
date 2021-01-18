@@ -96,15 +96,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   std::unique_ptr<DataSimulator> get_default_initializer(const int index) override;
 
   Tensor2<__half>& get_bottom_tensor_fprop(bool is_train) {
-    if (is_train) {
-      return train_bottom_tensor_fprop_;
-    }
+    return train_bottom_tensor_fprop_;
   }
 
   Tensor2<__half>& get_bottom_tensor_bprop(bool is_train) {
-    if (is_train) {
-      return train_bottom_tensor_bprop_;
-    }
+    return train_bottom_tensor_bprop_;
   }
 
  public:
