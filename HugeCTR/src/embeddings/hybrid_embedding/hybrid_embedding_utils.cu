@@ -1,5 +1,4 @@
 #include "hybrid_embedding_utils.hpp"
-#include "HugeCTR/include/embedding/hybrid_sparse_embedding.hpp"
 
 #include <vector>
 
@@ -51,20 +50,18 @@ void HybridEmbeddingData::flatten_samples(cudaStream_t stream) {
     embedding_offset += table_sizes[embedding];
   }
 
-  uint32_t network_batch_size = batch_size / num_networks;
-
+  // keep order of input samples, convert each data field such that categories
+  // from different categorical features have different label / index
+  size_t indx = 0;
   std::vector<dtype> h_samples(num_tables * batch_size);
-  for (size_t network=0; network < num_networks; ++network) {
-    size_t data_offset = network * network_batch_size * num_tables;
-    for (size_t i = 0; i < network_batch_size; ++i) {
-      for (size_t embedding=0; embedding < num_tables; ++embedding) {
-        dtype category_offset = embedding_offsets[embedding];
-        h_samples[indx] = h_data[data_offset + i*num_tables + embedding] + category_offset;
-        indx++;
-      }
+  for (size_t i = 0; i < network_batch_size; ++i) {
+    for (size_t embedding=0; embedding < num_tables; ++embedding) {
+      h_samples[indx] = h_data[indx] + embedding_offsets[embedding];
+      indx++;
     }
   }
 
+  // TODO : remove
   upload_tensor(h_samples, samples, stream);
 }
 
@@ -92,9 +89,10 @@ void HybridEmbeddingModel::init_model(
       n_threshold = all_to_all_bandwidth / all_reduce_bandwidth 
                     * (double) num_nodes / ((double) num_nodes - 1.);
 
-      
+      // samples, num_samples, categories_sorted, counts_sorted
 
-      sort_categories_by_count(samples, num_samples, categories_sorted, counts_sorted);
+      sort_categories_by_count(
+          samples, num_samples, categories_sorted, counts_sorted);
   }
 }
 

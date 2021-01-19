@@ -16,9 +16,15 @@
 
 #pragma once
 
-#include "HugeCTR/include/embedding.hpp"
+#include "HugeCTR/include/tensor2.hpp"
 
-// 
+#include <vector>
+
+///
+/// This class contains the calibrated measurements for all-to-all and all-reduce
+/// for different data sizes. Each calibration consists of two arrays, 
+/// ._data_size array and the ._time array which represent a mapping. 
+/// 
 struct CalibrationInitializationData {
   CalibrationInitializationData() {}
   ~CalibrationInitializationData() {}
@@ -56,9 +62,9 @@ public:
 
   std::vector<uint32_t> num_gpus_per_node; // number of gpus for each node, .size() == number of nodes
 
-  Tensor2<dtype> category_frequent_index;  // is this category a frequent category? => location in cache
-  Tensor2<dtype> category_location;        // is this an infrequent category? 
-                                           // => location of where the categories are stored
+  Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
+  Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
+
   void init_model(
     const CalibrationInitializationData& calibration,
     Tensor2<dtype> samples
@@ -80,5 +86,8 @@ struct HybridEmbeddingData {
   cudaStream_t stream;
 
   // flatten raw input data
-  void flatten_samples(cudaStream_t stream);
+  void flatten_samples(
+      
+      cudaStream_t stream
+    );
 };
