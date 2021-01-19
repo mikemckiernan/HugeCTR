@@ -37,7 +37,7 @@ namespace HugeCTR {
     CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
     CK_CUDA_THROW_(cudaEventSynchronize(stop_));
     CK_CUDA_THROW_(cudaEventElapsedTime(&measured_time_ms_, start_, stop_));
-    MESSAGE_("Result " + std::to_string(measured_time_ms_));
+    // MESSAGE_("Result " + std::to_string(measured_time_ms_));
   }
 
   float Profiler::GPUTimer::get_result() {
@@ -71,7 +71,7 @@ namespace HugeCTR {
 
   void Profiler::iter_start() {
     map_internal_.clear();
-    MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
+    // MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
   void Profiler::iter_end() {
@@ -113,22 +113,10 @@ namespace HugeCTR {
           }
         }
         if (!found) {
+          if (event_type == "stop") { map_internal_[event_name][stream] = met_times_within_this_stream + 1; }
           mtx_.unlock();
           return;
         }
-        /// hack!!
-        // int tid = omp_get_thread_num();
-        // MESSAGE_(std::string("Thread ID : ") + std::to_string(tid));
-        // for(auto it = map_stream_to_gpu_timer_.begin(); it != map_stream_to_gpu_timer_.end(); it++) {
-        //   const void * address = static_cast<const void*>(it->first);
-        //   std::stringstream ss;
-        //   ss << address;
-        //   std::stringstream sg;
-        //   address = static_cast<const void*>(it->second.get());
-        //   sg << address;
-        //   MESSAGE_(ss.str() + "  " + sg.str());
-        // }
-        // hack!
 
         auto map_iter = map_stream_to_gpu_timer_.find(stream);
         if(map_iter == map_stream_to_gpu_timer_.end()) {
@@ -136,9 +124,7 @@ namespace HugeCTR {
           map_stream_to_gpu_timer_[stream] = gpu_timer;
         }
         std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
-        PROFILER_DEBUG_(event_key);
         int event_idx = find_event(event_key);
-        PROFILER_DEBUG_(std::to_string(event_idx));
 
         if (event_type == "start") {
           if(event_idx >= 0) {
@@ -160,9 +146,7 @@ namespace HugeCTR {
           events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
           map_event_key_to_event_idx[event_key] = events_.size() - 1;
           events_num_++;
-          map_internal_[event_name][stream] = met_times_within_this_stream + 1;
-          MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + stream_str(stream) \
-                    + ", on device " + std::to_string(device_id) + ", on thread " + std::to_string(omp_get_thread_num()));
+          //PROFILER_DEBUG_(std::string("Parsed a new GPU event ") + event_label + " occured_time " + std::to_string(met_times_within_this_stream));
 
         } else { // event_name == "stop"
           // only update the end_index
@@ -171,9 +155,9 @@ namespace HugeCTR {
             if (event->end_index < 0) {
               event->end_index = events_num_;
               events_num_++;
-              MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + stream_str(stream) \
-                        + ", on device " + std::to_string(device_id) + ", on thread " + std::to_string(omp_get_thread_num()));
             }
+            map_internal_[event_name][stream] = met_times_within_this_stream + 1;
+            //PROFILER_DEBUG_(std::string("Parsed a new GPU event ") + event_label + " occured_time " + std::to_string(met_times_within_this_stream));
           } else {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
               std::string("Event ") + event_name + std::string(" has stop but no start"));
@@ -184,10 +168,16 @@ namespace HugeCTR {
       } else {
         mtx_.lock();
         int met_times_within_this_stream = safe_access_map_internel(event_name, stream);
-        mtx_.unlock();
         if (std::get<0>(scheduled_events_[current_schedule_idx_]) != event_name || \
             std::get<1>(scheduled_events_[current_schedule_idx_]) != current_iteration_ || \
-            std::get<3>(scheduled_events_[current_schedule_idx_]) != met_times_within_this_stream) { return; }
+            std::get<3>(scheduled_events_[current_schedule_idx_]) != met_times_within_this_stream) {
+              if (event_type == "stop") {
+                map_internal_[event_name][stream] = met_times_within_this_stream + 1;
+              }
+              mtx_.unlock();
+              return;
+        }
+        mtx_.unlock();
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
         if (event_type == "start") {
           gpu_timer->event_start(stream);
@@ -203,8 +193,7 @@ namespace HugeCTR {
           events_[event_idx]->measured_times_ms.push_back(gpu_timer->get_result());
           map_internal_[event_name][stream] = met_times_within_this_stream + 1;
           mtx_.unlock();
-          MESSAGE_(std::string("Timing on ") + event_label + " on stream " + stream_str(stream) \
-                    + ", on device " + std::to_string(device_id) + ", on thread " + std::to_string(omp_get_thread_num()));
+          // PROFILER_DEBUG_(std::string("Timing on ") + event_label);
         }
       }
     } catch (const std::runtime_error& rt_err) {
