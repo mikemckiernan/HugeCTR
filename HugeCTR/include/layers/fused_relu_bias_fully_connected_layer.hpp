@@ -71,14 +71,18 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   /*
    * stores the references to the bottom tensors of this layer.
    */
-  Tensor2<__half> train_bottom_tensor_fprop_;
-  Tensor2<__half> train_bottom_tensor_bprop_;
+  Tensor2<__half> train_in_tensor_;
+  Tensor2<__half> mask_in_tensor_;
+  Tensor2<__half> dRelu_in_tensor_;
+  Tensor2<__half> db_in_tensor_;
 
   /*
    * stores the references to the top tensors of this layer.
    */
-  Tensor2<__half> top_tensor_fprop_;
-  Tensor2<__half> top_tensor_bprop_;
+  Tensor2<__half> train_out_tensor_;
+  Tensor2<__half> mask_out_tensor_;
+  Tensor2<__half> dRelu_out_tensor_;
+  Tensor2<__half> db_out_tensor_;
 
   /*
    * stores the references to the intermediate bias grad tensors of this layer.
@@ -96,11 +100,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   std::unique_ptr<DataSimulator> get_default_initializer(const int index) override;
 
   Tensor2<__half>& get_bottom_tensor_fprop(bool is_train) {
-    return train_bottom_tensor_fprop_;
+    return train_in_tensor_;
   }
 
   Tensor2<__half>& get_bottom_tensor_bprop(bool is_train) {
-    return train_bottom_tensor_bprop_;
+    return mask_in_tensor_;
   }
 
  public:
@@ -118,6 +122,10 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   void search_algorithm() final;
   void initialize() final;
 
+  /*
+   * initialization for cutlass
+   */
+  void cutlass_initialize();
   /**
    * This is the constructor of the FullyConnectedLayer.
    * It will check whether the format combination of all tensors is supported or not.
@@ -137,10 +145,14 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const std::shared_ptr<BufferBlock2<__half>>& weights_buff,
       const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
-      const Tensor2<__half>& train_bottom_tensor_fprop,
-      const Tensor2<__half>& train_bottom_tensor_bprop,
-      const Tensor2<__half>& top_tensor_fprop, 
-      const Tensor2<__half>& top_tensor_bprop, 
+      const Tensor2<__half>& train_in_tensor,
+      const Tensor2<__half>& mask_in_tensor,
+      const Tensor2<__half>& dRelu_in_tensor,
+      const Tensor2<__half>& db_in_tensor,
+      const Tensor2<__half>& train_out_tensor, 
+      const Tensor2<__half>& mask_out_tensor, 
+      const Tensor2<__half>& dRelu_out_tensor,
+      const Tensor2<__half>& db_out_tensor,
       const std::shared_ptr<GPUResource>& gpu_resource,
       const std::string& pos,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());

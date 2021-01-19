@@ -96,7 +96,7 @@ file(GLOB huge_ctr_src
   diagnose.cu
 )
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DENABLE_MPI")
+#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DENABLE_MPI")
 
 set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_static STATIC ${huge_ctr_src})

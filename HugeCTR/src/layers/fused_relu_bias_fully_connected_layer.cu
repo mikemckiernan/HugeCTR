@@ -18,6 +18,24 @@
 #include <utils.cuh>
 #include <utils.hpp>
 
+#include "cutlass/cutlass.h"
+#include "cutlass/functional.h"
+
+#include "cutlass/gemm/kernel/default_gemm_with_reduction.h"
+#include "cutlass/gemm/device/gemm_universal_adapter.h"
+
+#include "cutlass/epilogue/thread/linear_combination_drelu.h"
+#include "cutlass/epilogue/thread/linear_combination_dgelu.h"
+
+// // #include "../../common/cutlass_unit_test.h"
+
+#include "cutlass/util/host_tensor.h"
+#include "cutlass/util/tensor_view_io.h"
+#include "cutlass/util/reference/host/tensor_fill.h"
+#include "cutlass/util/reference/host/tensor_copy.h"
+#include "cutlass/util/reference/host/tensor_compare.h"
+#include "cutlass/util/reference/host/gemm.h"
+#include "layers/gemm_with_reduction.hpp"
 namespace HugeCTR {
 
 namespace {
@@ -78,18 +96,22 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const std::shared_ptr<BufferBlock2<__half>>& weights_buff,
     const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
     const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
-    const Tensor2<__half>& train_bottom_tensor_fprop, 
-    const Tensor2<__half>& train_bottom_tensor_bprop,
-    const Tensor2<__half>& top_tensor_fprop, 
-    const Tensor2<__half>& top_tensor_bprop, 
+    const Tensor2<__half>& train_in_tensor, 
+    const Tensor2<__half>& mask_in_tensor,
+    const Tensor2<__half>& dRelu_in_tensor,
+    const Tensor2<__half>& db_in_tensor,   
+    const Tensor2<__half>& train_out_tensor, 
+    const Tensor2<__half>& mask_out_tensor, 
+    const Tensor2<__half>& dRelu_out_tensor,
+    const Tensor2<__half>& db_out_tensor,
     const std::shared_ptr<GPUResource>& gpu_resource,
     const std::string& pos,
     std::vector<Initializer_t> initializer_types)
     : Layer(gpu_resource, initializer_types),
       balgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP) {
-  const auto& bottom_tensor_dim = train_bottom_tensor_fprop.get_dimensions();
-  const auto& top_tensor_dim = top_tensor_fprop.get_dimensions();
+  const auto& bottom_tensor_dim = train_in_tensor.get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor.get_dimensions();
 
   if (bottom_tensor_dim.size() != 2 || top_tensor_dim.size() != 2) {
     CK_THROW_(Error_t::WrongInput, "input or output tensor doesn't has two dimensions");
@@ -147,13 +169,13 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     pos_ = TAIL;
   else if(pos=="Isolated")
     pos_ = ISOLATED;
-  train_bottom_tensor_fprop_ = train_bottom_tensor_fprop;
+  train_in_tensor_ = train_in_tensor;
   if(pos_ == HEAD || pos_ == ISOLATED)
-    train_bottom_tensor_bprop_ = train_bottom_tensor_fprop;
+    mask_in_tensor_ = train_in_tensor;
   else
-    train_bottom_tensor_bprop_ = train_bottom_tensor_bprop;
-  top_tensor_fprop_ = top_tensor_fprop;
-  top_tensor_bprop_ = top_tensor_bprop;
+    mask_in_tensor_ = mask_in_tensor;
+  train_out_tensor_ = train_out_tensor;
+  mask_out_tensor_  = mask_out_tensor;
   blobs_buff->reserve(bias_dim, &bias_grad_tensor_);
 
 }
@@ -162,7 +184,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
 
   // TODO: We need different bottom desc based on is_train or not
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(true).get_dimensions();
-  const auto& top_tensor_dim = top_tensor_fprop_.get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
 
   size_t m = bottom_tensor_dim[0];
   size_t n = top_tensor_dim[1];
@@ -207,11 +229,11 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   const __half* kernel = weights_half_[0].get_ptr();
   const __half* bias = weights_half_[1].get_ptr();
   const __half* bottom = get_bottom_tensor_fprop(is_train).get_ptr();
-  __half* top_fprop = top_tensor_fprop_.get_ptr();
-  __half* top_bprop = top_tensor_bprop_.get_ptr();
+  __half* top_fprop = train_out_tensor_.get_ptr();
+  __half* top_bprop = train_out_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(is_train).get_dimensions();
-  const auto& top_tensor_dim = top_tensor_fprop_.get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
 
   size_t m = bottom_tensor_dim[0];
   size_t n = top_tensor_dim[1];
@@ -239,7 +261,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
 
     if(pos_ == TAIL || pos_ == ISOLATED)
     {
-        size_t len = top_tensor_fprop_.get_num_elements();
+        size_t len = train_out_tensor_.get_num_elements();
         CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
             len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
     }
@@ -253,8 +275,8 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
-  const __half* top = top_tensor_bprop_.get_ptr();
-  __half* middle = top_tensor_fprop_.get_ptr();
+  const __half* top = mask_out_tensor_.get_ptr();
+  __half* middle = train_out_tensor_.get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
   __half* bias_grad = weights_grad_[1].get_ptr();
   const __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
@@ -262,7 +284,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
-  const auto& top_tensor_dim = top_tensor_bprop_.get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
 
   int m = bottom_tensor_dim[0];
   int n = top_tensor_dim[1];
@@ -289,12 +311,50 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
                                 &alpha, kernel, CUDA_R_16F, n, middle, CUDA_R_16F, n, &beta_x,
                                 bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
-
+  // cutlass_initialize();
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
 
+}
+
+void FusedReluBiasFullyConnectedLayer::cutlass_initialize() {
+
+  using EpilogueOutputOp = cutlass::epilogue::thread::LinearCombinationDRelu<
+    float,
+    float,
+    cutlass::half_t,
+    cutlass::half_t,
+    8
+  >;
+
+  using GemmKernel = 
+    typename cutlass::gemm::kernel::DefaultGemmWithReduction<
+      cutlass::half_t, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone, 8,    // transposed B operand
+      cutlass::half_t, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone, 8,    // transposed A operand
+      cutlass::half_t, cutlass::layout::RowMajor,
+      float,
+      cutlass::arch::OpClassTensorOp,
+      cutlass::arch::Sm75,
+      cutlass::gemm::GemmShape<128, 128, 32>,
+      cutlass::gemm::GemmShape<64, 64, 32>,
+      cutlass::gemm::GemmShape<16, 8, 8>,
+      EpilogueOutputOp,
+      cutlass::plus<float>,
+      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>,
+      2,
+      cutlass::arch::OpMultiplyAdd
+  >::GemmKernel;
+
+  using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
+  cutlassGemmWithReduction<Gemm>(
+    {520, 264, 96},
+    cutlass::gemm::GemmUniversalMode::kGemm,
+    1,
+    float(1),
+    float(0)
+  );
 }
 
 void FusedReluBiasFullyConnectedLayer::search_algorithm() {
@@ -306,7 +366,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
 
   // Device Tensors to be used
   __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
-  __half* top = top_tensor_fprop_.get_ptr();
+  __half* top = train_out_tensor_.get_ptr();
   __half* kernel = weights_half_[0].get_ptr();
   __half* bias = weights_half_[1].get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
@@ -314,7 +374,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
 
   // Tensor dim
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(true).get_dimensions();
-  const auto& top_tensor_dim = top_tensor_fprop_.get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
 
   size_t m = bottom_tensor_dim[0];
   size_t n = top_tensor_dim[1];
@@ -465,7 +525,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
 
 std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_uniform_initializer(const int index) {
   size_t bottom_dim = get_bottom_tensor_fprop(true).get_dimensions()[1];
-  size_t top_dim = top_tensor_fprop_.get_dimensions()[1];
+  size_t top_dim = train_out_tensor_.get_dimensions()[1];
 
   float limit = 1.0f / ((0 == index ? bottom_dim : 0) + top_dim);
   return std::make_unique<UniformDataSimulator>(-1 * limit, limit);
@@ -474,7 +534,7 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_uniform_ini
 std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_xavier_uniform_initializer(
     const int index) {
   size_t bottom_dim = get_bottom_tensor_fprop(true).get_dimensions()[1];
-  size_t top_dim = top_tensor_fprop_.get_dimensions()[1];
+  size_t top_dim = train_out_tensor_.get_dimensions()[1];
 
   return std::make_unique<VarianceScalingSimulator>(1.f, data_simu::Mode_t::Fan_avg,
                                                     data_simu::Distribution_t::Uniform,
@@ -484,7 +544,7 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_xavier_unif
 std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_xavier_norm_initializer(
     const int index) {
   size_t bottom_dim = get_bottom_tensor_fprop(true).get_dimensions()[1];
-  size_t top_dim = top_tensor_fprop_.get_dimensions()[1];
+  size_t top_dim = train_out_tensor_.get_dimensions()[1];
 
   return std::make_unique<VarianceScalingSimulator>(1.f, data_simu::Mode_t::Fan_avg,
                                                     data_simu::Distribution_t::Norm,
@@ -493,7 +553,7 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_xavier_norm
 
 std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_default_initializer(const int index) {
   size_t bottom_dim = get_bottom_tensor_fprop(true).get_dimensions()[1];
-  size_t top_dim = top_tensor_fprop_.get_dimensions()[1];
+  size_t top_dim = train_out_tensor_.get_dimensions()[1];
 
   std::unique_ptr<DataSimulator> simu(nullptr);
   if (0 == index) {

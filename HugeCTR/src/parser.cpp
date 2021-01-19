@@ -476,9 +476,9 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
         int output_size = input_output_info.output_names.size();
         if (has_key_(j, "position")) {
           pos_str = get_value_from_json<std::string>(j, "position");
-          if (pos_str=="Head" && input_size==1 && output_size==2) {}
-          else if (pos_str=="Body" && input_size==2 && output_size==2) {}
-          else if (pos_str=="Tail" && input_size==2 && output_size==1) {}
+          if (pos_str=="Head" && input_size==1 && output_size==4) {}
+          else if (pos_str=="Body" && input_size==4 && output_size==4) {}
+          else if (pos_str=="Tail" && input_size==4 && output_size==1) {}
           else if (pos_str=="Isolated" && input_size==1 && output_size==1) {}
           else
             CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
@@ -493,24 +493,32 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
         if (use_mixed_precision) {
           Tensor2<__half> train_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.inputs[0]);
-          Tensor2<__half> bprop_out_tensor;
-          if(pos_str!="Head" && pos_str!="Isolated")
-              bprop_out_tensor = Tensor2<__half>::stretch_from(input_output_info.inputs[1]);
-          Tensor2<__half> fc_out_tensor, bprop_in_tensor;
-          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &fc_out_tensor);
-          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &bprop_in_tensor);
+          Tensor2<__half> mask_in_tensor, dRelu_in_tensor, db_in_tensor;
+          if(pos_str!="Head" && pos_str!="Isolated") {
+              mask_in_tensor  = Tensor2<__half>::stretch_from(input_output_info.inputs[1]);
+              dRelu_in_tensor = Tensor2<__half>::stretch_from(input_output_info.inputs[2]);
+              db_in_tensor    = Tensor2<__half>::stretch_from(input_output_info.inputs[3]);
+          }
+          Tensor2<__half> train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor;
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &train_out_tensor);
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &mask_out_tensor);
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &dRelu_out_tensor);
+          blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &db_out_tensor);
           if(pos_str=="Tail" || pos_str=="Isolated")
-            output_tensor_entries.push_back({input_output_info.output_names[0], bprop_in_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[0], mask_out_tensor.shrink()});
           else
           {
-            output_tensor_entries.push_back({input_output_info.output_names[0], fc_out_tensor.shrink()});
-            output_tensor_entries.push_back({input_output_info.output_names[1], bprop_in_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[1], mask_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[2], dRelu_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[3], db_out_tensor.shrink()});
           }
 
           // establish layer
           layers.emplace_back(new FusedReluBiasFullyConnectedLayer(
-              weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff, train_in_tensor,
-              bprop_out_tensor, fc_out_tensor, bprop_in_tensor,
+              weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff,
+              train_in_tensor, mask_in_tensor, dRelu_in_tensor, db_in_tensor,
+              train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
               gpu_resource, pos_str, initializer_types));
         } else {
           CK_THROW_(Error_t::WrongInput, "FusedInnerProduct support half only");

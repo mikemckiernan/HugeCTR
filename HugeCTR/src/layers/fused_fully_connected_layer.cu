@@ -18,23 +18,6 @@
 #include <utils.cuh>
 #include <utils.hpp>
 
-#include "cutlass/cutlass.h"
-#include "cutlass/functional.h"
-
-#include "cutlass/gemm/kernel/default_gemm_with_reduction.h"
-#include "cutlass/gemm/device/gemm_universal_adapter.h"
-
-#include "cutlass/epilogue/thread/linear_combination_drelu.h"
-#include "cutlass/epilogue/thread/linear_combination_dgelu.h"
-
-// // #include "../../common/cutlass_unit_test.h"
-
-#include "cutlass/util/host_tensor.h"
-#include "cutlass/util/tensor_view_io.h"
-#include "cutlass/util/reference/host/tensor_fill.h"
-#include "cutlass/util/reference/host/tensor_copy.h"
-#include "cutlass/util/reference/host/tensor_compare.h"
-#include "cutlass/util/reference/host/gemm.h"
 
 namespace HugeCTR {
 
@@ -254,10 +237,6 @@ void FusedFullyConnectedLayer::bprop() {
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
-}
-
-void FusedFullyConnectedLayer::cutlass_initialize() {
-
 }
 
 
