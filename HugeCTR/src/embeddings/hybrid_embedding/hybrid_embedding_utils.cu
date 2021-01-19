@@ -1,6 +1,7 @@
 #include "hybrid_embedding_utils.hpp"
 
 #include <vector>
+#include <iostream>
 
 
 template <typename dtype>
@@ -28,7 +29,10 @@ void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStre
 ///        Per network, the columns corresponding to embedding tables 
 ///        are concatenated and categories get an unique index / label.
 template <typename dtype>
-void HybridEmbeddingData::flatten_samples(cudaStream_t stream) {
+void HybridEmbeddingData::flatten_samples(
+
+    cudaStream_t stream
+) {
 
   std::cout << "WARNING: flatten_samples needs to be placed on the GPU!" << std::endl;
   // TODO : perform conversion by kernel (before start of iteration ? => see below)
@@ -90,6 +94,10 @@ void HybridEmbeddingModel::init_model(
                     * (double) num_nodes / ((double) num_nodes - 1.);
 
       // samples, num_samples, categories_sorted, counts_sorted
+
+      // sort samples by category
+      // per category get count
+      // sort category by count
 
       sort_categories_by_count(
           samples, num_samples, categories_sorted, counts_sorted);

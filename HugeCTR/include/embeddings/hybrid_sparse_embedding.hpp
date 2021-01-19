@@ -33,6 +33,7 @@ private:
   dtype num_categories_;
 
   std::vector<uint32_t> category_frequent_index_;
+  std::vector<uint32_t> category_location_;
   std::vector<dtype> frequent_categories_;
 
   // gpu model instances

@@ -64,6 +64,7 @@ public:
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
   Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
+  // node_id, gpu_id, category_location_local
 
   void init_model(
     const CalibrationInitializationData& calibration,
