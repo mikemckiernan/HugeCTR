@@ -36,6 +36,7 @@ file(GLOB huge_ctr_src
   ../src/layers/fully_connected_layer.cu
   ../src/layers/fully_connected_layer_half.cu
   ../src/layers/fused_fully_connected_layer.cu
+  ../src/layers/fused_relu_bias_fully_connected_layer.cu
   ../src/layers/interaction_layer.cu
   ../src/layers/relu_layer.cu
   ../src/layers/reshape_layer.cu
