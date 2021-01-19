@@ -25,8 +25,7 @@ void conv_weight_gpu(size_t grid, size_t block, __half* dst, float* src, int ele
                      cudaStream_t stream);
 
 Network::Network(const std::shared_ptr<CPUResource>& cpu_resource,
-                 const std::shared_ptr<GPUResource>& gpu_resource,
-                 bool full_fp16,
+                 const std::shared_ptr<GPUResource>& gpu_resource, bool full_fp16,
                  bool enable_cuda_graph)
     : cpu_resource_(cpu_resource),
       gpu_resource_(gpu_resource),
@@ -59,7 +58,6 @@ void Network::conv_weight_() {
 }
 
 void Network::train(long long current_batchsize) {
-
   // forward
   if (full_fp16_) {
     conv_weight_();
@@ -239,18 +237,18 @@ float Network::get_loss() {
 metrics::RawMetricMap Network::get_raw_metrics() const { return raw_metrics_; }
 
 void Network::exchange_wgrad() {
-    CudaDeviceContext context(get_device_id());
-    if (full_fp16_) {
-      CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_half_.get_ptr(),
-                                   (void*)wgrad_tensor_half_.get_ptr(),
-                                   wgrad_tensor_half_.get_num_elements(), ncclHalf, ncclSum,
-                                   gpu_resource_->get_nccl(), gpu_resource_->get_stream()));
-    } else {
-      CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_.get_ptr(),
-                                   (void*)wgrad_tensor_.get_ptr(), wgrad_tensor_.get_num_elements(),
-                                   ncclFloat, ncclSum, gpu_resource_->get_nccl(),
-                                   gpu_resource_->get_stream()));
-    }
- }
+  CudaDeviceContext context(get_device_id());
+  if (full_fp16_) {
+    CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_half_.get_ptr(),
+                                 (void*)wgrad_tensor_half_.get_ptr(),
+                                 wgrad_tensor_half_.get_num_elements(), ncclHalf, ncclSum,
+                                 gpu_resource_->get_nccl(), gpu_resource_->get_stream()));
+  } else {
+    CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_.get_ptr(),
+                                 (void*)wgrad_tensor_.get_ptr(), wgrad_tensor_.get_num_elements(),
+                                 ncclFloat, ncclSum, gpu_resource_->get_nccl(),
+                                 gpu_resource_->get_stream()));
+  }
+}
 
 }  // namespace HugeCTR
