@@ -90,6 +90,11 @@ class FusedFullyConnectedLayer : public Layer {
    * algorithm search for cublasGemmEx
    */
   void search_algorithm() final;
+
+  /*
+   * initialization for cutlass
+   */
+  void cutlass_initialize();
   /**
    * This is the constructor of the FullyConnectedLayer.
    * It will check whether the format combination of all tensors is supported or not.

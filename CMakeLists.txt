@@ -49,6 +49,7 @@ endif()
 
 find_package(CUDA REQUIRED)
 find_package(CUDNN REQUIRED)
+find_package(CUTLASS REQUIRED)
 find_package(NCCL REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Threads)
@@ -131,11 +132,11 @@ configure_file(${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp.in ${PROJECT_SOU
 
 # building
 include_directories(
+  ${CUTLASS_INC_PATHS}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/test
   ${PROJECT_SOURCE_DIR}/HugeCTR/include
   ${CUDA_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/third_party/cutlass
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp/include
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp/src_prims
@@ -153,6 +154,8 @@ include_directories(
   $ENV{CONDA_PREFIX}/include
   $ENV{CONDA_PREFIX}/include/libcudf/libcudacxx)
 
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -fno-strict-aliasing")
+
 if(OPENMP_FOUND)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fopenmp")
   message(STATUS "add -fopenmp to compiler")
@@ -162,6 +165,7 @@ endif()
 
 link_directories(
   ${CUDNN_LIB_PATHS}
+  ${CUTLASS_LIB_PATHS}
   ${NCCL_LIB_PATHS}
   ${HWLOC_LIB_PATHS}
   ${UCX_LIB_PATHS}
