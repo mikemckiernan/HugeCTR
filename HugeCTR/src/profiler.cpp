@@ -101,12 +101,12 @@ namespace HugeCTR {
       std::string event_name = event_label.substr(0, dot_pos);
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
-        int met_times_within_this_thread = safe_access_map_internel(event_name, stream);
+        int met_times_within_this_stream = safe_access_map_internel(event_name, stream);
         // parse the event label, register it and create resources.
         bool found = false;
         std::string layer_name;
         for (auto& it : scheduled_events_) {
-          if (std::get<0>(it) == event_name && std::get<3>(it) == met_times_within_this_thread) {
+          if (std::get<0>(it) == event_name && std::get<3>(it) == met_times_within_this_stream) {
             layer_name = std::get<2>(it);
             found = true;
             break;
@@ -135,13 +135,13 @@ namespace HugeCTR {
           auto gpu_timer = std::make_shared<GPUTimer>();
           map_stream_to_gpu_timer_[stream] = gpu_timer;
         }
-
-        std::string event_key = gen_event_key(event_name, stream, met_times_within_this_thread);
+        std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
+        PROFILER_DEBUG_(event_key);
         int event_idx = find_event(event_key);
+        PROFILER_DEBUG_(std::to_string(event_idx));
 
         if (event_type == "start") {
           if(event_idx >= 0) {
-                      // event exist!
             // event exist!
             mtx_.unlock();
             return;
@@ -151,7 +151,7 @@ namespace HugeCTR {
           auto gpu_event = new GPUEvent;
           gpu_event->name = event_name;
           gpu_event->layer_name = layer_name;
-          gpu_event->same_name_events_occured_order_in_code = met_times_within_this_thread;
+          gpu_event->same_name_events_occured_order_in_code = met_times_within_this_stream;
           gpu_event->start_index = events_num_;
           gpu_event->end_index = -1; // wait for stop event to set,
           gpu_event->measured_times_ms = std::vector<float>();
@@ -160,8 +160,7 @@ namespace HugeCTR {
           events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
           map_event_key_to_event_idx[event_key] = events_.size() - 1;
           events_num_++;
-          map_internal_[event_name][stream] = met_times_within_this_thread + 1;
-
+          map_internal_[event_name][stream] = met_times_within_this_stream + 1;
           MESSAGE_(std::string("Parsed a new GPU event ") + event_label + " on stream " + stream_str(stream) \
                     + ", on device " + std::to_string(device_id) + ", on thread " + std::to_string(omp_get_thread_num()));
 
@@ -184,17 +183,17 @@ namespace HugeCTR {
         mtx_.unlock();
       } else {
         mtx_.lock();
-        int met_times_within_this_thread = safe_access_map_internel(event_name, stream);
+        int met_times_within_this_stream = safe_access_map_internel(event_name, stream);
         mtx_.unlock();
         if (std::get<0>(scheduled_events_[current_schedule_idx_]) != event_name || \
             std::get<1>(scheduled_events_[current_schedule_idx_]) != current_iteration_ || \
-            std::get<3>(scheduled_events_[current_schedule_idx_]) != met_times_within_this_thread) { return; }
+            std::get<3>(scheduled_events_[current_schedule_idx_]) != met_times_within_this_stream) { return; }
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
         if (event_type == "start") {
           gpu_timer->event_start(stream);
         } else {
           gpu_timer->event_stop(stream);
-          std::string event_key = gen_event_key(event_name, stream, met_times_within_this_thread);
+          std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
           int event_idx = find_event(event_key);
           if (event_idx < 0) {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
@@ -202,7 +201,7 @@ namespace HugeCTR {
           }
           mtx_.lock();
           events_[event_idx]->measured_times_ms.push_back(gpu_timer->get_result());
-          map_internal_[event_name][stream] = met_times_within_this_thread + 1;
+          map_internal_[event_name][stream] = met_times_within_this_stream + 1;
           mtx_.unlock();
           MESSAGE_(std::string("Timing on ") + event_label + " on stream " + stream_str(stream) \
                     + ", on device " + std::to_string(device_id) + ", on thread " + std::to_string(omp_get_thread_num()));
@@ -232,7 +231,7 @@ namespace HugeCTR {
   int Profiler::find_event(std::string& event_key) {
     int idx = -1;
     try {
-      idx = map_event_key_to_event_idx[event_key];
+      idx = map_event_key_to_event_idx.at(event_key);
     } catch (const std::out_of_range& e) {}
     return idx;
   }

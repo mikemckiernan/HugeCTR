@@ -23,6 +23,13 @@
 #define PROFILE_RECORD(...) do {} while (0)
 #endif
 
+#define PROFILER_DEBUG_(msg)                                                 \
+  do {                                                                      \
+    MESSAGE_(msg + " on thread " + std::to_string(omp_get_thread_num()) +    \
+             ", on stream " + stream_str(stream) +                          \
+             ", on device " + std::to_string(device_id));                   \
+  } while (0)                                                               \
+
 namespace HugeCTR {
 class Profiler {
   struct Event {
