@@ -99,13 +99,17 @@ Session::Session(const SolverParser& solver_config, const std::string& config_fi
   parser.create_pipeline(data_reader_, data_reader_eval_, embedding_, networks_, resource_manager_);
 
 #ifndef DATA_READING_TEST
-  for (auto& network : networks_) {
-    network->initialize();
-  }
-  if (solver_config.use_algorithm_search) {
-    for (auto& network : networks_) {
-      network->search_algorithm();
+
+#pragma omp parallel num_threads(networks_.size())
+  {
+    size_t id = omp_get_thread_num();
+    networks_[id]->initialize();
+    if (solver_config.use_algorithm_search) {
+      networks_[id]->search_algorithm();
     }
+  }
+  for (size_t i = 0; i < resource_manager_->get_local_gpu_count(); i++) {
+    CK_CUDA_THROW_(cudaStreamSynchronize(resource_manager_->get_local_gpu(i)->get_stream()));
   }
 #endif
 
@@ -415,8 +419,7 @@ std::shared_ptr<ModelOversubscriber> Session::create_model_oversubscriber_(
 
 void Session::check_overflow() const {
   for (auto& one_embedding : embedding_) {
-    std::dynamic_pointer_cast<IHashEmbedding>(one_embedding)
-        ->check_overflow();
+    std::dynamic_pointer_cast<IHashEmbedding>(one_embedding)->check_overflow();
   }
 }
 
