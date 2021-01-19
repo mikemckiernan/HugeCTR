@@ -27,8 +27,10 @@ namespace HugeCTR {
 class Profiler {
   struct Event {
     std::string name;
+    std::string layer_name;
+    std::string same_name_events_occured_order_in_code;
     int start_index;
-    int  end_index;
+    int end_index;
     // std::vector<int> on_iters;
     std::vector<float> measured_times_ms;
   };
@@ -71,18 +73,19 @@ class Profiler {
 
   // event_name : {stream : how many times does record_event meet this event_name within this stream }
   std::map<std::string, std::map<cudaStream_t, int>> map_internal_;
-
-  std::mutex mtx_; // for thread safe
+  // for thread safe
+  std::mutex mtx_;
 
  public:
   void initialize(const char* schedule_file);
   void record_event(const char* event_label_char, cudaStream_t stream, int device_id);
   void iter_start();
   void iter_end();
-  int find_event(std::string& event_name, cudaStream_t stream);
+  int find_event(std::string& event_key);
+  int safe_access_map_internel(std::string& event_name, cudaStream_t stream);
   std::string write_result(const char* result_dir);
 
-  static std::vector<std::string> split_string(std::string str, char delim = '.') {
+  static std::vector<std::string> split_string(std::string& str, char delim = '.') {
     std::stringstream ss(str);
     std::vector<std::string> result;
     std::string token;
@@ -92,20 +95,18 @@ class Profiler {
     return result;
   }
 
-  int safe_access_map_internel(std::string& event_name, cudaStream_t stream) {
-    int times = 0;
-    try {
-      map_internal_.at(event_name);
-    } catch (const std::out_of_range& e) {
-      map_internal_[event_name] = {};
-    }
-    try {
-      times = map_internal_[event_name].at(stream);
-    } catch (const std::out_of_range& e) {
-      map_internal_[event_name][stream] = times;
-    }
-    return times;
+  static std::string stream_str(cudaStream_t stream) {
+    const void * address = static_cast<const void*>(stream);
+    std::stringstream ss;
+    ss << address;
+    return ss.str();
   }
+
+  static std::string gen_event_key(std::string& event_name, cudaStream_t stream, int same_name_events_occured_order_in_code) {
+    return event_name + "_" + stream_str(stream) + "_" + std::to_string(same_name_events_occured_order_in_code);
+  }
+
+
 
 //   static int get_device_id() {
 //     // TBD, below code seems problem
