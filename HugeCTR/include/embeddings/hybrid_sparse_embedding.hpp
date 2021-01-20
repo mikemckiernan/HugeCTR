@@ -87,7 +87,13 @@ public:
 
   void initialize_embedding_vectors();
 
+  void reduce();
+
+  // over the network
   void all_reduce();
+  // for single bandwidth system
+  void all_to_all_reduce();
+
   void update();
 };
 
@@ -112,6 +118,8 @@ public:
   ~InfrequentEmbedding();  
 
   void initialize_embedding_vectors();
+  void calculate_model_indices();
+  void calculate_network_indices();
 
   void all_to_all_forward();
   void all_to_all_backward();

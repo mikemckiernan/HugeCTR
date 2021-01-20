@@ -17,17 +17,20 @@
 #pragma once
 
 #include "HugeCTR/include/tensor2.hpp"
-
 #include <vector>
+
+namespace HugeCTR {
+
+enum class CommunicationType {IB_NVLink, NVLink};
 
 ///
 /// This class contains the calibrated measurements for all-to-all and all-reduce
 /// for different data sizes. Each calibration consists of two arrays, 
 /// ._data_size array and the ._time array which represent a mapping. 
 /// 
-struct CalibrationInitializationData {
-  CalibrationInitializationData() {}
-  ~CalibrationInitializationData() {}
+struct CalibrationData {
+  CalibrationData() {}
+  ~CalibrationData() {}
 
   // Calibration all-to-all : 
   //   the following two arrays map data sizes to all-to-all times / latencies.
@@ -57,6 +60,8 @@ public:
   uint32_t node_id;
   uint32_t gpu_id;
 
+  CommunicationType communication_type;
+
   dtype num_frequent;
   dtype num_categories;
 
@@ -65,6 +70,8 @@ public:
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
   Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
   // node_id, gpu_id, category_location_local
+
+  cudaStream_t stream;
 
   void init_model(
     const CalibrationInitializationData& calibration,
@@ -88,7 +95,8 @@ struct HybridEmbeddingData {
 
   // flatten raw input data
   void flatten_samples(
-      
       cudaStream_t stream
     );
 };
+
+}
