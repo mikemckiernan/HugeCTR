@@ -117,6 +117,9 @@ void HybridEmbeddingModel::init_model(
 
       sort_categories_by_count(
           samples, num_samples, categories_sorted, counts_sorted);
+
+      
+
   }
 }
 

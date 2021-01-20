@@ -71,6 +71,10 @@ public:
   Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
   // node_id, gpu_id, category_location_local
 
+  // top categories sorted by count
+  Tensor2<dtype> categories_sorted;
+  Tensor2<uint32_t> counts_sorted;
+
   cudaStream_t stream;
 
   void init_model(
