@@ -208,9 +208,7 @@ namespace HugeCTR {
           mtx_.lock();
           events_[event_idx]->measured_times_ms.push_back(gpu_timer->get_result());
           map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
-          // After measuring, the cpu overhead is around 0.000x ms and 0.00x ms level. But a few are at 0.0x ms level and very rare are at 0.x ms level.
-          // Considering a few kernel execution time is at 0.00x ms level, should considering increase repeat time for each kernel and use representative
-          // result .
+          // After measuring, the cpu overhead is around 0.000x ms.
           // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
           // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
           mtx_.unlock();
