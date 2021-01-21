@@ -78,8 +78,9 @@ class Profiler {
   std::map<std::string, int> map_event_key_to_event_idx;
   int events_num_;
 
-  // event_name : {stream : how many times does record_event meet this event_name within this stream }
-  std::map<std::string, std::map<cudaStream_t, int>> map_internal_;
+  // stream : {event_name : how many times does record_event meet this event_name within this stream }
+  std::map<cudaStream_t, std::shared_ptr<std::map<std::string, int>>> map_internal_;
+
   // for thread safe
   std::mutex mtx_;
 
@@ -89,7 +90,6 @@ class Profiler {
   void iter_start();
   void iter_end();
   int find_event(std::string& event_key);
-  int safe_access_map_internel(std::string& event_name, cudaStream_t stream);
   std::string write_result(const char* result_dir);
 
   static std::vector<std::string> split_string(std::string& str, char delim = '.') {
