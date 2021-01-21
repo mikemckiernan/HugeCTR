@@ -16,12 +16,17 @@
 
 #include "hybrid_embedding_utils.hpp"
 
-#include <vector>
+#include <algorithm>
 #include <iostream>
+#include <vector>
 
+
+namespace {
 
 template <typename dtype>
 void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream) {
+  size_t tensor_size = tensor.get_size_in_bytes() / sizeof(dtype);
+  h_tensor.resize(tensor_size);
   CK_CUDA_THROW(cudaStreamSynchronize(stream));
   CK_CUDA_THROW(cudaMemcpy(
     h_tensor.data(), tensor.get_ptr(), 
@@ -39,59 +44,17 @@ void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStre
   CK_CUDA_THROW(cudaStreamSynchronize(stream));
 }
 
-
-/// @brief flatten_samples converts the member variable 'data' and store 
-///        the result in member variable 'samples'. 
-///        Per network, the columns corresponding to embedding tables 
-///        are concatenated and categories get an unique index / label.
-template <typename dtype>
-void HybridEmbeddingData::flatten_samples(
-
-    cudaStream_t stream
-) {
-
-  std::cout << "WARNING: flatten_samples needs to be placed on the GPU!" << std::endl;
-  // TODO : perform conversion by kernel (before start of iteration ? => see below)
-  //        for batch_size = 55*1024
-  //        batch_size * 26 * 4 / 1600e9 = 3.67 microseconds, 
-  // 
-  // Remark:
-  //        Doesn't need to be before start of kernel. 
-  //        Would be nice to have just before calculating indices, since
-  //        those would be in L2 cache already.
-  std::vector<dtype> h_data;
-  download_tensor<dtype>(h_data, data, stream);
-
-  const size_t num_tables = table_sizes.size();
-  std::vector<dtype> embedding_offsets(num_tables);
-  dtype embedding_offset = (dtype) 0;
-  for (size_t embedding = 0; embedding < num_tables; ++embedding) {
-    embedding_offsets[embedding] = embedding_offset;
-    embedding_offset += table_sizes[embedding];
-  }
-
-  // keep order of input samples, convert each data field such that categories
-  // from different categorical features have different label / index
-  size_t indx = 0;
-  std::vector<dtype> h_samples(num_tables * batch_size);
-  for (size_t i = 0; i < network_batch_size; ++i) {
-    for (size_t embedding=0; embedding < num_tables; ++embedding) {
-      h_samples[indx] = h_data[indx] + embedding_offsets[embedding];
-      indx++;
-    }
-  }
-
-  // TODO : remove
-  upload_tensor(h_samples, samples, stream);
 }
 
+namespace HugeCTR {
 
 /// @brief init_model calculates the optimal number of frequent categories 
 ///        given the calibration of the all-to-all and all-reduce.
 template<dtype>
 void HybridEmbeddingModel::init_model(
     const CalibrationData& calibration,
-    const HybridEmbeddingData<dtype>& embedding_data
+    const HybridEmbeddingData<dtype>& embedding_data,
+    Tensor2<dtype> samples
 ) {
 
   if (calibration.all_to_all_times.size() > 0) {
@@ -100,14 +63,30 @@ void HybridEmbeddingModel::init_model(
   } else {
       Tensor2<dtype> samples = embedding_data.samples;
       size_t num_nodes = (double) num_gpus_per_node.size();
+      size_t num_gpus = (size_t) 0;
+      for (size_t i = 0; i < num_gpus_per_node.size(); ++i) {
+        num_gpus += num_gpus_per_nodex[i];
+      }
+
+      size_t batch_size = embedding_data.batch_size;
+      size_t num_gpus = embedding_data.num_networks;
+      size_t num_tables = embedding_data.table_sizes.size();
+      size_t num_iterations = embedding_data.num_iterations;
+
+      size_t num_samples = batch_size * num_iterations * num_tables;
 
       // Use threshold to determine number of frequent categories,
       // calculates optimal number of frequent categories when the all-to-all 
       // and all-reduce are both bandwidth limited.
+      // 
+      // max_._bandwidth is the maximum achieved algorithm bandwidth
       double all_reduce_bandwidth = calibration.max_all_reduce_bandwidth;
       double all_to_all_bandwidth = calibration.max_all_to_all_bandwidth;
-      n_threshold = all_to_all_bandwidth / all_reduce_bandwidth 
-                    * (double) num_nodes / ((double) num_nodes - 1.);
+
+      float count_threshold = 1.f;
+      double count_threshold = calibration.calculate_threshold(
+        communication_type, batch_size, num_networks, num_iterations, num_tables);
+
 
       // samples, num_samples, categories_sorted, counts_sorted
 
@@ -115,13 +94,27 @@ void HybridEmbeddingModel::init_model(
       // per category get count
       // sort category by count
 
+
       sort_categories_by_count(
           samples, num_samples, categories_sorted, counts_sorted);
 
-      
+      // initialize frequent_category_index
+      // find first element smaller than n_threshold
+      std::vector<uint32_t> h_counts_sorted;
+      download_tensor(h_counts_sorted, counts_sorted, stream);
 
+      for (size_t i = 0; i < h_counts_sorted; ++i) {
+        (float) h_counts_sorted[i] / (float) 
+      }
+
+      // 
+      // initialize category_location
+      // node_id, gpu_id, buffer_index
+      std::fill(category_location.begin(), category_location.end(), num_categories);
+      
   }
 }
 
 // template definitions
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils_include.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils_includes.cuh"
+}

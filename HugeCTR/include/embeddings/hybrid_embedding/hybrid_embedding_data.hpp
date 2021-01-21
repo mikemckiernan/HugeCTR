@@ -22,7 +22,23 @@
 namespace HugeCTR {
 
 
-enum class CommunicationType {IB_NVLink, NVLink};
+template <typename dtype>
+struct HybridEmbeddingData {
+  std::vector<uint32_t> table_sizes;
+
+  size_t batch_size;
+  size_t num_iterations;
+
+  Tensor2<dtype> samples;
+
+  // convert raw input data such that categories of different 
+  // categorical features have unique indices
+  void data_to_unique_categories(
+      Tensor2<dtype> data,
+      cudaStream_t stream
+  );
+
+};
 
 
 }

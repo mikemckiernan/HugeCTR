@@ -22,7 +22,26 @@
 namespace HugeCTR {
 
 
-enum class CommunicationType {IB_NVLink, NVLink};
+template <typename dtype>
+struct EmbeddingStatistics {
+  EmbeddingStatistics();
+  ~EmbeddingStatistics();
+
+  uint32_t num_unique_categories;
+
+  // top categories sorted by count
+  Tensor2<dtype> categories_sorted;
+  Tensor2<uint32_t> counts_sorted;
+
+  void calculate_statistics(Tensor2<dtype> samples);
+  void get_top_categories();                       // from existing sorted categories
+  void get_top_categories(  
+    Tensor2<dtype> samples                 // in
+    Tensor2<dtype> &categories_sorted_out, // out
+    Tensor2<dtype> &counts_sorted_out      // out
+  );
+
+};
 
 
 }

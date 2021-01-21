@@ -78,8 +78,6 @@ class FrequentEmbedding {
   // locally stored reduced gradients: input for the all-reduce
   Tensor2<TypeEmbedding> frequent_partial_gradients_;
 
-  cudaStream_t stream_;
-
   void init();
 public:
   FrequentEmbedding() {}
@@ -89,9 +87,9 @@ public:
 
   void reduce();
 
-  // over the network
+  // when using IB & NVLink
   void all_reduce();
-  // for single bandwidth system
+  // for NVLink only
   void all_to_all_reduce();
 
   void update();
@@ -110,8 +108,6 @@ class InfrequentEmbedding {
   Tensor2<dtype> model_indices_;
   // forward-receive, backward-send
   Tensor2<dtype> network_indices_;
-
-  cudaStream_t stream_;
 
 public:
   InfrequentEmbedding();

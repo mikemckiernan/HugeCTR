@@ -40,4 +40,5 @@ void FrequentEmbedding::reduce() {
 }
 
 
+#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_sparse_embedding_includes.cuh"
 }
