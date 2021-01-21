@@ -26,3 +26,4 @@ tools/embedding_plugin/performance_profile/val
 tools/embedding_plugin/performance_profile/valtest
 tools/embedding_plugin/performance_profile/*.txt
 prof.*
+__pycache__/

@@ -182,10 +182,10 @@ namespace HugeCTR {
         }
         mtx_.unlock();
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
-        // auto t_end = std::chrono::high_resolution_clock::now();
         if (event_type == "start") {
           gpu_timer->event_start(stream);
         } else {
+          //auto t_end = std::chrono::high_resolution_clock::now();
           gpu_timer->event_stop(stream);
           std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
           int event_idx = find_event(event_key);
@@ -196,14 +196,15 @@ namespace HugeCTR {
           mtx_.lock();
           events_[event_idx]->measured_times_ms.push_back(gpu_timer->get_result());
           map_internal_[event_name][stream] = met_times_within_this_stream + 1;
+          // After measuring, the cpu overhead is around 0.000x ms and 0.00x ms level. But a few are at 0.0x ms level and very rare are at 0.x ms level.
+          // Considering a few kernel execution time is at 0.00x ms level, should considering increase repeat time for each kernel and use representative
+          // result .
+          //auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
+          //PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
           mtx_.unlock();
-          // PROFILER_DEBUG_(std::string("Timing on ") + event_label);
         }
 
-        // After measuring, the cpu overhead is around 0.000x ms and 0.00x ms level. But a few are at 0.0x ms level and very rare are at 0.x ms level.
-        // Considering a few kernel execution time is at 0.00x ms level, should considering increase repeat time for each kernel.
-        // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
-        // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
+
 
       }
     } catch (const std::runtime_error& rt_err) {

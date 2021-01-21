@@ -83,7 +83,7 @@ dlrm_perf_schedule = {
 }
 
 def main():
-    generate_schedule(dlrm_perf_schedule, repeat_for_each_event=20)
+    generate_schedule(dlrm_perf_schedule, repeat_for_each_event=50)
 
 if __name__ == '__main__':
     main()
