@@ -36,6 +36,7 @@ void FrequentEmbedding::reduce() {
       all_to_all_reduce();
     break;
     default:
+      CK_THROW(Errot_t::WrongInput, "Not a valid communication type, should be IB_NVLink or NVLink");
   }
 }
 

@@ -14,31 +14,5 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "HugeCTR/include/tensor2.hpp"
-#include <vector>
-
-namespace HugeCTR {
-
-
-template <typename dtype>
-struct EmbeddingStatistics {
-  EmbeddingStatistics(size_t num_samples) {
-      // TODO:
-      // allocate num_samples categories of data 
-      // for categories_sorted and counts_sorted
-  }
-  ~EmbeddingStatistics();
-
-  uint32_t num_unique_categories;
-
-  // top categories sorted by count
-  Tensor2<dtype> categories_sorted;
-  Tensor2<uint32_t> counts_sorted;
-
-  void calculate_statistics(Tensor2<dtype> samples);
-};
-
-
-}
+template void download_tensor<uint32_t>(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+template void upload_tensor<uint32_t>(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
