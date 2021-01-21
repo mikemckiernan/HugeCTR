@@ -20,12 +20,6 @@
 #include <iostream>
 #include <vector>
 
-
-namespace {
-
-
-}
-
 namespace HugeCTR {
 
 

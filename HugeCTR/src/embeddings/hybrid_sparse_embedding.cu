@@ -15,7 +15,7 @@
  */
 
 #include "HugeCTR/include/embeddings/hybrid_sparse_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
 
 
 namespace HugeCTR {

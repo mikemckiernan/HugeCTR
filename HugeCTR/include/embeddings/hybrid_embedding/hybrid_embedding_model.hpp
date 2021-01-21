@@ -27,7 +27,7 @@ namespace HugeCTR {
 ///    which categories are frequent, which are infrequent 
 ///    where are the corresponding embedding vectors stored.
 ///
-/// Also the mlp network / nodes topology is defined here:
+/// Also the mlp network - nodes topology is defined here:
 ///    The node_id, network_id where the current model instance is
 ///    associated with is stored. However, keep in mind that these are the only 
 ///    differentiating variables inside this class that differ from other 

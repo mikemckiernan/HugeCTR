@@ -24,8 +24,9 @@
  
 namespace HugeCTR {
 
-/// @brief init_model calculates the optimal number of frequent categories 
-///        given the calibration of the all-to-all and all-reduce.
+
+/// init_model calculates the optimal number of frequent categories 
+/// given the calibration of the all-to-all and all-reduce.
 template<dtype>
 void HybridEmbeddingModel::init_model(
     const CalibrationData& calibration,
@@ -57,7 +58,7 @@ void HybridEmbeddingModel::init_model(
     // and all-reduce are both bandwidth limited.
     float count_threshold = 1.f;
     double count_threshold = calibration.calculate_threshold(
-    communication_type, batch_size, num_networks, num_iterations, num_tables);
+        communication_type, batch_size, num_networks, num_iterations, num_tables);
 
     // Initialize frequent_category_index
 

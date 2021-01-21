@@ -72,5 +72,6 @@ void HybridEmbeddingData::data_to_unique_categories(
   upload_tensor(h_samples, samples, stream);
 }
 
+
 #include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_data_includes.cuh"
 }
