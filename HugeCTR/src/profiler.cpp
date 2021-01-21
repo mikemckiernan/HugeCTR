@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <mutex>
+#include <chrono>
 #include <omp.h>
 
 #include <cuda.h>
@@ -90,15 +91,17 @@ namespace HugeCTR {
   void Profiler::record_event(const char* event_label_char, cudaStream_t stream, int device_id) {
     try {
       // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
-      auto event_label = std::string(event_label_char);
+      // auto t_start = std::chrono::high_resolution_clock::now();
+
+      std::string event_label = std::string(event_label_char);
       int dot_pos = event_label.find_last_of(std::string("."));
       std::string event_type = event_label.substr(dot_pos + 1);
-
       if (event_type != "start" && event_type != "stop") {
         throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
         std::string("Invalid event name. Should end with .start or .stop"));
       }
       std::string event_name = event_label.substr(0, dot_pos);
+
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
         int met_times_within_this_stream = safe_access_map_internel(event_name, stream);
@@ -179,6 +182,7 @@ namespace HugeCTR {
         }
         mtx_.unlock();
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
+        // auto t_end = std::chrono::high_resolution_clock::now();
         if (event_type == "start") {
           gpu_timer->event_start(stream);
         } else {
@@ -195,6 +199,12 @@ namespace HugeCTR {
           mtx_.unlock();
           // PROFILER_DEBUG_(std::string("Timing on ") + event_label);
         }
+
+        // After measuring, the cpu overhead is around 0.000x ms and 0.00x ms level. But a few are at 0.0x ms level and very rare are at 0.x ms level.
+        // Considering a few kernel execution time is at 0.00x ms level, should considering increase repeat time for each kernel.
+        // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
+        // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
+
       }
     } catch (const std::runtime_error& rt_err) {
       std::cerr << rt_err.what() << std::endl;

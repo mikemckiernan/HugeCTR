@@ -113,40 +113,6 @@ class Profiler {
     return event_name + "_" + stream_str(stream) + "_" + std::to_string(same_name_events_occured_order_in_code);
   }
 
-
-
-//   static int get_device_id() {
-//     // TBD, below code seems problem
-//     // std::cout << "get_device_id" << std::endl;
-//     // CUcontext ctx;
-//     // std::cout << "1" << std::endl;
-//     // CUdevice device;
-//     // std::cout << "2" << std::endl;
-//     // CK_CU_RESULT_(cuStreamGetCtx(stream, &ctx));
-//     // std::cout << "3" << std::endl;
-//     // CK_CU_RESULT_(cuCtxPushCurrent(ctx));
-//     // std::cout << "4" << std::endl;
-//     // CK_CU_RESULT_(cuCtxGetDevice(&device));
-//     // std::cout << "5" << std::endl;
-//     // CK_CU_RESULT_(cuCtxPopCurrent(&ctx));
-//     // std::cout << "6" << std::endl;
-//     // int device_id;
-//     // //CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_BUS_ID;
-//     // CUdevice_attribute attr = CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID;
-//     // std::cout << "7" << std::endl;
-//     // CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, attr, device));
-//     // std::cout << "8" << std::endl;
-// 
-//     //char device_info[20];
-//     //CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID, device));
-//     //CK_CU_RESULT_(cuDeviceGetPCIBusId(device_info, 20, device));
-//     //CK_CU_RESULT_(cuDeviceGetAttribute(&device_id, CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID, device));
-//     // MESSAGE_(std::to_string(device_id));
-// 
-//     int device_id;
-//     cudaGetDevice(&device_id);
-//     return device_id;
-//   }
 };
 
 extern Profiler global_profiler;

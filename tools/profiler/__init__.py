@@ -106,8 +106,40 @@ def generate_schedule(schedule, repeat_for_each_event=10, warmup_iterations=10, 
 def parse_result(prof_file):
     with open(prof_file, 'r') as f:
         jstring = f.read()
-        result = json.loads(jstring)
+        timeline = json.loads(jstring)
+        timeline.sort(key=lambda e: e["start_index"])
+        result = split_by_layer_device_stream(timeline)
+        
+
         import pdb;pdb.set_trace()
+
+def split_by_layer_device_stream(timeline):
+    # timeline is a array
+    global_streams = []
+    result = {}
+    for event in timeline:
+        layer_name = event["layer_name"]
+        if layer_name not in result.keys():
+            result[layer_name] = {}
+        device_id = event["device_id"]
+        if device_id not in result[layer_name].keys():
+            result[layer_name][device_id] = {}
+        if event["stream"] in global_streams:
+            stream_id = global_streams.index(event["stream"])
+        else:
+            stream_id = len(global_streams)
+            global_streams.append(event["stream"])
+        if stream_id not in result[layer_name][device_id].keys():
+            result[layer_name][device_id][stream_id] = []
+        new_event = {}
+        new_event["name"] = event["name"]
+        new_event["start_index"] = event["start_index"]
+        new_event["end_index"] = event["end_index"]
+        avg_time = sum(event["measured_times_ms"]) / len(event["measured_times_ms"])
+        new_event["avg_measured_times_ms"] = avg_time
+        result[layer_name][device_id][stream_id].append(new_event)
+    return result
+
 
 if __name__ == '__main__':
     parse_result('prof.json')
