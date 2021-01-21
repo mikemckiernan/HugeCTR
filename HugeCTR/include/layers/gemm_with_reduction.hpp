@@ -66,7 +66,6 @@ struct TestbedGemmWithReduction {
   cutlass::HostTensor<typename Gemm::ElementC, typename Gemm::LayoutC> tensor_Tensor;
   cutlass::HostTensor<typename Gemm::ElementC, typename Gemm::LayoutC> reference_D;
 
-
   //
   // Methods
   //
@@ -79,21 +78,6 @@ struct TestbedGemmWithReduction {
   ):
     init_A(init_A_), init_B(init_B_), init_C(init_C_), seed(seed_) { }
 
-inline char const *to_string(cutlass::Status status) {
-
-  switch (status) {
-    case cutlass::Status::kSuccess: return "kSuccess";
-    case cutlass::Status::kErrorMisalignedOperand: return "kErrorMisalignedOperand";
-    case cutlass::Status::kErrorInvalidLayout: return "kErrorInvalidLayout";
-    case cutlass::Status::kErrorInvalidProblem: return "kErrorInvalidProblem";
-    case cutlass::Status::kErrorNotSupported: return "kErrorNotSupported";
-    case cutlass::Status::kErrorWorkspaceNull: return "kErrorWorkspaceNull";
-    case cutlass::Status::kErrorInternal: return "kErrorInternal";
-    case cutlass::Status::kInvalid: return "kInvalid";
-    default: break;
-  }
-  return "invalid";
-}
 
   /// Helper to initialize a tensor view
   template <typename Element, typename Layout>
@@ -147,7 +131,41 @@ inline char const *to_string(cutlass::Status status) {
   }
 
   /// Initializes data structures
-  void initialize(cutlass::gemm::GemmCoord problem_size) {
+  void initialize_val(const __half* W,
+      const __half* dRelu_top,
+      __half* dRelu_bottom,
+      __half* db,
+      const __half* mask,
+      cutlass::gemm::GemmCoord problem_size) {
+    int len_A = tensor_A.size();
+    int len_B = tensor_B.size();
+    int len_D = tensor_D.size();
+    int len_T = tensor_Tensor.size();
+
+    cutlass::half_t* W_ptr            = tensor_A.device_data();
+    cutlass::half_t* dRelu_top_ptr    = tensor_B.device_data();
+    cutlass::half_t* dRelu_bottom_ptr = tensor_D.device_data();
+    cutlass::half_t* mask_ptr         = tensor_Tensor.device_data();
+    
+    cudaMemcpy(W_ptr,            W,            len_A*sizeof(__half), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dRelu_top_ptr,    dRelu_top,    len_B*sizeof(__half), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dRelu_bottom_ptr, dRelu_bottom, len_D*sizeof(__half), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(mask_ptr,         mask,         len_T*sizeof(__half), cudaMemcpyDeviceToDevice);
+    // cudaMemset(mask_ptr, 1, len_T*sizeof(__half));
+
+    tensor_A.sync_host();
+    tensor_B.sync_host();
+    tensor_D.sync_host();
+    tensor_Tensor.sync_host();
+  }
+
+  /// Initializes data structures
+  void initialize(const __half* W,
+    const __half* dRelu_top,
+    __half* dRelu_bottom,
+    __half* db,
+    const __half* mask,
+    cutlass::gemm::GemmCoord problem_size) {
     //
     // Allocate the GEMM workspace
     //
@@ -165,25 +183,34 @@ inline char const *to_string(cutlass::Status status) {
     tensor_Tensor.resize(problem_size.mn());
     reference_D.resize(problem_size.mn(), false);
 
-    initialize_tensor(tensor_A.host_view(), init_A, seed + 2019);
-    initialize_tensor(tensor_B.host_view(), init_B, seed + 2018);
-    initialize_tensor(tensor_C.host_view(), init_C, seed + 2017);
-    initialize_tensor(tensor_Tensor.host_view(), init_C, seed + 2020);
+
+    // std::cout<<"A: ("<<tensor_A.size(0)<<","<<tensor_A.size(1)<<")"<<std::endl;
+    // std::cout<<"tensor_A: "<<tensor_A.size()<<std::endl;
+    // std::cout<<"tensor_B: "<<tensor_B.size()<<std::endl;
+    // std::cout<<"tensor_C: "<<tensor_C.size()<<std::endl;
+    // std::cout<<"tensor_D: "<<tensor_D.size()<<std::endl;
+    // std::cout<<"tensor_Reduction: "<<tensor_Reduction.size()<<std::endl;
+    // std::cout<<"tensor_Tensor: "<<tensor_Tensor.size()<<std::endl;
+
+    // initialize_tensor(tensor_A.host_view(), init_A, seed + 2019);
+    // initialize_tensor(tensor_B.host_view(), init_B, seed + 2018);
+    // initialize_tensor(tensor_C.host_view(), init_C, seed + 2017);
+    // initialize_tensor(tensor_Tensor.host_view(), init_C, seed + 2020);
 
     // It is possible to randomly initialize to all zeros, so override this with non-zeros
     // in the upper left corner of each operand.
-    tensor_A.host_view().at({0, 0}) = typename Gemm::ElementA(1);
-    tensor_B.host_view().at({0, 0}) = typename Gemm::ElementB(1);
-    tensor_C.host_view().at({0, 0}) = typename Gemm::ElementC(1);
+    // tensor_A.host_view().at({0, 0}) = typename Gemm::ElementA(1);
+    // tensor_B.host_view().at({0, 0}) = typename Gemm::ElementB(1);
+    // tensor_C.host_view().at({0, 0}) = typename Gemm::ElementC(1);
 
-    cutlass::reference::host::TensorCopy(reference_D.host_view(), tensor_C.host_view());
+    // cutlass::reference::host::TensorCopy(reference_D.host_view(), tensor_C.host_view());
 
-    tensor_A.sync_device();
-    tensor_B.sync_device();
-    tensor_C.sync_device();
-    tensor_D.sync_device();
-    tensor_Reduction.sync_device();
-    tensor_Tensor.sync_device();
+    // tensor_A.sync_device();
+    // tensor_B.sync_device();
+    // tensor_C.sync_device();
+    // tensor_D.sync_device();
+    // tensor_Reduction.sync_device();
+    // tensor_Tensor.sync_device();
   }
 
   /// Compares computed reference with device reference and outputs to a file if incorrect
@@ -316,18 +343,19 @@ inline char const *to_string(cutlass::Status status) {
 
   /// Executes one test
   bool run(
+    const __half* W,
+    const __half* dRelu_top,
+    __half* dRelu_bottom,
+    __half* db,
+    const __half* mask,
     cutlass::gemm::GemmUniversalMode mode,
     cutlass::gemm::GemmCoord problem_size, 
     int batch_count = 1,
     ElementAccumulator alpha = ElementAccumulator(1), 
     ElementAccumulator beta = ElementAccumulator(0)) {
 
-    // Waive test if insufficient CUDA device
-    if (!sufficient()) {
-        std::cerr << "Test waived due to insufficient CUDA device." << std::endl;
-    }
-
-    this->initialize(problem_size);
+    this->initialize(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
+    this->initialize_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
 
     //
     // Initialize the GEMM operator
@@ -370,25 +398,39 @@ inline char const *to_string(cutlass::Status status) {
     //
     // Verify
     //
+    int len_D = tensor_D.size();
+    cutlass::half_t* dRelu_bottom_ptr = tensor_D.device_data();
+    cudaMemcpy(dRelu_bottom, dRelu_bottom_ptr, len_D*sizeof(__half), cudaMemcpyDeviceToDevice);
+    // cutlass::half_t* d_host = tensor_D.host_data();
+    // for (int i = 0; i < len_D; i++)
+    // {
+    //   printf("%d, %f\n", i, (float)d_host[i]);
+    // }
+    
 
-    bool passed = this->verify(problem_size, alpha, beta);
+    // bool passed = this->verify(problem_size, alpha, beta);
 
-    if (!passed) {
-      std::cout << "Failed with batch_count/split_k_slices = " << batch_count << std::endl;
-    } else
-    {
-        std::cout << "Pass" << std::endl;
-    }
+    // if (!passed) {
+    //   std::cout << "Failed with batch_count/split_k_slices = " << batch_count << std::endl;
+    // } else
+    // {
+    //     std::cout << "Pass" << std::endl;
+    // }
 
-    return passed;
+    return true;
   }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename Gemm>
 bool cutlassGemmWithReduction(
+  const __half* W,
+  const __half* dRelu_top,
+  __half* dRelu_bottom,
+  __half* db,
+  const __half* mask,
   cutlass::gemm::GemmCoord const & problem_size,
-  cutlass::gemm::GemmUniversalMode mode,
+  cutlass::gemm::GemmUniversalMode mode,  
   int batch_count,
   double alpha = 1.0, 
   double beta = 2.0) {
@@ -396,10 +438,11 @@ bool cutlassGemmWithReduction(
   bool passed = true;
 
   TestbedGemmWithReduction<Gemm> testbed;
-  
-  using ElementAccumulator = typename Gemm::ElementAccumulator;
 
-  passed = testbed.run(
+  using ElementAccumulator = typename Gemm::ElementAccumulator;
+  
+
+  passed = testbed.run(W, dRelu_top, dRelu_bottom, db, mask,
     mode,
     problem_size, 
     batch_count,
