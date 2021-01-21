@@ -136,7 +136,8 @@ struct TestbedGemmWithReduction {
       __half* dRelu_bottom,
       __half* db,
       const __half* mask,
-      cutlass::gemm::GemmCoord problem_size) {
+      cutlass::gemm::GemmCoord problem_size,
+      cudaStream_t stream = 0) {
     int len_A = tensor_A.size();
     int len_B = tensor_B.size();
     int len_D = tensor_D.size();
@@ -147,10 +148,10 @@ struct TestbedGemmWithReduction {
     cutlass::half_t* dRelu_bottom_ptr = tensor_D.device_data();
     cutlass::half_t* mask_ptr         = tensor_Tensor.device_data();
     
-    cudaMemcpy(W_ptr,            W,            len_A*sizeof(__half), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(dRelu_top_ptr,    dRelu_top,    len_B*sizeof(__half), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(dRelu_bottom_ptr, dRelu_bottom, len_D*sizeof(__half), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(mask_ptr,         mask,         len_T*sizeof(__half), cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(W_ptr,            W,            len_A*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
+    cudaMemcpyAsync(dRelu_top_ptr,    dRelu_top,    len_B*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
+    cudaMemcpyAsync(dRelu_bottom_ptr, dRelu_bottom, len_D*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
+    cudaMemcpyAsync(mask_ptr,         mask,         len_T*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
     // cudaMemset(mask_ptr, 1, len_T*sizeof(__half));
 
     tensor_A.sync_host();
@@ -347,10 +348,11 @@ struct TestbedGemmWithReduction {
     cutlass::gemm::GemmCoord problem_size, 
     int batch_count = 1,
     ElementAccumulator alpha = ElementAccumulator(1), 
-    ElementAccumulator beta = ElementAccumulator(0)) {
+    ElementAccumulator beta = ElementAccumulator(0),
+    cudaStream_t stream=0) {
 
     this->initialize(problem_size);
-    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
+    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size, stream);
 
     //
     // Initialize the GEMM operator
@@ -385,17 +387,17 @@ struct TestbedGemmWithReduction {
 
     cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
 
-    gemm_op.initialize(arguments, workspace.get());
+    gemm_op.initialize(arguments, workspace.get(), stream);
     //
     // Run the GEMM
     //
-    gemm_op();
+    gemm_op(stream);
     //
     // Verify
     //
     int len_D = tensor_D.size();
     cutlass::half_t* dRelu_bottom_ptr = tensor_D.device_data();
-    cudaMemcpy(dRelu_bottom, dRelu_bottom_ptr, len_D*sizeof(__half), cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(dRelu_bottom, dRelu_bottom_ptr, len_D*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
     // cutlass::half_t* d_host = tensor_D.host_data();
     // for (int i = 0; i < len_D; i++)
     // {

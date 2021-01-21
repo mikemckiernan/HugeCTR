@@ -314,10 +314,16 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   //   cudaMemcpy(dRelu_top_host, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half), cudaMemcpyDeviceToHost);
   //   __half* middle_host = new __half[dRelu_out_tensor_.get_num_elements()];
   //   cudaMemcpy(middle_host, middle, dRelu_out_tensor_.get_num_elements()*sizeof(__half), cudaMemcpyDeviceToHost);
+  //   printf("%d, %d, %d\n", m, n, k);
   //   for (unsigned i = 0; i < dRelu_out_tensor_.get_num_elements(); i++)
   //   {
-  //     printf("%d, %f, %f\n", i, (float)middle_host[i], (float)dRelu_top_host[i]);
+  //     if(abs(float(middle_host[i]) - float(dRelu_top_host[i]))>1e-4)
+  //     {
+  //       printf("%d, %f, %f\n", i, (float)middle_host[i], (float)dRelu_top_host[i]);
+  //       // exit(-1);
+  //     }
   //   }
+  //   printf("Pass\n");
   // }
 
   convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
@@ -331,9 +337,32 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 &alpha, kernel, CUDA_R_16F, n, middle, CUDA_R_16F, n, &beta_x,
                                 bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
 
-
   if(pos_ == BODY || pos_ == TAIL) {
     gemm_dRelu_bgrad_run();
+    // __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
+    // __half* bottom_ptr ;
+    // cudaMalloc((void**)&bottom_ptr, m*k*sizeof(__half));
+    // CK_CUDA_THROW_(cudaMemcpyAsync(bottom_ptr, bottom,
+    //     m*k*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));    
+    // reverse_add_bias_and_re_kernel<32>
+    //   <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, bottom_ptr, bottom_bprop, n / 2);
+
+    // __half* dRelu_bottom_host = new __half[dRelu_in_tensor_.get_num_elements()];
+    // cudaMemcpyAsync(dRelu_bottom_host, dRelu_bottom, dRelu_in_tensor_.get_num_elements()*sizeof(__half),
+    //     cudaMemcpyDeviceToHost, get_gpu().get_stream());
+    // __half* bottom_ptr_host = new __half[dRelu_in_tensor_.get_num_elements()];
+    // cudaMemcpyAsync(bottom_ptr_host, bottom_ptr, dRelu_in_tensor_.get_num_elements()*sizeof(__half),
+    //     cudaMemcpyDeviceToHost, get_gpu().get_stream());      
+    // printf("%d, %d, %d\n", m, n, k);
+    // for (int i = 0; i < m*n; i++)
+    // {
+    //   if(abs(float(bottom_ptr_host[i]) - float(dRelu_bottom_host[i]))>1e-4)
+    //   {
+    //     printf("%d, %f, %f\n", i, (float)bottom_ptr_host[i], (float)dRelu_bottom_host[i]);
+    //     exit(-1);
+    //   }
+    // }
+    // printf("Pass\n");
   }
 
 #ifndef NDEBUG
@@ -442,7 +471,8 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
     {k, m, n},
     1,
     float(1),
-    float(0)
+    float(0),
+    get_gpu().get_stream()
   );
 }
 
