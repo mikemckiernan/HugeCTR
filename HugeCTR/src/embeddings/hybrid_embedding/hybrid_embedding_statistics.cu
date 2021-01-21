@@ -42,5 +42,15 @@ void EmbeddingStatistics::calculate_statistics(
 }
 
 
+template <typename dtype> 
+void sort_categories_by_count(
+    dtype *samples,
+    uint32_t num_samples,
+    dtype *categories_sorted,
+    dtype *counts_sorted,
+    uint32_t &num_unique_categories,
+    cudaStream_t stream);
+
+
 #include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_statistics_includes.cuh"
 }

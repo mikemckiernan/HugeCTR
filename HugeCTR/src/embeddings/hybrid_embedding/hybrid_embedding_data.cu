@@ -24,7 +24,7 @@
 namespace HugeCTR {
 
 
-/// @brief data_to_unique_categories converts the argument 'data' and stores
+/// data_to_unique_categories converts the argument 'data' and stores
 ///        the result in member variable 'samples'.
 ///        Per network, the columns corresponding to embedding tables 
 ///        are concatenated and categories get an unique index / label.

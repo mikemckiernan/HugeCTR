@@ -89,6 +89,11 @@ file(GLOB huge_ctr_src
   embeddings/localized_slot_sparse_embedding_hash.cu
   embeddings/localized_slot_sparse_embedding_one_hot.cu
   embeddings/hybrid_sparse_embedding.cu
+  embeddings/hybrid_embedding/hybrid_embedding_model.cu
+  embeddings/hybrid_embedding/hybrid_embedding_data.cu
+  embeddings/hybrid_embedding/hybrid_embedding_calibration.cu
+  embeddings/hybrid_embedding/hybrid_embedding_statistics.cu
+  embeddings/hybrid_embedding/hybrid_embedding_utils.cu
   model_oversubscriber/distributed_parameter_server_delegate.cpp
   model_oversubscriber/model_oversubscriber_impl.cpp
   model_oversubscriber/parameter_server.cpp

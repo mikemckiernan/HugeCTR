@@ -44,6 +44,11 @@ void HybridEmbeddingModel::init_model(
   size_t num_iterations = embedding_data.num_iterations;
   size_t num_tables = embedding_data.table_sizes.size();
 
+  num_categories = (dtype) 0;
+  for (size_t i = 0; i < embedding_data.table_sizes.size(); ++i) {
+      num_categories += embedding_data.table_sizes[i];
+  }
+
   Tensor2<dtype> samples = embedding_data.samples;
   EmbeddingStatistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
   statistics.calculate_statistics(samples);
@@ -65,17 +70,16 @@ void HybridEmbeddingModel::init_model(
     // Get first index in category frequent array that is smaller than threshold
     // find first element smaller than n_threshold
     std::vector<uint32_t> h_counts_sorted;
+    std::vector<dtype> h_categories_sorted;
     download_tensor(h_counts_sorted, statistics.counts_sorted, stream);
+    download_tensor(h_categories_sorted, statistics.categories_sorted, stream);
 
     // num_frequent must be smaller than batch_size
     size_t n;
     for (n = 0; n < h_counts_sorted.size(); ++n) {
         if (h_counts_sorted[n] < count_threshold) break;
     }
-    num_frequent = n;
-
-    std::vector<dtype> h_categories_sorted;
-    download_tensor(h_categories_sorted, statistics.categories_sorted, stream);
+    num_frequent = (dtype) n;
 
     std::vector<dtype> h_category_frequent_index(num_categories, num_categories);
     for (size_t i = 0; i < num_frequent; ++i) {
@@ -95,6 +99,7 @@ void HybridEmbeddingModel::init_model(
       }
     }
 
+    // upload the model arrays
     upload_tensor(h_category_frequent_index, category_frequent_index, stream);
     upload_tensor(h_category_location, category_location, stream);
   }

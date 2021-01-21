@@ -18,3 +18,12 @@ template
 void EmbeddingStatistics<uint32_t>::calculate_statistics(
   Tensor2<uint32_t> samples, 
   cudaStream_t stream);
+
+template
+void sort_categories_by_count<uint32_t>(
+    uint32_t *samples,
+    uint32_t num_samples,
+    uint32_t *categories_sorted,
+    uint32_t *counts_sorted,
+    uint32_t &num_unique_categories,
+    cudaStream_t stream);
