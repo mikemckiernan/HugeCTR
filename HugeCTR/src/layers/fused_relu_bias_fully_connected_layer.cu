@@ -183,6 +183,7 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   db_out_tensor_     = db_out_tensor;
   blobs_buff->reserve(bias_dim, &bias_grad_tensor_);
 
+  gemm_dRelu_bgrad_init();
 }
 
 void FusedReluBiasFullyConnectedLayer::initialize() {
@@ -332,27 +333,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
 
 
   if(pos_ == BODY || pos_ == TAIL) {
-    // std::cout<<"M: "<<m<<", N: "<<n<<", K: "<<k<<std::endl;
-    __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-    // // __half* dRelu_top    = dRelu_out_tensor_.get_ptr();
-    // std::cout<<"W: "<<weights_half_[0].get_num_elements()<<std::endl;
-    // std::cout<<"b: "<<weights_half_[1].get_num_elements()<<std::endl;
-    // std::cout<<"X: "<<get_bottom_tensor_fprop(true).get_num_elements()<<std::endl;
-    // std::cout<<"dRelu_bottom: "<<dRelu_in_tensor_.get_num_elements()<<std::endl;
-    // std::cout<<"dRelu_top: "<<dRelu_out_tensor_.get_num_elements()<<std::endl;
-
-    gemm_with_reduction(kernel, middle, dRelu_bottom, bias_grad, bottom, m, n, k);
-
-    // __half* dRelu_bottom_host = new __half[dRelu_in_tensor_.get_num_elements()];
-    // cudaMemcpy(dRelu_bottom_host, dRelu_bottom, dRelu_in_tensor_.get_num_elements()*sizeof(__half), cudaMemcpyDeviceToHost);
-    // __half* middle_host = new __half[dRelu_in_tensor_.get_num_elements()];
-    // cudaMemcpy(middle_host, middle, dRelu_in_tensor_.get_num_elements()*sizeof(__half), cudaMemcpyDeviceToHost);
-    // for (unsigned i = 0; i < dRelu_in_tensor_.get_num_elements(); i++)
-    // {
-    //   printf("%d, %f, %f\n", i, (float)middle_host[i], (float)dRelu_bottom_host[i]);
-    // }
-    
-
+    gemm_dRelu_bgrad_run();
   }
 
 #ifndef NDEBUG
@@ -362,11 +343,14 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
 
 }
 
-void FusedReluBiasFullyConnectedLayer::gemm_with_reduction(
-    const __half* W, const __half* dRelu_top,
-    __half* dRelu_bottom, __half* db, const __half* mask,
-    int m, int n, int k)
+void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
 {
+  const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
+
+  int m = bottom_tensor_dim[0];
+  int n = top_tensor_dim[1];
+  int k = bottom_tensor_dim[1];
 
   using EpilogueOutputOp = cutlass::epilogue::thread::LinearCombinationDRelu<
     float,
@@ -395,10 +379,67 @@ void FusedReluBiasFullyConnectedLayer::gemm_with_reduction(
   >::GemmKernel;
 
   using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
-  cutlassGemmWithReduction<Gemm>(
-    W, dRelu_top, dRelu_bottom, db, mask,
-    {k, m, n},
+  // cutlassGemmWithReduction<Gemm>(
+  //   W, dRelu_top, dRelu_bottom, db, mask,
+  //   {k, m, n},
+  //   cutlass::gemm::GemmUniversalMode::kGemm,
+  //   1,
+  //   float(1),
+  //   float(0)
+  // );
+  bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
+}
+
+void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
+{
+  const __half* kernel = weights_half_[0].get_ptr();
+  const __half* top = mask_out_tensor_.get_ptr();
+  __half* middle = train_out_tensor_.get_ptr();
+  __half* kernel_grad = weights_grad_[0].get_ptr();
+  __half* bias_grad = weights_grad_[1].get_ptr();
+  const __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
+  __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
+  float* bias_grad_float = bias_grad_tensor_.get_ptr();
+  __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
+
+  const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
+
+  int m = bottom_tensor_dim[0];
+  int n = top_tensor_dim[1];
+  int k = bottom_tensor_dim[1];
+
+  using EpilogueOutputOp = cutlass::epilogue::thread::LinearCombinationDRelu<
+    float,
+    float,
+    cutlass::half_t,
+    cutlass::half_t,
+    8
+  >;
+
+  using GemmKernel = 
+    typename cutlass::gemm::kernel::DefaultGemmWithReduction<
+      cutlass::half_t, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone, 8,    // transposed B operand
+      cutlass::half_t, cutlass::layout::ColumnMajor, cutlass::ComplexTransform::kNone, 8,    // transposed A operand
+      cutlass::half_t, cutlass::layout::RowMajor,
+      float,
+      cutlass::arch::OpClassTensorOp,
+      cutlass::arch::Sm75,
+      cutlass::gemm::GemmShape<128, 128, 32>,
+      cutlass::gemm::GemmShape<64, 64, 32>,
+      cutlass::gemm::GemmShape<16, 8, 8>,
+      EpilogueOutputOp,
+      cutlass::plus<float>,
+      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>,
+      2,
+      cutlass::arch::OpMultiplyAdd
+  >::GemmKernel;
+
+  using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
+  reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->run(
+    kernel, middle, dRelu_bottom, bias_grad, bottom,
     cutlass::gemm::GemmUniversalMode::kGemm,
+    {k, m, n},
     1,
     float(1),
     float(0)

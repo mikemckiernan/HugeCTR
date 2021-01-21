@@ -131,7 +131,7 @@ struct TestbedGemmWithReduction {
   }
 
   /// Initializes data structures
-  void initialize_val(const __half* W,
+  void copyin_val(const __half* W,
       const __half* dRelu_top,
       __half* dRelu_bottom,
       __half* db,
@@ -160,12 +160,7 @@ struct TestbedGemmWithReduction {
   }
 
   /// Initializes data structures
-  void initialize(const __half* W,
-    const __half* dRelu_top,
-    __half* dRelu_bottom,
-    __half* db,
-    const __half* mask,
-    cutlass::gemm::GemmCoord problem_size) {
+  void initialize(cutlass::gemm::GemmCoord problem_size) {
     //
     // Allocate the GEMM workspace
     //
@@ -354,8 +349,8 @@ struct TestbedGemmWithReduction {
     ElementAccumulator alpha = ElementAccumulator(1), 
     ElementAccumulator beta = ElementAccumulator(0)) {
 
-    this->initialize(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
-    this->initialize_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
+    this->initialize(problem_size);
+    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size);
 
     //
     // Initialize the GEMM operator
