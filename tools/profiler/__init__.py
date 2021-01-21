@@ -107,9 +107,14 @@ def generate_schedule(schedule, repeat_for_each_event=10, warmup_iterations=10, 
 def parse_result(prof_file):
     with open(prof_file, 'r') as f:
         jstring = f.read()
-        timeline = json.loads(jstring)
+        prof = json.loads(jstring)
+        timeline = prof['events']
         timeline.sort(key=lambda e: e["start_index"])
-        result = split_by_layer_device_stream(timeline)
+        result = {
+            'iter_time_ms': sum(prof['iter_time_ms']) / len(prof['iter_time_ms']),
+            'layers': split_by_layer_device_stream(timeline)
+        }
+
         with open('prof_report.json', 'w') as f:
             f.write(json.dumps(result))
 
@@ -121,13 +126,13 @@ def split_by_layer_device_stream(timeline):
         layer_name = event["layer_name"]
         if layer_name not in result.keys():
             result[layer_name] = {}
-        device_id = event["device_id"]
+        device_id = "device_" + str(event["device_id"])
         if device_id not in result[layer_name].keys():
             result[layer_name][device_id] = {}
         if event["stream"] in global_streams:
-            stream_id = global_streams.index(event["stream"])
+            stream_id = "stream_" + str(global_streams.index(event["stream"]))
         else:
-            stream_id = len(global_streams)
+            stream_id = "stream_" + str(len(global_streams))
             global_streams.append(event["stream"])
         if stream_id not in result[layer_name][device_id].keys():
             result[layer_name][device_id][stream_id] = []

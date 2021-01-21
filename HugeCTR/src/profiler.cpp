@@ -76,6 +76,14 @@ namespace HugeCTR {
         it->second = 0;
       }
     }
+    auto last_check = iter_check_;
+    iter_check_ = std::chrono::high_resolution_clock::now();
+    if(current_iteration_ > warmup_iterations_) {
+      iter_time_ms_.push_back(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(iter_check_ - last_check).count() / 1000000.0
+      );
+    }
+
     // MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
@@ -233,7 +241,9 @@ namespace HugeCTR {
 
   std::string Profiler::write_result(const char* result_file) {
     // TBD dump events_ to json file
-    json result = json::array();
+    json result;
+    result["iter_time_ms"] = iter_time_ms_;
+    result["events"] = json::array();
     for (auto& event_p : events_) {
       GPUEvent* gep = static_cast<GPUEvent*>(event_p.get());
       json j;
@@ -244,7 +254,7 @@ namespace HugeCTR {
       j["start_index"] = gep->start_index;
       j["end_index"] = gep->end_index;
       j["measured_times_ms"] = gep->measured_times_ms;
-      result.push_back(j);
+      result["events"].push_back(j);
     }
     std::string result_jstring = result.dump();
     std::ofstream outfile;

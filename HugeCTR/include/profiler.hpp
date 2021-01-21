@@ -7,6 +7,7 @@
 #include <memory>
 #include <iostream>
 #include <sstream>
+#include <chrono>
 #include <mutex>
 
 #include <cuda.h>
@@ -68,6 +69,9 @@ class Profiler {
 
  private:
   std::string host_name_;
+  std::vector<float> iter_time_ms_;
+  std::chrono::high_resolution_clock::time_point iter_check_;
+
   int warmup_iterations_;
   int current_iteration_;
   int current_schedule_idx_;
