@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+#pragma once
+
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
+
 namespace HugeCTR {
 
 
@@ -26,17 +31,19 @@ class InfrequentEmbedding {
   Tensor2<TypeEmbedding> infrequent_embedding_vectors_;
 
   // forward-send, backward-receive
-  Tensor2<dtype> model_indices_;
+  Tensor2<uint32_t> model_indices_;
+  Tensor2<uint32_t> model_indices_offsets_;
   // forward-receive, backward-send
-  Tensor2<dtype> network_indices_;
+  Tensor2<uint32_t> network_indices_;
+  Tensor2<uint32_t> network_indices_offsets_;
 
-public:
+ public:
   InfrequentEmbedding();
   ~InfrequentEmbedding();  
 
   void initialize_embedding_vectors();
-  void calculate_model_indices();
-  void calculate_network_indices();
+  void calculate_model_indices(cudaStream_t stream);
+  void calculate_network_indices(cudaStream_t stream);
 
   void all_to_all_forward();
   void all_to_all_backward();
