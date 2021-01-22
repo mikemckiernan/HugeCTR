@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-template
-void HybridEmbeddingModel<uint32_t>::init_model(
-  CommunicationType communication_type,
-  CalibrationData<uint32_t> calibration,
-  HybridEmbeddingStatistics<uint32_t> statistics,
-  HybridEmbeddingData<uint32_t> data,
-  cudaStream_t stream);
+#include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
+namespace HugeCTR {
+
+    
+
+#include "HugeCTR/include/embeddings/hybrid_embedding_includes/infrequent_embedding_includes.cuh"
+}

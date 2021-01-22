@@ -29,7 +29,7 @@ namespace HugeCTR {
 ///
 template <typename dtype>
 void EmbeddingStatistics::calculate_statistics(
-  Tensor2<dtype> samples, 
+  Tensor2<dtype> samples,
   cudaStream_t stream
 ) {
   dtype *d_samples = samples.get_ptr();
@@ -42,6 +42,7 @@ void EmbeddingStatistics::calculate_statistics(
 }
 
 
+// Kefeng, place your implementation here:
 template <typename dtype> 
 void sort_categories_by_count(
     dtype *samples,

@@ -25,7 +25,6 @@ namespace HugeCTR {
 template <typename dtype>
 struct HybridEmbeddingData {
   std::vector<uint32_t> table_sizes;
-
   size_t batch_size;
   size_t num_iterations;
 

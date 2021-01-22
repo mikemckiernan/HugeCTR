@@ -56,8 +56,11 @@ public:
   // node_id, gpu_id, category_location_local
 
   void init_model(
-    const CalibrationData& calibration,
-    const HybridEmbeddingData<dtype>& data
+    CommunicationType communication_type,
+    CalibrationData<dtype> calibration,
+    HybridEmbeddingStatistics<dtype> statistics,
+    HybridEmbeddingData<dtype> data,
+    cudaStream_t stream
   );
 
 };

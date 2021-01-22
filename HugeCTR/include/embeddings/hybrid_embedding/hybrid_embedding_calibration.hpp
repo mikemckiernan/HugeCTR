@@ -69,6 +69,7 @@ struct CalibrationData {
 
 template <typename dtype>
 uint32_t calculate_num_frequent_categories(
+  CommunicationType communication_type,
   CalibrationData<dtype> calibration_data,
   HybridEmbeddingStatistics<dtype> statistics
 );

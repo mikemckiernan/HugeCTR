@@ -19,6 +19,7 @@
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
+
 namespace HugeCTR {
 
 
@@ -37,11 +38,11 @@ struct EmbeddingStatistics {
   Tensor2<dtype> categories_sorted;
   Tensor2<uint32_t> counts_sorted;
 
-  void calculate_statistics(Tensor2<dtype> samples);
+  void calculate_statistics(Tensor2<dtype> samples, cudaStream_t stream);
 };
 
 
-template <typename dtype> 
+template <typename dtype>
 void sort_categories_by_count(
     dtype *samples,
     uint32_t num_samples,
