@@ -66,6 +66,8 @@ struct TestbedGemmWithReduction {
   cutlass::HostTensor<typename Gemm::ElementC, typename Gemm::LayoutC> tensor_Tensor;
   cutlass::HostTensor<typename Gemm::ElementC, typename Gemm::LayoutC> reference_D;
 
+  Gemm gemm_op_;
+
   //
   // Methods
   //
@@ -136,7 +138,6 @@ struct TestbedGemmWithReduction {
       __half* dRelu_bottom,
       __half* db,
       const __half* mask,
-      cutlass::gemm::GemmCoord problem_size,
       cudaStream_t stream = 0) {
     int len_A = tensor_A.size();
     int len_B = tensor_B.size();
@@ -161,7 +162,12 @@ struct TestbedGemmWithReduction {
   }
 
   /// Initializes data structures
-  void initialize(cutlass::gemm::GemmCoord problem_size) {
+  void initialize(cutlass::gemm::GemmUniversalMode mode,
+    cutlass::gemm::GemmCoord problem_size, 
+    int batch_count = 1,
+    ElementAccumulator alpha = ElementAccumulator(1), 
+    ElementAccumulator beta = ElementAccumulator(0),
+    cudaStream_t stream=0) {
     //
     // Allocate the GEMM workspace
     //
@@ -178,7 +184,39 @@ struct TestbedGemmWithReduction {
 
     tensor_Tensor.resize(problem_size.mn());
     reference_D.resize(problem_size.mn(), false);
+    //
+    // Initialize the GEMM operator
+    //
 
+    typename Gemm::Arguments arguments{
+      mode,
+      problem_size,
+      batch_count,
+      {alpha, beta},
+      tensor_A.device_data(),
+      tensor_B.device_data(),
+      tensor_C.device_data(),
+      tensor_D.device_data(),
+      tensor_Reduction.device_data(),
+      tensor_Tensor.device_data(),
+      problem_size.m() * problem_size.k(),
+      problem_size.n() * problem_size.k(),
+      problem_size.m() * problem_size.n(),
+      problem_size.m() * problem_size.n(),
+      tensor_A.layout().stride(0),
+      tensor_B.layout().stride(0),
+      tensor_C.layout().stride(0),
+      tensor_D.layout().stride(0),
+      tensor_Reduction.layout().stride(0),
+      tensor_Tensor.layout().stride(0),
+    };
+
+
+    size_t workspace_size = Gemm::get_workspace_size(arguments);
+
+    cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
+
+    gemm_op_.initialize(arguments, workspace.get(), stream);
 
     // std::cout<<"A: ("<<tensor_A.size(0)<<","<<tensor_A.size(1)<<")"<<std::endl;
     // std::cout<<"tensor_A: "<<tensor_A.size()<<std::endl;
@@ -344,54 +382,15 @@ struct TestbedGemmWithReduction {
     __half* dRelu_bottom,
     __half* db,
     const __half* mask,
-    cutlass::gemm::GemmUniversalMode mode,
-    cutlass::gemm::GemmCoord problem_size, 
-    int batch_count = 1,
-    ElementAccumulator alpha = ElementAccumulator(1), 
-    ElementAccumulator beta = ElementAccumulator(0),
     cudaStream_t stream=0) {
 
-    this->initialize(problem_size);
-    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, problem_size, stream);
+    // this->initialize(problem_size);
+    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, stream);
 
-    //
-    // Initialize the GEMM operator
-    //
-
-    typename Gemm::Arguments arguments{
-      mode,
-      problem_size,
-      batch_count,
-      {alpha, beta},
-      tensor_A.device_data(),
-      tensor_B.device_data(),
-      tensor_C.device_data(),
-      tensor_D.device_data(),
-      tensor_Reduction.device_data(),
-      tensor_Tensor.device_data(),
-      problem_size.m() * problem_size.k(),
-      problem_size.n() * problem_size.k(),
-      problem_size.m() * problem_size.n(),
-      problem_size.m() * problem_size.n(),
-      tensor_A.layout().stride(0),
-      tensor_B.layout().stride(0),
-      tensor_C.layout().stride(0),
-      tensor_D.layout().stride(0),
-      tensor_Reduction.layout().stride(0),
-      tensor_Tensor.layout().stride(0),
-    };
-
-    Gemm gemm_op;
-
-    size_t workspace_size = Gemm::get_workspace_size(arguments);
-
-    cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
-
-    gemm_op.initialize(arguments, workspace.get(), stream);
     //
     // Run the GEMM
     //
-    gemm_op(stream);
+    this->gemm_op_(stream);
     //
     // Verify
     //
