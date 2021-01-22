@@ -25,5 +25,7 @@ tools/embedding_plugin/performance_profile/test
 tools/embedding_plugin/performance_profile/val
 tools/embedding_plugin/performance_profile/valtest
 tools/embedding_plugin/performance_profile/*.txt
-prof*
+prof.*
+prof_report.*
 __pycache__/
+*.ipynb_checkpoints
