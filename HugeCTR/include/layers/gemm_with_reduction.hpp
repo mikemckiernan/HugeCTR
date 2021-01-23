@@ -68,6 +68,10 @@ struct TestbedGemmWithReduction {
 
   Gemm gemm_op_;
 
+  int m_;
+  int n_;
+  int k_;
+
   //
   // Methods
   //
@@ -155,14 +159,20 @@ struct TestbedGemmWithReduction {
     cudaMemcpyAsync(mask_ptr,         mask,         len_T*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
     // cudaMemset(mask_ptr, 1, len_T*sizeof(__half));
 
-    tensor_A.sync_host();
-    tensor_B.sync_host();
-    tensor_D.sync_host();
-    tensor_Tensor.sync_host();
+    // tensor_A.sync_host();
+    // tensor_B.sync_host();
+    // tensor_D.sync_host();
+    // tensor_Tensor.sync_host();
   }
 
   /// Initializes data structures
-  void initialize(cutlass::gemm::GemmUniversalMode mode,
+  void initialize(
+    const __half* W,
+    const __half* dRelu_top,
+    __half* dRelu_bottom,
+    __half* db,
+    const __half* mask,
+    cutlass::gemm::GemmUniversalMode mode,
     cutlass::gemm::GemmCoord problem_size, 
     int batch_count = 1,
     ElementAccumulator alpha = ElementAccumulator(1), 
@@ -171,6 +181,10 @@ struct TestbedGemmWithReduction {
     //
     // Allocate the GEMM workspace
     //
+
+    this->m_ = problem_size.m();
+    this->n_ = problem_size.n();
+    this->k_ = problem_size.k();
 
     tensor_A.resize(problem_size.mk());
     tensor_B.resize(problem_size.kn());
@@ -184,6 +198,7 @@ struct TestbedGemmWithReduction {
 
     tensor_Tensor.resize(problem_size.mn());
     reference_D.resize(problem_size.mn(), false);
+
     //
     // Initialize the GEMM operator
     //
@@ -193,12 +208,12 @@ struct TestbedGemmWithReduction {
       problem_size,
       batch_count,
       {alpha, beta},
-      tensor_A.device_data(),
-      tensor_B.device_data(),
-      tensor_C.device_data(),
-      tensor_D.device_data(),
-      tensor_Reduction.device_data(),
-      tensor_Tensor.device_data(),
+      W,
+      dRelu_top,
+      dRelu_bottom,
+      dRelu_bottom,
+      db,
+      mask,
       problem_size.m() * problem_size.k(),
       problem_size.n() * problem_size.k(),
       problem_size.m() * problem_size.n(),
@@ -376,16 +391,10 @@ struct TestbedGemmWithReduction {
   }
 
   /// Executes one test
-  bool run(
-    const __half* W,
-    const __half* dRelu_top,
-    __half* dRelu_bottom,
-    __half* db,
-    const __half* mask,
-    cudaStream_t stream=0) {
+  bool run(__half* db, cudaStream_t stream=0) {
 
     // this->initialize(problem_size);
-    this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, stream);
+    // this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, stream);
 
     //
     // Run the GEMM
@@ -394,14 +403,29 @@ struct TestbedGemmWithReduction {
     //
     // Verify
     //
-    int len_D = tensor_D.size();
-    cutlass::half_t* dRelu_bottom_ptr = tensor_D.device_data();
-    cudaMemcpyAsync(dRelu_bottom, dRelu_bottom_ptr, len_D*sizeof(__half), cudaMemcpyDeviceToDevice, stream);
-    // cutlass::half_t* d_host = tensor_D.host_data();
-    // for (int i = 0; i < len_D; i++)
+    // int len = tensor_Reduction.size();
+    // for (int i = 0; i < len; i++)
     // {
-    //   printf("%d, %f\n", i, (float)d_host[i]);
+    //   /* code */
     // }
+  //   int len = tensor_Reduction.size();
+  // cudaDeviceSynchronize();
+  //   float* db_host = new float[len];
+  //   cudaMemcpyAsync(db_host, db, len*sizeof(float), cudaMemcpyDeviceToHost, stream);
+  //   float* sum = new float[this->m_];
+  //   for (int i = 0; i < this->m_; i++) sum[i] = 0.0f;
+  //   printf("%d\n",len/this->m_);
+  //   for (int i = 0; i < this->m_; i++)
+  //   {
+  //     for(int j=0;j<16;j++)
+  //     {
+  //       sum[i] += db_host[i+j*this->m_];
+  //     }
+  //   }
+  // cudaDeviceSynchronize();
+  //   cudaMemcpyAsync(db, sum, this->m_*sizeof(float), cudaMemcpyHostToDevice, stream);
+  // cudaDeviceSynchronize();
+    
     
 
     // bool passed = this->verify(problem_size, alpha, beta);
@@ -418,35 +442,35 @@ struct TestbedGemmWithReduction {
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename Gemm>
-bool cutlassGemmWithReduction(
-  const __half* W,
-  const __half* dRelu_top,
-  __half* dRelu_bottom,
-  __half* db,
-  const __half* mask,
-  cutlass::gemm::GemmCoord const & problem_size,
-  cutlass::gemm::GemmUniversalMode mode,  
-  int batch_count,
-  double alpha = 1.0, 
-  double beta = 2.0) {
+// template <typename Gemm>
+// bool cutlassGemmWithReduction(
+//   const __half* W,
+//   const __half* dRelu_top,
+//   __half* dRelu_bottom,
+//   __half* db,
+//   const __half* mask,
+//   cutlass::gemm::GemmCoord const & problem_size,
+//   cutlass::gemm::GemmUniversalMode mode,  
+//   int batch_count,
+//   double alpha = 1.0, 
+//   double beta = 2.0) {
 
-  bool passed = true;
+//   bool passed = true;
 
-  TestbedGemmWithReduction<Gemm> testbed;
+//   TestbedGemmWithReduction<Gemm> testbed;
 
-  using ElementAccumulator = typename Gemm::ElementAccumulator;
+//   using ElementAccumulator = typename Gemm::ElementAccumulator;
   
 
-  passed = testbed.run(W, dRelu_top, dRelu_bottom, db, mask,
-    mode,
-    problem_size, 
-    batch_count,
-    cutlass::from_real<ElementAccumulator>(alpha), 
-    cutlass::from_real<ElementAccumulator>(beta)
-  );
+//   passed = testbed.run(W, dRelu_top, dRelu_bottom, db, mask,
+//     mode,
+//     problem_size, 
+//     batch_count,
+//     cutlass::from_real<ElementAccumulator>(alpha), 
+//     cutlass::from_real<ElementAccumulator>(beta)
+//   );
 
-  return passed;
-}
+//   return passed;
+// }
 
 }  // namespace HugeCTR
