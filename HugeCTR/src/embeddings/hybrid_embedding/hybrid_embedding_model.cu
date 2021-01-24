@@ -89,5 +89,5 @@ void HybridEmbeddingModel::init_model(
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_model_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_model_template_defs.cuh"
 }

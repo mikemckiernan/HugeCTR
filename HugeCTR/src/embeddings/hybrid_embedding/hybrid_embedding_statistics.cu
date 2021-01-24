@@ -53,5 +53,5 @@ void sort_categories_by_count(
     cudaStream_t stream);
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_statistics_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_statistics_template_defs.cuh"
 }

@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-template void download_tensor<uint32_t>(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
-template void upload_tensor<uint32_t>(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+template void download_tensor<uint32_t>(std::vector<uint32_t>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+template void upload_tensor<uint32_t>(std::vector<uint32_t>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);

@@ -109,5 +109,5 @@ std::vector<TensorBag2> HybridSparseEmbedding<dtype, TypeEmbedding>::get_evaluat
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_sparse_embedding_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_sparse_embedding_template_defs.cuh"
 }

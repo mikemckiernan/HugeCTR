@@ -46,5 +46,5 @@ void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStre
   
 
 // template definitions
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_utils_template_defs.cuh"
 }

@@ -92,7 +92,7 @@ uint32_t calculate_num_frequent_categories(
     for (size_t i = 0; i < num_networks_per_node.size(); ++i) {
       num_networks += num_networks_per_nodex[i];
     }
-  
+
     size_t batch_size = data.batch_size;
     size_t num_networks = data.num_networks;
     size_t num_iterations = data.num_iterations;
@@ -160,5 +160,5 @@ float CalibrationData::calculate_threshold(
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_calibration_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_calibration_template_defs.cuh"
 }

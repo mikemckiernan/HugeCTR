@@ -33,8 +33,8 @@ struct HybridEmbeddingData {
   // convert raw input data such that categories of different 
   // categorical features have unique indices
   void data_to_unique_categories(
-      Tensor2<dtype> data,
-      cudaStream_t stream
+    Tensor2<dtype> data,
+    cudaStream_t stream
   );
 
 };

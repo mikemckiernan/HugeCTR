@@ -25,7 +25,36 @@
 
 namespace HugeCTR {
 
-    
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/infrequent_embedding_includes.cuh"
+template <typename dtype, typename TypeEmbedding>
+void InfrequentEmbedding::initialize_embedding_vectors() {
+  // TODO: create initialize_embedding_vectors()
+}
+
+
+template <typename dtype, typename TypeEmbedding>
+void InfrequentEmbedding::calculate_model_indices() {
+  // TODO: create calculate_model_indices()
+}
+
+
+template <typename dtype, typename TypeEmbedding>
+void InfrequentEmbedding::calculate_network_indices() {
+  // TODO: create calculate_network_indices()
+}
+  
+
+template <typename dtype, typename TypeEmbedding>
+void InfrequentEmbedding::all_to_all_forward() {
+  // TODO: create all_to_all_forward()
+}
+
+
+template <typename dtype, typename TypeEmbedding>
+void InfrequentEmbedding::all_to_all_backward() {
+  // TODO: create all_to_all_backward()
+}
+
+
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/infrequent_embedding_template_defs.cuh"
 }

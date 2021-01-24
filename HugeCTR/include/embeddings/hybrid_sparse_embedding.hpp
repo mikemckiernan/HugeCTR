@@ -46,13 +46,15 @@ private:
   std::vector<FrequentEmbedding<dtype, TypeEmbedding>> frequent_embeddings_;
   // model-parallel embedding model
   std::vector<InfrequentEmbedding<dtype, TypeEmbedding>> infrequent_embeddings_;
+  // performs the communication scheme
+  std::vector<HybridEmbeddingCommunication<dtype, TypeEmbedding>> communication_;
 
   // model_, data_, calibration_ and statistics_ are replications of the model 
   // and input data on each gpu. The HybridSparseEmbedding class manages 
   // it's scope / frees the memory.
   std::vector<HybridEmbeddingModel<dtype>> model_;
   std::vector<HybridEmbeddingData<dtype>> data_;
-  std::vector<HybridEmbeddingData<dtype>> calibration_;
+  std::vector<HybridEmbeddingCalibration<dtype>> calibration_;
   std::vector<HybridEmbeddingStatistics<dtype>> statistics_;
 
   // std::vector<FrequentEmbeddingCompression<dtype>> frequent_compression_;
@@ -61,6 +63,8 @@ private:
 public:
   HybridSparseEmbedding() {}
   ~HybridSparseEmbedding() {}
+
+  void initialize_model();
 
   void forward(bool is_train) override;
   void backward() override;
@@ -74,8 +78,6 @@ public:
   size_t get_max_vocabulary_size() const override;
   std::vector<TensorBag2> get_train_output_tensors() const override;
   std::vector<TensorBag2> get_evaluate_output_tensors() const override;
-
-  void initialize_model();
 };
 
 

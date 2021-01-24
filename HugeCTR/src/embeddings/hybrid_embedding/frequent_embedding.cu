@@ -71,5 +71,5 @@ void FrequentEmbedding::update() {
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/frequent_embedding_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/frequent_embedding_template_defs.cuh"
 }

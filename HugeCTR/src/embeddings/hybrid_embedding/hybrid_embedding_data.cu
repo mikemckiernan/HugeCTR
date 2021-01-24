@@ -33,8 +33,9 @@ void HybridEmbeddingData::data_to_unique_categories(
     Tensor2<dtype> data,
     cudaStream_t stream
 ) {
-
-  std::cout << "WARNING: data_to_unique_categories() needs to be placed on the GPU!" << std::endl;
+  /// === TODO: PERFORM ON GPU ===
+  /// ============================
+  // std::cout << "WARNING: data_to_unique_categories() needs to be placed on the GPU!" << std::endl;
   // TODO : perform conversion by kernel (before start of iteration ? => see below)
   //        for batch_size = 55*1024
   //        batch_size * 26 * 4 / 1600e9 = 3.67 microseconds, 
@@ -44,11 +45,9 @@ void HybridEmbeddingData::data_to_unique_categories(
   //        Would be nice to have just before calculating indices, since
   //        those would be in L2 cache already.
 
-  // TODO: remove this
   std::vector<dtype> h_data;
   download_tensor<dtype>(h_data, data, stream);
 
-  // TODO: place on gpu
   const size_t num_tables = table_sizes.size();
   std::vector<dtype> embedding_offsets(num_tables);
   dtype embedding_offset = (dtype) 0;
@@ -68,10 +67,11 @@ void HybridEmbeddingData::data_to_unique_categories(
     }
   }
 
-  // TODO : remove
   upload_tensor(h_samples, samples, stream);
+  /// ============================
+  /// ============================
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_includes/hybrid_embedding_data_includes.cuh"
+#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_data_template_defs.cuh"
 }

@@ -49,11 +49,10 @@ public:
   dtype num_frequent;
   dtype num_categories;
 
-  Tensor2<uint32_t> num_networks_per_node;   // number of gpus for each node, .size() == number of nodes
+  Tensor2<uint32_t> num_networks_per_node; // number of gpus for each node, .size() == number of nodes
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
   Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
-  // node_id, gpu_id, category_location_local
 
   void init_model(
     CommunicationType communication_type,
