@@ -53,35 +53,50 @@ struct CalibrationData {
   //   This approximation assumes that the communications are bandwidth limited.
   double max_all_reduce_bandwidth; // algorithm bandwidth all-reduce [data size message per gpu in bytes / sec]
   double max_all_to_all_bandwidth; // algorithm bandwidth all-to-all [data size message per gpu in bytes / sec]
-};
 
+  // cpu functions
+  double interpolate(
+    const std::vector<double> &calibrated_data_size,
+    const std::vector<double> &calibrated_times,
+    const std::vector<double> &data_size,
+    std::vector<double> &communication_times);
+  double interpolate_all_reduce(
+    const std::vector<double> &data_size,
+    std::vector<double> &communication_times);
+  double interpolate_all_to_all(
+    const std::vector<double> &data_size,
+    std::vector<double> &communication_times);
 
-template <typename dtype>
-class ModelInitializationFunctors {
- public:
+  // gpu functions
   float interpolate(
     const Tensor2<float> &calibrated_data_size,
     const Tensor2<float> &calibrated_times,
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
   float interpolate_all_reduce(
-    const CalibrationData<dtype> &calibration,
-    float data_size);
-  float interpolate_all_to_all(
-    const Calibrationtype<dtype> &calibration,
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
- float calculate_threshold(
+  float interpolate_all_to_all(
+    const Tensor2<float> &data_size,
+    Tensor2<float> &communication_times);
+};
+
+
+template <typename dtype>
+class ModelInitializationFunctors {
+ public:
+  double calculate_threshold(
     CommunicationType communication_type,
     size_t batch_size, 
     size_t num_networks,
     size_t num_iterations,
     size_t num_tables);
   uint32_t calculate_num_frequent_categories(
-    CommunicationType communication_type,
-    CalibrationData<dtype> calibration_data,
-    HybridEmbeddingStatistics<dtype> statistics
-  );
+    const CommunicationType &communication_type,
+    const CalibrationData<dtype> &calibration,
+    const HybridEmbeddingStatistics<dtype> &statistics,
+    const HybridEmbeddingData<dtype> &data,
+    cudaStream_t stream);
 };
 
 

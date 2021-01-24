@@ -40,7 +40,7 @@ class HybridSparseEmbedding : public IEmbedding {
 private:
 
   // Embedding models, one instance per frequent and the infrequent embedding 
-  // for each mlp-network in the train session
+  // for each mlp-network in the train session.
   //
   // data-parallel embedding model
   std::vector<FrequentEmbedding<dtype, emtype>> frequent_embeddings_;

@@ -26,6 +26,9 @@
 namespace HugeCTR {
 
 
+
+
+
 ///
 /// interpolate data_size using the two calibration data 
 ///   calibrated_data_size, calibrated_times
@@ -69,15 +72,54 @@ float CalibrationData::interpolate_all_to_all(
 }
 
 
+// Calculate threshold such that for the worst case distribution there will 
+// be one duplication per network on average
+template <typename dtype>
+double ModelInitializationFunctors::calculate_threshold(
+  CommunicationType communication_type,
+  size_t batch_size, 
+  size_t num_networks,
+  size_t num_iterations,
+  size_t num_tables
+) {
+  float count_threshold = 1.f;
+
+  // for NVLink capture effectively all duplications with number of categories
+  double M = (double) batch_size / (double) num_networks;
+  double p_dup_max = 1.0 / 100.; // maximum 1 % of samples the category will be duplicated
+  double count_threshold = 1.;
+  switch(communication_type) {
+  case IB_NVLink:
+    count_threshold = (double) num_iterations * (double) num_nodes
+                      * all_to_all_bandwidth / all_reduce_bandwidth 
+                      * (double) num_nodes / ((double) num_nodes - 1.);
+    break;
+  case NVLink:
+    // count threshold such that the probability of duplication is less than p_dup_max
+    //   even if there are batch size number of categories that occur more often,
+    //   there will be a duplication at most once every iteration per gpu
+    //
+    // d_duplication(category) \approx 1/2 M (M-1) \left( \frac{count}{batch_sizexnum_iterations} \right)^2
+    count_threshold = (double) ((double) batch_size * (double) num_iterations
+                    * sqrt(2.0 * p_dup_max / (M *(M-1))));
+    break;
+  default:
+    CK_THROW(Error_t::WrongInput, "Unknown communication type, expecting IB_NVLink or NVLink");
+  }
+
+  return count_threshold;
+}
+
+
 /// 
 /// Calculate the number of frequent categories from data
 ///
 template <typename dtype>
-uint32_t calculate_num_frequent_categories(
-  CommunicationType communication_type,
-  CalibrationData<dtype> calibration,
-  HybridEmbeddingStatistics<dtype> statistics,
-  HybridEmbeddingData<dtype> data,
+uint32_t ModelInitializationFunctors::calculate_num_frequent_categories(
+  const CommunicationType &communication_type,
+  const CalibrationData<dtype> &calibration,
+  const HybridEmbeddingStatistics<dtype> &statistics,
+  const HybridEmbeddingData<dtype> &data,
   cudaStream_t stream
 ) {
   size_t num_frequent = 0;
@@ -86,8 +128,6 @@ uint32_t calculate_num_frequent_categories(
     // calibration is given, perform fully optimized hybrid model
     CK_THROW(Error_t::WrongInput, "initialization hybrid model from communication calibration not available yet");
   } else {
-    float count_threshold = 1.f;
-
     size_t num_networks = (size_t) 0;
     for (size_t i = 0; i < num_networks_per_node.size(); ++i) {
       num_networks += num_networks_per_nodex[i];
@@ -120,43 +160,6 @@ uint32_t calculate_num_frequent_categories(
   }
 
   return num_frequent;
-}
-
-
-// Calculate threshold such that for the worst case distribution there will 
-// be one duplication per network on average
-float CalibrationData::calculate_threshold(
-  CommunicationType communication_type,
-  size_t batch_size, 
-  size_t num_networks,
-  size_t num_iterations,
-  size_t num_tables
-) {
-  float count_threshold = 1.f;
-
-  // for NVLink capture effectively all duplications with number of categories
-  double M = (double) batch_size / (double) num_networks;
-  double p_dup_max = 1.0 / 100.; // maximum 1 % of samples the category will be duplicated
-  double count_threshold = 1.;
-  switch(communication_type) {
-  case IB_NVLink:
-    count_threshold = (double) num_nodes * all_to_all_bandwidth / all_reduce_bandwidth 
-                    * (double) num_nodes / ((double) num_nodes - 1.);
-    break;
-  case NVLink:
-    // count threshold such that the probability of duplication is less than p_dup_max
-    //   even if there are batch size number of categories that occur more often,
-    //   there will be a duplication at most once every iteration per gpu
-    //
-    // d_duplication(category) \approx 1/2 M (M-1) \left( \frac{count}{batch_sizexnum_iterations} \right)^2
-    count_threshold = (float) ((double) batch_size * (double) num_iterations
-                    * sqrt(2.0 * p_dup_max / (M *(M-1))));
-    break;
-  default:
-    CK_THROW(Error_t::WrongInput, "Unknown communication type, expecting IB_NVLink or NVLink");
-  }
-
-  return count_threshold;
 }
 
 

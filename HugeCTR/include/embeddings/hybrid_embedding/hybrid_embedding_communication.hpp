@@ -52,3 +52,6 @@ public:
   // embeddings simultaneously (IB)
   void all_to_all_reduce();
 };
+
+
+}

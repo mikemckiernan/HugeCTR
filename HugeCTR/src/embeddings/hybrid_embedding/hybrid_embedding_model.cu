@@ -35,7 +35,6 @@ void HybridEmbeddingModel::init_model(
   HybridEmbeddingData<dtype> data,
   cudaStream_t stream
 ) {
-
   // calculate the total number of categories
   num_categories = (dtype) 0;
   for (size_t i = 0; i < data.table_sizes.size(); ++i) {
