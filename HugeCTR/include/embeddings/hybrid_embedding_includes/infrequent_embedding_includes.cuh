@@ -14,31 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+template void InfrequentEmbedding<uint32_t, __half>::calculate_model_indices(cudaStream_t stream);
+template void InfrequentEmbedding<uint32_t, float>::calculate_model_indices(cudaStream_t stream);
 
-#include "HugeCTR/include/tensor2.hpp"
-#include <vector>
-
-namespace HugeCTR {
-
-
-template <typename dtype>
-struct HybridEmbeddingData {
-  std::vector<uint32_t> table_sizes;
-  size_t batch_size;
-  size_t num_iterations;
-  size_t num_networks;
-
-  Tensor2<dtype> samples;
-
-  // convert raw input data such that categories of different 
-  // categorical features have unique indices
-  void data_to_unique_categories(
-    Tensor2<dtype> data,
-    cudaStream_t stream
-  );
-
-};
-
-
-}
+template void InfrequentEmbedding<uint32_t, __half>::calculate_network_indices(cudaStream_t stream);
+template void InfrequentEmbedding<uint32_t, float>::calculate_network_indices(cudaStream_t stream);
