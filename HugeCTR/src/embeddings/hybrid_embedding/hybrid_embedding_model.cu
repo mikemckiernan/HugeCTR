@@ -47,7 +47,7 @@ void HybridEmbeddingModel::init_model(
   // create the top categories sorted by count
   Tensor2<dtype> samples = data.samples;
   EmbeddingStatistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
-  statistics.calculate_statistics(samples, stream);
+  statistics.sort_categories_by_count(samples, stream);
   // from the sorted count, determine the number of frequent categories
   num_frequent = calibration.calculate_num_frequent_categories(
       communication_type, calibration, statistics, data, stream);
@@ -85,9 +85,9 @@ void HybridEmbeddingModel::init_model(
 
   /// ============================
   /// ============================
-
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_model_template_defs.cuh"
+template class HybridEmbeddingData<uint32_t>;
+template class HybridEmbeddingData<size_t>;
 }

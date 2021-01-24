@@ -23,24 +23,13 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
 #include "HugeCTR/include/utils.cuh"
 
+
 namespace HugeCTR {
 
 
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 void InfrequentEmbedding::initialize_embedding_vectors() {
   // TODO: create initialize_embedding_vectors()
-}
-
-
-template <typename dtype, typename TypeEmbedding>
-void InfrequentEmbedding::all_to_all_forward() {
-  // TODO: create all_to_all_forward()
-}
-
-
-template <typename dtype, typename TypeEmbedding>
-void InfrequentEmbedding::all_to_all_backward() {
-  // TODO: create all_to_all_backward()
 }
 
 
@@ -51,8 +40,8 @@ static bool lesser_by_first(const std::pair<T, T>& a, const std::pair<T, T>& b) 
 
 
 /// TODO: GPU version
-template <typename dtype, typename TypeEmbedding>
-void InfrequentEmbedding<dtype, TypeEmbedding>::calculate_model_indices(cudaStream_t stream) {
+template <typename dtype, typename emtype>
+void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t stream) {
   std::cout << "WARNING: calculate_model_indices must be done on GPU!" << std::endl;
 
   size_t local_batch_size = ceildiv<size_t>(data_.batch_size, data_.num_networks);
@@ -93,8 +82,8 @@ void InfrequentEmbedding<dtype, TypeEmbedding>::calculate_model_indices(cudaStre
 
 
 /// TODO: GPU version
-template <typename dtype, typename TypeEmbedding>
-void InfrequentEmbedding<dtype, TypeEmbedding>::calculate_network_indices(cudaStream_t stream) {
+template <typename dtype, typename emtype>
+void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t stream) {
   std::cout << "WARNING: calculate_network_indices must be done on GPU!" << std::endl;
 
   size_t local_batch_size = ceildiv<size_t>(data_.batch_size, data_.num_networks);
@@ -154,5 +143,8 @@ void InfrequentEmbedding<dtype, TypeEmbedding>::calculate_network_indices(cudaSt
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/infrequent_embedding_template_defs.cuh"
+template class InfrequentEmbedding<uint32_t, __half>;
+template class InfrequentEmbedding<uint32_t, float>;
+template class InfrequentEmbedding<size_t, __half>;
+template class InfrequentEmbedding<size_t, float>;
 }  // namespace HugeCTR

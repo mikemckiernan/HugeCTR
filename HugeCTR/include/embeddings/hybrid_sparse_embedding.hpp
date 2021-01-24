@@ -35,19 +35,19 @@ namespace HugeCTR {
 /// Interface class for the hybrid embedding to HugeCTR. It is responsible for
 /// persistent gpu memory allocation.
 ///
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 class HybridSparseEmbedding : public IEmbedding {
 private:
 
   // Embedding models, one instance per frequent and the infrequent embedding 
   // for each mlp-network in the train session
-  // 
+  //
   // data-parallel embedding model
-  std::vector<FrequentEmbedding<dtype, TypeEmbedding>> frequent_embeddings_;
+  std::vector<FrequentEmbedding<dtype, emtype>> frequent_embeddings_;
   // model-parallel embedding model
-  std::vector<InfrequentEmbedding<dtype, TypeEmbedding>> infrequent_embeddings_;
+  std::vector<InfrequentEmbedding<dtype, emtype>> infrequent_embeddings_;
   // performs the communication scheme
-  std::vector<HybridEmbeddingCommunication<dtype, TypeEmbedding>> communication_;
+  std::vector<HybridEmbeddingCommunication<dtype, emtype>> communication_;
 
   // model_, data_, calibration_ and statistics_ are replications of the model 
   // and input data on each gpu. The HybridSparseEmbedding class manages 
@@ -56,9 +56,6 @@ private:
   std::vector<HybridEmbeddingData<dtype>> data_;
   std::vector<HybridEmbeddingCalibration<dtype>> calibration_;
   std::vector<HybridEmbeddingStatistics<dtype>> statistics_;
-
-  // std::vector<FrequentEmbeddingCompression<dtype>> frequent_compression_;
-  // std::vector<FrequentEmbeddingCompression<dtype>> infrequent_compression_;
 
 public:
   HybridSparseEmbedding() {}
@@ -81,4 +78,4 @@ public:
 };
 
 
-}  // namespace HugeCTR
+}// namespace HugeCTR

@@ -35,15 +35,10 @@ public:
   ~FrequentEmbedding() {}
 
   void initialize_embedding_vectors();
-
-  void reduce();
-
-  // when using IB & NVLink
-  void all_reduce();
-  // for NVLink only
-  void all_to_all_reduce();
-
-  void update();
+  // update on the gpu where the sample gradients are calculated
+  void update_network();
+  // update on the gpu where the embedding vectors are stored
+  void update_model();
 };
 
 

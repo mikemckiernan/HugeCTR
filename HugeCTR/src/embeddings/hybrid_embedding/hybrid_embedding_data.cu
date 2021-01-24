@@ -73,5 +73,6 @@ void HybridEmbeddingData::data_to_unique_categories(
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_data_template_defs.cuh"
+template class HybridEmbeddingData<uint32_t>;
+template class HybridEmbeddingData<size_t>;
 }

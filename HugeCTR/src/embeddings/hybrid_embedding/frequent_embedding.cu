@@ -27,49 +27,26 @@
 namespace HugeCTR {
 
 
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 void FrequentEmbedding::initialize_embedding_vectors() {
   // TODO: create intialize_embedding_vectors()
 }
-    
-
-template <typename dtype, typename TypeEmbedding>
-void FrequentEmbedding::reduce() {
-    switch(model_.communication_type) {
-    case IB_NVLink:
-        // internode using IB and intra node using NVLink: perform all-reduce
-        all_reduce();
-    break;
-    case NVLink:
-        // internode and intranode direct access: update fequent category
-        // embedding vector on one gpu, 
-        // on all gpus: update the embedding cache for the embedding vectors 
-        // that are needed in next iteration.
-        all_to_all_reduce();
-    break;
-    default:
-        CK_THROW(Errot_t::WrongInput, "Not a valid communication type, should be IB_NVLink or NVLink");
-    }
-}
 
 
-template <typename dtype, typename TypeEmbedding>
-void FrequentEmbedding::all_reduce() {
-  // TODO: create all_reduce
-}
-
-
-template <typename dtype, typename TypeEmbedding>
-void FrequentEmbedding::all_to_all_reduce() {
-  // TODO: create all_to_all_reduce()
-}
-
-
-template <typename dtype, typename TypeEmbedding>
-void FrequentEmbedding::update() {
+template <typename dtype, typename emtype>
+void FrequentEmbedding::update_network() {
   // TODO: create update()
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/frequent_embedding_template_defs.cuh"
+template <typename dtype, typename emtype>
+void FrequentEmbedding::update_model() {
+  // TODO: create update()
+}
+
+
+template class FrequentEmbedding<uint32_t, __half>;
+template class FrequentEmbedding<uint32_t, float>;
+template class FrequentEmbedding<size_t, __half>;
+template class FrequentEmbedding<size_t, float>;
 }

@@ -109,5 +109,8 @@ std::vector<TensorBag2> HybridSparseEmbedding<dtype, TypeEmbedding>::get_evaluat
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_sparse_embedding_template_defs.cuh"
+template class HybridSparseEmbedding<uint32_t, __half>;
+template class HybridSparseEmbedding<size_t, float>;
+template class HybridSparseEmbedding<uint32_t, __half>;
+template class HybridSparseEmbedding<size_t, float>;
 }

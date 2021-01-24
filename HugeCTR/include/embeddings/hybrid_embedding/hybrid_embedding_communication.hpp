@@ -32,20 +32,23 @@
 namespace HugeCTR {
 
 
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 class HybridEmbeddingCommunication {
-    FrequentEmbedding frequent_embedding_;
-    InfrequentEmbedding infrequent_embedding_;
+  FrequentEmbedding<dtype, emtype> frequent_embedding_;
+  InfrequentEmbedding<dtype, emtype> infrequent_embedding_;
 
 public:
-    // reduces the frequent embedding
-    void all_reduce();
-    // all-to-all forward and backward for the infrequent embedding
-    void all_to_all_v_forward();
-    void all_to_all_v_backward();
-    // performs all-to-all-reduce on the frequent embedding
-    void all_to_all_reduce_frequent();
-    // performs all-to-all-reduce on the frequent and infrequent
-    // embeddings simultaneously (IB)
-    void all_to_all_reduce();
+  HybridEmbeddingCommunication();
+  ~HybridembeddingCommmunication();
+
+  // reduces the frequent embedding
+  void all_reduce();
+  // all-to-all forward and backward for the infrequent embedding
+  void all_to_all_v_forward();
+  void all_to_all_v_backward();
+  // performs all-to-all-reduce on the frequent embedding
+  void all_to_all_reduce_frequent();
+  // performs all-to-all-reduce on the frequent and infrequent
+  // embeddings simultaneously (IB)
+  void all_to_all_reduce();
 };

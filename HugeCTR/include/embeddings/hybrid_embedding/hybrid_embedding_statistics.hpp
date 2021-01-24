@@ -38,18 +38,17 @@ struct EmbeddingStatistics {
   Tensor2<dtype> categories_sorted;
   Tensor2<uint32_t> counts_sorted;
 
-  void calculate_statistics(Tensor2<dtype> samples, cudaStream_t stream);
-};
-
-
-template <typename dtype>
-void sort_categories_by_count(
+  void sort_categories_by_count(
     dtype *samples,
     uint32_t num_samples,
     dtype *categories_sorted,
     dtype *counts_sorted,
     uint32_t &num_unique_categories,
     cudaStream_t stream);
+  void sort_categories_by_count(
+    Tensor2<dtype> samples, 
+    cudaStream_t stream);
+};
 
 
 }

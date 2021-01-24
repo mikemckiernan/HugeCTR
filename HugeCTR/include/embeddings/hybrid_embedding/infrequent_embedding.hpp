@@ -37,16 +37,17 @@ class InfrequentEmbedding {
   Tensor2<uint32_t> network_indices_;
   Tensor2<uint32_t> network_indices_offsets_;
 
+  // requires model_ and data_ to be set
+  void init();
  public:
   InfrequentEmbedding();
   ~InfrequentEmbedding();  
 
   void initialize_embedding_vectors();
+  // only update on the gpu where the embedding vectors are stored
+  void update_model();
   void calculate_model_indices(cudaStream_t stream);
   void calculate_network_indices(cudaStream_t stream);
-
-  void all_to_all_forward();
-  void all_to_all_backward();
 };
 
 

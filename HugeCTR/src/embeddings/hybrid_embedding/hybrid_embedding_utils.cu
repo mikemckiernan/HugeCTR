@@ -45,6 +45,12 @@ void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStre
 }
   
 
-// template definitions
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_utils_template_defs.cuh"
+template void download_tensor<uint32_t>(std::vector<uint32_t>& h_tensor, Tensor2<uint32_t> tensor, CudaStream_t stream);
+template void download_tensor<size_t>(std::vector<size_t>& h_tensor, Tensor2<size_t> tensor, CudaStream_t stream);
+template void download_tensor<__half>(std::vector<__half>& h_tensor, Tensor2<__half> tensor, CudaStream_t stream);
+template void download_tensor<float>(std::vector<float>& h_tensor, Tensor2<float> tensor, CudaStream_t stream);
+template void upload_tensor<uint32_t>(std::vector<uint32_t>& h_tensor, Tensor2<uint32_t> tensor, CudaStream_t stream);
+template void upload_tensor<size_t>(std::vector<size_t>& h_tensor, Tensor2<size_t> tensor, CudaStream_t stream);
+template void upload_tensor<__half>(std::vector<__half>& h_tensor, Tensor2<__half> tensor, CudaStream_t stream);
+template void upload_tensor<float>(std::vector<float>& h_tensor, Tensor2<float> tensor, CudaStream_t stream);
 }

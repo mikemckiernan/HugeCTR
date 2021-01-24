@@ -26,18 +26,24 @@ namespace HugeCTR {
 /// This class contains the calibrated measurements for all-to-all and all-reduce
 /// for different data sizes. Each calibration consists of two arrays, 
 /// ._data_size array and the ._time array which represent a mapping. 
-/// 
+///
+/// This class will be executed on the cpu instead of the gpu if no
+/// gpu memory is allocated for the calibration data.
 struct CalibrationData {
   CalibrationData() {}
   ~CalibrationData() {}
 
   // Calibration all-to-all : 
   //   the following two arrays map data sizes to all-to-all times / latencies.
+  std::vector<double> h_all_to_all_data_size;
+  std::vector<double> h_all_to_all_times;
   Tensor2<float> all_to_all_data_size; // data size of message per gpu
   Tensor2<float> all_to_all_times;     // calibrated all-to-all times
 
   // Calibration all-reduce : 
   //   the following two arrays map data sizes to all-to-all times / latencies.
+  std::vector<double> h_all_reduce_data_size;
+  std::vector<double> h_all_reduce_times;
   Tensor2<float> all_reduce_data_size; // data size of message per gpu
   Tensor2<float> all_reduce_times;     // calibrated all-reduce times
 
@@ -47,32 +53,36 @@ struct CalibrationData {
   //   This approximation assumes that the communications are bandwidth limited.
   double max_all_reduce_bandwidth; // algorithm bandwidth all-reduce [data size message per gpu in bytes / sec]
   double max_all_to_all_bandwidth; // algorithm bandwidth all-to-all [data size message per gpu in bytes / sec]
+};
 
+
+template <typename dtype>
+class ModelInitializationFunctors {
+ public:
   float interpolate(
     const Tensor2<float> &calibrated_data_size,
     const Tensor2<float> &calibrated_times,
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
-  float interpolate_all_reduce(float data_size);
-  float interpolate_all_to_all(float data_size);
-
-  float calculate_threshold(
+  float interpolate_all_reduce(
+    const CalibrationData<dtype> &calibration,
+    float data_size);
+  float interpolate_all_to_all(
+    const Calibrationtype<dtype> &calibration,
+    const Tensor2<float> &data_size,
+    Tensor2<float> &communication_times);
+ float calculate_threshold(
     CommunicationType communication_type,
     size_t batch_size, 
     size_t num_networks,
     size_t num_iterations,
-    size_t num_tables
+    size_t num_tables);
+  uint32_t calculate_num_frequent_categories(
+    CommunicationType communication_type,
+    CalibrationData<dtype> calibration_data,
+    HybridEmbeddingStatistics<dtype> statistics
   );
-
 };
-
-
-template <typename dtype>
-uint32_t calculate_num_frequent_categories(
-  CommunicationType communication_type,
-  CalibrationData<dtype> calibration_data,
-  HybridEmbeddingStatistics<dtype> statistics
-);
 
 
 }

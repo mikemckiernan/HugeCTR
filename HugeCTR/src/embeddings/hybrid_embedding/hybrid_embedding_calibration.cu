@@ -160,5 +160,6 @@ float CalibrationData::calculate_threshold(
 }
 
 
-#include "HugeCTR/include/embeddings/hybrid_embedding_template_defs/hybrid_embedding_calibration_template_defs.cuh"
+template class ModelInitializationFunctors<uint32_t>;
+template class ModelInitializationFunctors<size_t>;
 }
