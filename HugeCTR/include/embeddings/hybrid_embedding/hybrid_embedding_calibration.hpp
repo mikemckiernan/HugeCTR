@@ -85,13 +85,13 @@ struct CalibrationData {
 template <typename dtype>
 class ModelInitializationFunctors {
  public:
-  double calculate_threshold(
-    CommunicationType communication_type,
+  static double calculate_threshold(
+    const CommunicationType communication_type,
     size_t batch_size, 
     size_t num_networks,
     size_t num_iterations,
     size_t num_tables);
-  uint32_t calculate_num_frequent_categories(
+  static uint32_t calculate_num_frequent_categories(
     const CommunicationType &communication_type,
     const CalibrationData<dtype> &calibration,
     const HybridEmbeddingStatistics<dtype> &statistics,

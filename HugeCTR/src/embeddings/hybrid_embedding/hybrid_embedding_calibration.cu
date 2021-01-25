@@ -76,7 +76,7 @@ float CalibrationData::interpolate_all_to_all(
 // be one duplication per network on average
 template <typename dtype>
 double ModelInitializationFunctors::calculate_threshold(
-  CommunicationType communication_type,
+  const CommunicationType communication_type,
   size_t batch_size, 
   size_t num_networks,
   size_t num_iterations,

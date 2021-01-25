@@ -49,16 +49,16 @@ public:
   dtype num_frequent;
   dtype num_categories;
 
+  uint32_t num_networks;
   Tensor2<uint32_t> num_networks_per_node; // number of gpus for each node, .size() == number of nodes
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
   Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
 
   void init_model(
-    CommunicationType communication_type,
-    CalibrationData<dtype> calibration,
-    HybridEmbeddingStatistics<dtype> statistics,
-    HybridEmbeddingData<dtype> data,
+    const CommunicationType communication_type,
+    const CalibrationData<dtype> &calibration,
+    const HybridEmbeddingData<dtype> &data,
     cudaStream_t stream
   );
 

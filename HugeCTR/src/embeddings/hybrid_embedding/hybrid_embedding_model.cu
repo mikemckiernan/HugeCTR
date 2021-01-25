@@ -29,26 +29,39 @@ namespace HugeCTR {
 /// given the calibration of the all-to-all and all-reduce.
 template<dtype>
 void HybridEmbeddingModel::init_model(
-  CommunicationType communication_type,
-  CalibrationData<dtype> calibration,
-  HybridEmbeddingStatistics<dtype> statistics,
-  HybridEmbeddingData<dtype> data,
+  const CommunicationType communication_type,
+  const CalibrationData<dtype> &calibration,
+  const HybridEmbeddingData<dtype> &data,
   cudaStream_t stream
 ) {
+
+  // Requires:
+  //     communication_type
+  //     calibration
+  //     number of iterations to be read into data 
+  //           here: data.table_sizes, data.samples, data.num_networks
   // calculate the total number of categories
+
   num_categories = (dtype) 0;
-  for (size_t i = 0; i < data.table_sizes.size(); ++i) {
+  for (size_t i = 0; i < data.table_sizes.size(); ++i)
     num_categories += data.table_sizes[i];
-  }
+  num_networks = 0;
+  for (size_t n = 0; n  < num_networks_per_node.size(); ++n)
+    num_networks += num_networks_per_node[n];
 
   // determine the number of frequent categories
 
-  // create the top categories sorted by count
-  Tensor2<dtype> samples = data.samples;
+  // list the top categories sorted by count
+  Tensor2<dtype> &samples = data.samples;
   EmbeddingStatistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
   statistics.sort_categories_by_count(samples, stream);
+
   // from the sorted count, determine the number of frequent categories
-  num_frequent = calibration.calculate_num_frequent_categories(
+  //
+  // If the calibration data is present, this is used to calculate the number
+  // of frequent categories.  Otherwise use the threshold required by the 
+  // communication type.
+  num_frequent = ModelInitializationFunctors::calculate_num_frequent_categories(
       communication_type, calibration, statistics, data, stream);
 
   /// === TODO: PERFORM ON GPU ===
