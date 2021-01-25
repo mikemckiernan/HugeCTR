@@ -41,7 +41,7 @@ namespace HugeCTR {
 namespace {
 
 template <int BLOCK_WIDTH>
-__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, const __half* top,
+__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu,  __half* middle, const __half* top,
                                                int ldn) {
   __shared__ __half2 elem[32][BLOCK_WIDTH + 1];
   __shared__ __half2 accu[BLOCK_WIDTH];
@@ -50,6 +50,7 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, cons
 
   __half2* middle2 = reinterpret_cast<__half2*>(middle);
   const __half2* top2 = reinterpret_cast<const __half2*>(top);
+  __half2* dRelu2 = reinterpret_cast<__half2*>(dRelu);
 
   int lx, ly, gi;
   int gx_offset = blockIdx.x * BLOCK_WIDTH;
@@ -64,7 +65,7 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, cons
     __half2 mask = __hgt2(t, zero);
     t = __hmul2(__ldg(top2 + gi), mask);
 
-    middle2[gi] = t;
+    dRelu2[gi] = t;
     elem[ly][lx] = t;
   }
 
@@ -303,14 +304,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float beta_k = 1.0f;
   const float beta_x = 0.0f;
 
-  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
-                                                                            0.0f);
 
-  dim3 blocks(n / 64, m / 32);
-  reverse_add_bias_and_re_kernel<32>
-      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, middle, top, n / 2);
-  convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
-                                                                         n);
   // if(pos_ == BODY || pos_ == HEAD) {  
   //   __half* db_top_host = new __half[weights_grad_[1].get_num_elements()];
   //   cudaMemcpyAsync(db_top_host, db_top, weights_grad_[1].get_num_elements()*sizeof(__half),
@@ -349,19 +343,27 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   //   printf("Pass\n");
   // }
 
-  if(pos_ == BODY || pos_ == HEAD) {
-    middle = dRelu_out_tensor_.get_ptr();
-    bias_grad = (__half*)db_out_tensor_.get_ptr();
-  }
-      // cudaMemcpyAsync(middle, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
-        // cudaMemcpyDeviceToDevice, get_gpu().get_stream());
-  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
-                                &alpha, middle, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
-                                kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
+  // if(pos_ == BODY || pos_ == HEAD) {
+  //   middle = dRelu_out_tensor_.get_ptr();
+  //   cudaMemcpyAsync(middle, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
+  //       cudaMemcpyDeviceToDevice, get_gpu().get_stream());    
+  //   cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), db_out_tensor_.get_num_elements()*sizeof(__half),
+  //       cudaMemcpyDeviceToDevice, get_gpu().get_stream());  
+  // }
 
-  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
-                                &alpha, kernel, CUDA_R_16F, n, middle, CUDA_R_16F, n, &beta_x,
-                                bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
+
+
+
+  if(pos_ == TAIL) {
+    initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
+                                                                              0.0f);
+
+    dim3 blocks(n / 64, m / 32);
+    reverse_add_bias_and_re_kernel<32>
+        <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, middle, top, n / 2);
+    convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
+                                                                         n);
+  }
   if(pos_ == BODY || pos_ == TAIL) {
     gemm_dRelu_bgrad_run();
     // float* db    = (float*)db_in_tensor_.get_ptr();    
@@ -404,6 +406,14 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     // printf("Pass\n");
   }
 
+  if(pos_ == HEAD) {
+    CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
+                                &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
+                                bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
+  }
+  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
+                                &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
+                                kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));      
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
