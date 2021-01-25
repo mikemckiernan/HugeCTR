@@ -16,8 +16,15 @@
 
 #pragma once
 
-#include "HugeCTR/include/tensor2.hpp"
+#include <cuda_runtime.h>
 #include <vector>
+
+#include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
@@ -39,6 +46,9 @@ struct Data {
   );
 
 };
+
+
+}
 
 
 }

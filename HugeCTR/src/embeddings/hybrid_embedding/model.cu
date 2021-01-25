@@ -14,23 +14,31 @@
  * limitations under the License.
  */
 
+
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
 
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
+
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
 
 /// init_model calculates the optimal number of frequent categories 
 /// given the calibration of the all-to-all and all-reduce.
-template<dtype>
-void Model::init_model(
+template <typename dtype>
+void Model<dtype>::init_model(
   const CommunicationType communication_type,
-  const CalibrationData<dtype> &calibration,
+  const CalibrationData &calibration,
   const Data<dtype> &data,
   cudaStream_t stream
 ) {
@@ -102,4 +110,7 @@ void Model::init_model(
 
 template class Data<uint32_t>;
 template class Data<size_t>;
+}
+
+
 }

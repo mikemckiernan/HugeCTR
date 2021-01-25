@@ -16,10 +16,19 @@
 
 #pragma once
 
-#include "HugeCTR/include/tensor2.hpp"
+#include <cuda_runtime.h>
+#include <vector>
+
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
-#include <vector>
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
@@ -70,15 +79,15 @@ struct CalibrationData {
     std::vector<double> &communication_times);
 
   // gpu functions
-  float interpolate(
+  void interpolate(
     const Tensor2<float> &calibrated_data_size,
     const Tensor2<float> &calibrated_times,
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
-  float interpolate_all_reduce(
+  void interpolate_all_reduce(
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
-  float interpolate_all_to_all(
+  void interpolate_all_to_all(
     const Tensor2<float> &data_size,
     Tensor2<float> &communication_times);
 };
@@ -95,11 +104,14 @@ class ModelInitializationFunctors {
     size_t num_tables);
   static uint32_t calculate_num_frequent_categories(
     const CommunicationType &communication_type,
-    const CalibrationData<dtype> &calibration,
+    const CalibrationData &calibration,
     const Statistics<dtype> &statistics,
     const Data<dtype> &data,
     cudaStream_t stream);
 };
+
+
+}
 
 
 }

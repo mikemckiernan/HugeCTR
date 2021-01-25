@@ -15,22 +15,28 @@
  */
 
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <utility>
 #include <vector>
 
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/utils.cuh"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+namespace HugeCTR {
 
 
 namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>
-void InfrequentEmbedding::initialize_embedding_vectors() {
+void InfrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create initialize_embedding_vectors()
 }
 
@@ -150,3 +156,6 @@ template class InfrequentEmbedding<uint32_t, float>;
 template class InfrequentEmbedding<size_t, __half>;
 template class InfrequentEmbedding<size_t, float>;
 }  // namespace HugeCTR
+
+
+}

@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
 
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
+
+
+namespace HugeCTR {
 
 
 namespace hybrid_embedding {
@@ -31,11 +37,11 @@ namespace hybrid_embedding {
 ///   calibrated_data_size, calibrated_times
 ///   return communication_times
 ///
-float CalibrationData::interpolate(
-    const Tensor2<float> &calibrated_data_size,
-    const Tensor2<float> &calibrated_times,
-    const Tensor2<float> &data_size,
-    Tensor2<float> &communication_times
+void CalibrationData::interpolate(
+  const Tensor2<float> &calibrated_data_size,
+  const Tensor2<float> &calibrated_times,
+  const Tensor2<float> &data_size,
+  Tensor2<float> &communication_times
 ) {
   // TODO: implement this
 }
@@ -45,7 +51,7 @@ float CalibrationData::interpolate(
 /// Convenience function for interpolating all-to-all communication times from 
 /// calibrated data
 ///
-float CalibrationData::interpolate_all_reduce(
+void CalibrationData::interpolate_all_reduce(
   const Tensor2<float> &data_size,
   Tensor2<float> &communication_times
 ) {
@@ -59,7 +65,7 @@ float CalibrationData::interpolate_all_reduce(
 /// Convenience function for interpolating all-to-all communication times from 
 /// calibrated data
 ///
-float CalibrationData::interpolate_all_to_all(
+void CalibrationData::interpolate_all_to_all(
   const Tensor2<float> &data_size,
   Tensor2<float> &communication_times
 ) {
@@ -72,7 +78,7 @@ float CalibrationData::interpolate_all_to_all(
 // Calculate threshold such that for the worst case distribution there will 
 // be one duplication per network on average
 template <typename dtype>
-double ModelInitializationFunctors::calculate_threshold(
+double ModelInitializationFunctors<dtype>::calculate_threshold(
   const CommunicationType communication_type,
   size_t batch_size, 
   size_t num_networks,
@@ -84,7 +90,6 @@ double ModelInitializationFunctors::calculate_threshold(
   // for NVLink capture effectively all duplications with number of categories
   double M = (double) batch_size / (double) num_networks;
   double p_dup_max = 1.0 / 100.; // maximum 1 % of samples the category will be duplicated
-  double count_threshold = 1.;
   switch(communication_type) {
   case IB_NVLink:
     count_threshold = (double) num_iterations * (double) num_nodes
@@ -112,9 +117,9 @@ double ModelInitializationFunctors::calculate_threshold(
 /// Calculate the number of frequent categories from data
 ///
 template <typename dtype>
-uint32_t ModelInitializationFunctors::calculate_num_frequent_categories(
+uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
   const CommunicationType &communication_type,
-  const CalibrationData<dtype> &calibration,
+  const CalibrationData &calibration,
   const Statistics<dtype> &statistics,
   const Data<dtype> &data,
   cudaStream_t stream
@@ -162,4 +167,7 @@ uint32_t ModelInitializationFunctors::calculate_num_frequent_categories(
 
 template class ModelInitializationFunctors<uint32_t>;
 template class ModelInitializationFunctors<size_t>;
+}
+
+
 }

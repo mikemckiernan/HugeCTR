@@ -16,8 +16,14 @@
 
 #pragma once
 
-#include "HugeCTR/include/tensor2.hpp"
+#include <cuda_runtime.h>
 #include <vector>
+
+#include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+namespace HugeCTR {
 
 
 namespace hybrid_embedding {
@@ -25,6 +31,7 @@ namespace hybrid_embedding {
 
 template <typename dtype>
 struct Statistics {
+ public:
   Statistics(size_t num_samples) {
       // TODO:
       // allocate num_samples categories of data 
@@ -49,6 +56,9 @@ struct Statistics {
     Tensor2<dtype> samples, 
     cudaStream_t stream);
 };
+
+
+}
 
 
 }

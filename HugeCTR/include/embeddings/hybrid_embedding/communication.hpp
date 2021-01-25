@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <cuda_runtime.h>
+#include <vector>
+
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
@@ -24,33 +28,41 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
-
 #include "HugeCTR/include/tensor2.hpp"
-#include <vector>
+
+
+namespace HugeCTR{
+
 
 namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>
-class HybridEmbeddingCommunication {
+class Communication {
   FrequentEmbedding<dtype, emtype> frequent_embedding_;
   InfrequentEmbedding<dtype, emtype> infrequent_embedding_;
 
+  void initialize_communication();
+
 public:
   Communication();
-  ~Commmunication();
+  ~Communication();
 
   // reduces the frequent embedding
   void all_reduce();
   // all-to-all forward and backward for the infrequent embedding
   void all_to_all_v_forward();
   void all_to_all_v_backward();
+
   // performs all-to-all-reduce on the frequent embedding
   void all_to_all_reduce_frequent();
   // performs all-to-all-reduce on the frequent and infrequent
   // embeddings simultaneously (IB)
   void all_to_all_reduce();
 };
+
+
+}
 
 
 }

@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
  
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
+
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
@@ -29,7 +36,7 @@ namespace hybrid_embedding {
 ///        Per network, the columns corresponding to embedding tables 
 ///        are concatenated and categories get an unique index / label.
 template <typename dtype>
-void Data::data_to_unique_categories(
+void Data<dtype>::data_to_unique_categories(
     Tensor2<dtype> data,
     cudaStream_t stream
 ) {
@@ -48,6 +55,7 @@ void Data::data_to_unique_categories(
   std::vector<dtype> h_data;
   download_tensor<dtype>(h_data, data, stream);
 
+  size_t network_batch_size = batch_size / num_networks;
   const size_t num_tables = table_sizes.size();
   std::vector<dtype> embedding_offsets(num_tables);
   dtype embedding_offset = (dtype) 0;
@@ -75,4 +83,7 @@ void Data::data_to_unique_categories(
 
 template class Data<uint32_t>;
 template class Data<size_t>;
+}
+
+
 }

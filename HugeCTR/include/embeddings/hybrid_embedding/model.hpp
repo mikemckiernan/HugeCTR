@@ -16,8 +16,18 @@
 
 #pragma once
 
-#include "HugeCTR/include/tensor2.hpp"
+#include <cuda_runtime.h>
 #include <vector>
+
+#include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
@@ -57,12 +67,15 @@ public:
 
   void init_model(
     const CommunicationType communication_type,
-    const CalibrationData<dtype> &calibration,
+    const CalibrationData &calibration,
     const Data<dtype> &data,
     cudaStream_t stream
   );
 
 };
+
+
+}
 
 
 }

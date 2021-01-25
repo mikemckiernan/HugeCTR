@@ -16,8 +16,17 @@
 
 #pragma once
 
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
+#include <cuda_runtime.h>
+#include <vector>
+
+#include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+namespace HugeCTR {
+
 
 namespace hybrid_embedding {
 
@@ -49,6 +58,9 @@ class InfrequentEmbedding {
   void calculate_model_indices(cudaStream_t stream);
   void calculate_network_indices(cudaStream_t stream);
 };
+
+
+}
 
 
 }

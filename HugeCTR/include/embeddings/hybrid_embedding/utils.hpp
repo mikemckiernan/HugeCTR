@@ -16,8 +16,11 @@
 
 #pragma once
 
+
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
+
+namespace HugeCTR {
 
 
 namespace hybrid_embedding {
@@ -27,11 +30,13 @@ enum class CommunicationType {IB_NVLink, NVLink};
 
 
 template <typename dtype>
-void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, cudaStream_t stream);
 
 
 template <typename dtype>
-void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, cudaStream_t stream);
 
+
+}
 
 }

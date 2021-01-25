@@ -14,6 +14,19 @@
  * limitations under the License.
  */
 
+#include <cuda_runtime.h>
+#include <vector>
+
+#include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
+
+
+namespace HugeCTR {
+
+
 namespace hybrid_embedding {
 
 
@@ -40,6 +53,9 @@ public:
   // update on the gpu where the embedding vectors are stored
   void update_model();
 };
+
+
+}
 
 
 }

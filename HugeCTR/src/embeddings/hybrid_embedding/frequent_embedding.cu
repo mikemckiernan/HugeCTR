@@ -14,33 +14,39 @@
  * limitations under the License.
  */
 
+#include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/tensor2.hpp"
 
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
+
+
+namespace HugeCTR {
 
 
 namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>
-void FrequentEmbedding::initialize_embedding_vectors() {
+void FrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create intialize_embedding_vectors()
 }
 
 
 template <typename dtype, typename emtype>
-void FrequentEmbedding::update_network() {
+void FrequentEmbedding<dtype, emtype>::update_network() {
   // TODO: create update()
 }
 
 
 template <typename dtype, typename emtype>
-void FrequentEmbedding::update_model() {
+void FrequentEmbedding<dtype, emtype>::update_model() {
   // TODO: create update()
 }
 
@@ -49,4 +55,7 @@ template class FrequentEmbedding<uint32_t, __half>;
 template class FrequentEmbedding<uint32_t, float>;
 template class FrequentEmbedding<size_t, __half>;
 template class FrequentEmbedding<size_t, float>;
+}
+
+
 }
