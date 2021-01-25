@@ -49,8 +49,8 @@ class InfrequentEmbedding {
   // requires model_ and data_ to be set
   void init();
  public:
-  InfrequentEmbedding();
-  ~InfrequentEmbedding();  
+  InfrequentEmbedding() {}
+  ~InfrequentEmbedding() {}  
 
   void initialize_embedding_vectors();
   // only update on the gpu where the embedding vectors are stored

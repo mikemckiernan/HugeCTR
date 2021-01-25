@@ -29,7 +29,7 @@
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
-using namespace hybrid_embedding;
+using namespace HugeCTR::hybrid_embedding;
 
 namespace HugeCTR {
 
@@ -57,7 +57,7 @@ private:
   // it's scope / frees the memory.
   std::vector<Model<dtype>> model_;
   std::vector<Data<dtype>> data_;
-  std::vector<CalibrationData<dtype>> calibration_;
+  std::vector<CalibrationData> calibration_;
   std::vector<Statistics<dtype>> statistics_;
 
 public:

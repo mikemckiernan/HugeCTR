@@ -53,8 +53,8 @@ void FrequentEmbedding<dtype, emtype>::update_model() {
 
 template class FrequentEmbedding<uint32_t, __half>;
 template class FrequentEmbedding<uint32_t, float>;
-template class FrequentEmbedding<size_t, __half>;
-template class FrequentEmbedding<size_t, float>;
+template class FrequentEmbedding<unsigned long, __half>;
+template class FrequentEmbedding<unsigned long, float>;
 }
 
 

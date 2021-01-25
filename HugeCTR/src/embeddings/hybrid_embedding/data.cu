@@ -82,7 +82,7 @@ void Data<dtype>::data_to_unique_categories(
 
 
 template class Data<uint32_t>;
-template class Data<size_t>;
+template class Data<unsigned long>;
 }
 
 

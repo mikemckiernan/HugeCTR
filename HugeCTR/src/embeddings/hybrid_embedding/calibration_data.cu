@@ -80,6 +80,9 @@ void CalibrationData::interpolate_all_to_all(
 template <typename dtype>
 double ModelInitializationFunctors<dtype>::calculate_threshold(
   const CommunicationType communication_type,
+  double all_to_all_bandwidth,
+  double all_reduce_bandwidth,
+  size_t num_nodes,
   size_t batch_size, 
   size_t num_networks,
   size_t num_iterations,
@@ -91,12 +94,12 @@ double ModelInitializationFunctors<dtype>::calculate_threshold(
   double M = (double) batch_size / (double) num_networks;
   double p_dup_max = 1.0 / 100.; // maximum 1 % of samples the category will be duplicated
   switch(communication_type) {
-  case IB_NVLink:
+  case CommunicationType::IB_NVLink:
     count_threshold = (double) num_iterations * (double) num_nodes
                       * all_to_all_bandwidth / all_reduce_bandwidth 
                       * (double) num_nodes / ((double) num_nodes - 1.);
     break;
-  case NVLink:
+  case CommunicationType::NVLink:
     // count threshold such that the probability of duplication is less than p_dup_max
     //   even if there are batch size number of categories that occur more often,
     //   there will be a duplication at most once every iteration per gpu
@@ -106,7 +109,7 @@ double ModelInitializationFunctors<dtype>::calculate_threshold(
                     * sqrt(2.0 * p_dup_max / (M *(M-1))));
     break;
   default:
-    CK_THROW(Error_t::WrongInput, "Unknown communication type, expecting IB_NVLink or NVLink");
+    CK_THROW_(Error_t::WrongInput, "Unknown communication type, expecting IB_NVLink or NVLink");
   }
 
   return count_threshold;
@@ -122,19 +125,16 @@ uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
   const CalibrationData &calibration,
   const Statistics<dtype> &statistics,
   const Data<dtype> &data,
+  const size_t num_networks,
   cudaStream_t stream
 ) {
   size_t num_frequent = 0;
 
-  if (calibration.all_to_all_times.size() > 0) {
+  if (calibration.all_to_all_times.get_size_in_bytes() > 0) {
     // calibration is given, perform fully optimized hybrid model
-    CK_THROW(Error_t::WrongInput, "initialization hybrid model from communication calibration not available yet");
+    CK_THROW_(Error_t::WrongInput, "initialization hybrid model from communication calibration not available yet");
   } else {
-    size_t num_networks = (size_t) 0;
-    for (size_t i = 0; i < num_networks_per_node.size(); ++i) {
-      num_networks += num_networks_per_nodex[i];
-    }
-
+    size_t num_nodes = calibration.num_nodes;
     size_t batch_size = data.batch_size;
     size_t num_networks = data.num_networks;
     size_t num_iterations = data.num_iterations;
@@ -143,8 +143,9 @@ uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
     // Use threshold to determine number of frequent categories,
     // calculates optimal number of frequent categories when the all-to-all 
     // and all-reduce are both bandwidth limited.
-    double count_threshold = calibration.calculate_threshold(
-        communication_type, batch_size, num_networks, num_iterations, num_tables);
+    double count_threshold = ModelInitializationFunctors::calculate_threshold(
+        communication_type, calibration.max_all_to_all_bandwidth, calibration.max_all_reduce_bandwidth,
+        num_nodes, batch_size, num_networks, num_iterations, num_tables);
 
     /// === TODO: PERFORM ON GPU ===
     /// ============================
@@ -166,7 +167,7 @@ uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
 
 
 template class ModelInitializationFunctors<uint32_t>;
-template class ModelInitializationFunctors<size_t>;
+template class ModelInitializationFunctors<unsigned long>;
 }
 
 

@@ -45,8 +45,8 @@ class Communication {
   void initialize_communication();
 
 public:
-  Communication();
-  ~Communication();
+  Communication() {}
+  ~Communication() {}
 
   // reduces the frequent embedding
   void all_reduce();

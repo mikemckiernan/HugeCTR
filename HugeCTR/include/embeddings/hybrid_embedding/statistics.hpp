@@ -37,7 +37,7 @@ struct Statistics {
       // allocate num_samples categories of data 
       // for categories_sorted and counts_sorted
   }
-  ~Statistics();
+  ~Statistics() {}
 
   uint32_t num_unique_categories;
 

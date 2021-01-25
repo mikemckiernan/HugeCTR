@@ -60,6 +60,7 @@ public:
   dtype num_categories;
 
   uint32_t num_networks;
+  std::vector<uint32_t> h_num_networks_per_node;
   Tensor2<uint32_t> num_networks_per_node; // number of gpus for each node, .size() == number of nodes
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache

@@ -60,8 +60,8 @@ void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t st
   std::vector<dtype> h_category_location;
   download_tensor<dtype>(h_category_location, model_.category_location, stream);
 
-  std::vector<uint32_t> h_model_indices = std::vector<dtype>(data_.batch_size * num_tables);
-  std::vector<uint32_t> h_model_indices_offsets = std::vector<dtype>(data_.num_networks + 1);
+  std::vector<uint32_t> h_model_indices = std::vector<uint32_t>(data_.batch_size * num_tables);
+  std::vector<uint32_t> h_model_indices_offsets = std::vector<uint32_t>(data_.num_networks + 1);
 
   // Prefix sum
   size_t sum = 0;
@@ -131,12 +131,12 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
             lesser_by_first<dtype>);
 
   // Retrieve indices
-  std::vector<dtype> h_network_indices = std::vector<dtype>(local_batch_size * num_tables);
+  std::vector<uint32_t> h_network_indices = std::vector<uint32_t>(local_batch_size * num_tables);
   for (size_t idx = 0; idx < sum; idx++) {
     h_network_indices[idx] = h_network_sources_indices[idx].second;
   }
   // Compute offsets
-  std::vector<dtype> h_network_indices_offsets = std::vector<dtype>(data_.num_networks + 1);
+  std::vector<uint32_t> h_network_indices_offsets = std::vector<uint32_t>(data_.num_networks + 1);
   for (size_t i = 0; i < data_.num_networks; i++) {
     h_network_indices_offsets[i] =
         std::lower_bound(h_network_sources_indices.begin(), h_network_sources_indices.begin() + sum,
@@ -153,8 +153,8 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
 
 template class InfrequentEmbedding<uint32_t, __half>;
 template class InfrequentEmbedding<uint32_t, float>;
-template class InfrequentEmbedding<size_t, __half>;
-template class InfrequentEmbedding<size_t, float>;
+template class InfrequentEmbedding<unsigned long, __half>;
+template class InfrequentEmbedding<unsigned long, float>;
 }  // namespace HugeCTR
 
 

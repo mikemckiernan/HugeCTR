@@ -44,6 +44,8 @@ struct CalibrationData {
   CalibrationData() {}
   ~CalibrationData() {}
 
+  size_t num_nodes;
+
   // Calibration all-to-all : 
   //   the following two arrays map data sizes to all-to-all times / latencies.
   std::vector<double> h_all_to_all_data_size;
@@ -97,16 +99,20 @@ template <typename dtype>
 class ModelInitializationFunctors {
  public:
   static double calculate_threshold(
-    const CommunicationType communication_type,
-    size_t batch_size, 
-    size_t num_networks,
-    size_t num_iterations,
-    size_t num_tables);
+  const CommunicationType communication_type,
+  double all_to_all_bandwidth,
+  double all_reduce_bandwidth,
+  size_t num_nodes,
+  size_t batch_size, 
+  size_t num_networks,
+  size_t num_iterations,
+  size_t num_tables);
   static uint32_t calculate_num_frequent_categories(
     const CommunicationType &communication_type,
     const CalibrationData &calibration,
     const Statistics<dtype> &statistics,
     const Data<dtype> &data,
+    const size_t num_networks,
     cudaStream_t stream);
 };
 

@@ -86,36 +86,40 @@ void HybridSparseEmbedding<dtype, emtype>::set_learning_rate(float lr) {
 
 template <typename dtype, typename emtype>
 size_t HybridSparseEmbedding<dtype, emtype>::get_params_num() const {
-
+  return 0;
 }
 
 
 template <typename dtype, typename emtype>
 size_t HybridSparseEmbedding<dtype, emtype>::get_vocabulary_size() const {
   // TODO: create get_vocabulary_size()
+  return 0;
 }
 
 
 template <typename dtype, typename emtype>
 size_t HybridSparseEmbedding<dtype, emtype>::get_max_vocabulary_size() const {
   // TODO: create get_max_vocabulary_size()
+  return 0;
 }
 
 
 template <typename dtype, typename emtype>
 std::vector<TensorBag2> HybridSparseEmbedding<dtype, emtype>::get_train_output_tensors() const {
   // TODO: create get_train_output_tensors()
+  return std::vector<TensorBag2>();
 }
 
 
 template <typename dtype, typename emtype>
 std::vector<TensorBag2> HybridSparseEmbedding<dtype, emtype>::get_evaluate_output_tensors() const {
   // TODO: create get_evaluate_output_tensors
+  return std::vector<TensorBag2>();
 }
 
 
 template class HybridSparseEmbedding<uint32_t, __half>;
-template class HybridSparseEmbedding<size_t, float>;
-template class HybridSparseEmbedding<uint32_t, __half>;
-template class HybridSparseEmbedding<size_t, float>;
+template class HybridSparseEmbedding<uint32_t, float>;
+template class HybridSparseEmbedding<unsigned long, __half>;
+template class HybridSparseEmbedding<unsigned long, float>;
 }

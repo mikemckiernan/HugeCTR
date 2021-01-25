@@ -38,16 +38,16 @@ void Communication<dtype, emtype>::initialize_communication() {
 }
 
 
-template <typename dtype, typename emtype>
-Communication<dtype, emtype>::Communication<dtype, emtype>() {
+// template <typename dtype, typename emtype>
+// Communication<dtype, emtype>::Communication<dtype, emtype>() {
 
-}
+// }
 
 
-template <typename dtype, typename emtype>
-Communication<dtype, emtype>::~Commmunication() {
+// template <typename dtype, typename emtype>
+// Communication<dtype, emtype>::~Communication() {
 
-}
+// }
 
 
 // reduces the frequent embedding
@@ -85,6 +85,10 @@ void Communication<dtype, emtype>::all_to_all_reduce() {
 }
 
 
+template class Communication<uint32_t, __half>;
+template class Communication<uint32_t, float>;
+template class Communication<unsigned long, __half>;
+template class Communication<unsigned long, float>;
 }
 
 

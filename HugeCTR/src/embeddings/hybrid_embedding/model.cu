@@ -54,14 +54,14 @@ void Model<dtype>::init_model(
   for (size_t i = 0; i < data.table_sizes.size(); ++i)
     num_categories += data.table_sizes[i];
   num_networks = 0;
-  for (size_t n = 0; n  < num_networks_per_node.size(); ++n)
-    num_networks += num_networks_per_node[n];
+  for (size_t n = 0; n  < h_num_networks_per_node.size(); ++n)
+    num_networks += h_num_networks_per_node[n];
 
   // determine the number of frequent categories
 
   // list the top categories sorted by count
   Tensor2<dtype> &samples = data.samples;
-  Statistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
+  Statistics<dtype> statistics(samples.get_size_in_bytes() / sizeof(dtype));
   statistics.sort_categories_by_count(samples, stream);
 
   // from the sorted count, determine the number of frequent categories
@@ -69,7 +69,7 @@ void Model<dtype>::init_model(
   // If the calibration data is present, this is used to calculate the number
   // of frequent categories.  Otherwise use the threshold required by the 
   // communication type.
-  num_frequent = ModelInitializationFunctors::calculate_num_frequent_categories(
+  num_frequent = ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
       communication_type, calibration, statistics, data, stream);
 
   /// === TODO: PERFORM ON GPU ===
@@ -84,13 +84,13 @@ void Model<dtype>::init_model(
   //   embedding vector and partial gradient buffers
   std::vector<dtype> h_category_frequent_index(num_categories, num_categories);
   for (size_t i = 0; i < num_frequent; ++i) {
-    dtype category = h_categories_sorted[i]
+    dtype category = h_categories_sorted[i];
     h_category_frequent_index[category] = (dtype) i;
   }
 
   // initialize category_location
   //   for each category: global_network_id, local_buffer_index
-  std::vector<dtype> category_location(2*num_categories, num_categories);
+  std::vector<dtype> h_category_location(2*num_categories, num_categories);
   size_t indx = 0;
   for (size_t category = 0; category < num_categories; ++category) {
     if (h_category_frequent_index[category] == num_categories) {
@@ -109,7 +109,7 @@ void Model<dtype>::init_model(
 
 
 template class Data<uint32_t>;
-template class Data<size_t>;
+template class Data<unsigned long>;
 }
 
 
