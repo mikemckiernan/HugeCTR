@@ -41,7 +41,7 @@ namespace HugeCTR {
 namespace {
 
 template <int BLOCK_WIDTH>
-__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, const __half* top,
+__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu,__half* middle, const __half* top,
                                                int ldn) {
   __shared__ __half2 elem[32][BLOCK_WIDTH + 1];
   __shared__ __half2 accu[BLOCK_WIDTH];
@@ -49,6 +49,7 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, cons
   const __half2 zero = TypeFunc<__half2>::zero();
 
   __half2* middle2 = reinterpret_cast<__half2*>(middle);
+  __half2* dRelu2 = reinterpret_cast<__half2*>(dRelu);
   const __half2* top2 = reinterpret_cast<const __half2*>(top);
 
   int lx, ly, gi;
@@ -64,7 +65,7 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* middle, cons
     __half2 mask = __hgt2(t, zero);
     t = __hmul2(__ldg(top2 + gi), mask);
 
-    middle2[gi] = t;
+    dRelu2[gi] = t;
     elem[ly][lx] = t;
   }
 
@@ -303,105 +304,35 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float beta_k = 1.0f;
   const float beta_x = 0.0f;
 
-  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
+  if(pos_ == TAIL) {
+	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
                                                                             0.0f);
 
-  dim3 blocks(n / 64, m / 32);
-  reverse_add_bias_and_re_kernel<32>
-      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, middle, top, n / 2);
-  convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
+	  dim3 blocks(n / 64, m / 32);
+	  reverse_add_bias_and_re_kernel<32>
+	      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, middle, top, n / 2);
+	  convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
                                                                          n);
-  // if(pos_ == BODY || pos_ == HEAD) {  
-  //   __half* db_top_host = new __half[weights_grad_[1].get_num_elements()];
-  //   cudaMemcpyAsync(db_top_host, db_top, weights_grad_[1].get_num_elements()*sizeof(__half),
-  //       cudaMemcpyDeviceToHost, get_gpu().get_stream());
-  //   __half* db_host = new __half[weights_grad_[1].get_num_elements()];
-  //   cudaMemcpyAsync(db_host, bias_grad, weights_grad_[1].get_num_elements()*sizeof(__half),
-  //       cudaMemcpyDeviceToHost, get_gpu().get_stream());
-  //   printf("%d, %d, %d\n", m, n, k);
-  //   for (unsigned i = 0; i < weights_grad_[1].get_num_elements(); i++)
-  //   {
-  //     if(abs(float(db_host[i]) - float(db_top_host[i]))>1e-3)
-  //     {
-  //       printf("%d, %f, %f\n", i, (float)db_host[i], (float)db_top_host[i]);
-  //       // exit(-1);
-  //     }
-  //   }
-  //   printf("Pass\n");
-  // }
-
-  // if(pos_ == BODY || pos_ == HEAD) {
-  //   __half* dRelu_top_host = new __half[dRelu_out_tensor_.get_num_elements()];
-  //   cudaMemcpyAsync(dRelu_top_host, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
-  //       cudaMemcpyDeviceToHost, get_gpu().get_stream());
-  //   __half* middle_host = new __half[dRelu_out_tensor_.get_num_elements()];
-  //   cudaMemcpyAsync(middle_host, middle, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
-  //       cudaMemcpyDeviceToHost, get_gpu().get_stream());
-  //   printf("%d, %d, %d\n", m, n, k);
-  //   for (unsigned i = 0; i < dRelu_out_tensor_.get_num_elements(); i++)
-  //   {
-  //     if(abs(float(middle_host[i]) - float(dRelu_top_host[i]))>1e-4)
-  //     {
-  //       printf("%d, %f, %f\n", i, (float)middle_host[i], (float)dRelu_top_host[i]);
-  //       exit(-1);
-  //     }
-  //   }
-  //   printf("Pass\n");
-  // }
+  }
 
   if(pos_ == BODY || pos_ == HEAD) {
-    middle = dRelu_out_tensor_.get_ptr();
-    bias_grad = (__half*)db_out_tensor_.get_ptr();
+    cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
+         cudaMemcpyDeviceToDevice, get_gpu().get_stream());
+
   }
       // cudaMemcpyAsync(middle, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
         // cudaMemcpyDeviceToDevice, get_gpu().get_stream());
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
-                                &alpha, middle, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
+                                &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
-  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
-                                &alpha, kernel, CUDA_R_16F, n, middle, CUDA_R_16F, n, &beta_x,
+  if(pos_ == HEAD) {
+	  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
+                                &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
                                 bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
+  }
   if(pos_ == BODY || pos_ == TAIL) {
     gemm_dRelu_bgrad_run();
-    // float* db    = (float*)db_in_tensor_.get_ptr();    
-    // float* db_host = new float[k];
-    // cudaMemcpyAsync(db_host, db, k*sizeof(float), cudaMemcpyDeviceToHost, get_gpu().get_stream());
-
-    // __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-    // __half* bottom_ptr ;
-    // cudaMalloc((void**)&bottom_ptr, m*k*sizeof(__half));
-    // CK_CUDA_THROW_(cudaMemcpyAsync(bottom_ptr, bottom,
-    //     m*k*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));    
-    // reverse_add_bias_and_re_kernel<32>
-    //   <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, bottom_ptr, bottom_bprop, n / 2);
-    // float* db_ptr_host = new float[k];
-    // cudaMemcpyAsync(db_ptr_host, bias_grad_float, k*sizeof(float), cudaMemcpyDeviceToHost, get_gpu().get_stream());   
-    // for (int i = 0; i < k; i++)
-    // {
-    //   printf("%d, %f, %f\n", i, db_ptr_host[i], db_host[i]);
-    // }            
-
-    // __half* dRelu_bottom_host = new __half[dRelu_in_tensor_.get_num_elements()];
-    // cudaMemcpyAsync(dRelu_bottom_host, dRelu_bottom, dRelu_in_tensor_.get_num_elements()*sizeof(__half),
-    //     cudaMemcpyDeviceToHost, get_gpu().get_stream());
-    // for (int i = 0; i < m; i++)
-    // {
-    //   printf("%d, %f, %f\n", i, (float)dRelu_bottom_host[i], (float)db_host[i]);
-    // }     
-    // __half* bottom_ptr_host = new __half[dRelu_in_tensor_.get_num_elements()];
-    // cudaMemcpyAsync(bottom_ptr_host, bottom_ptr, dRelu_in_tensor_.get_num_elements()*sizeof(__half),
-    //     cudaMemcpyDeviceToHost, get_gpu().get_stream());      
-    // printf("%d, %d, %d\n", m, n, k);
-    // for (int i = 0; i < m*n; i++)
-    // {
-    //   if(abs(float(bottom_ptr_host[i]) - float(dRelu_bottom_host[i]))>1e-5)
-    //   {
-    //     printf("%d, %f, %f\n", i, (float)bottom_ptr_host[i], (float)dRelu_bottom_host[i]);
-    //     exit(-1);
-    //   }
-    // }
-    // printf("Pass\n");
   }
 
 #ifndef NDEBUG
@@ -422,6 +353,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
+  __half* dRelu_top = dRelu_out_tensor_.get_ptr();
   float* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
@@ -468,7 +400,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   // );
   bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
-    kernel, middle, dRelu_bottom, db_bottom, bottom,
+    kernel, dRelu_top, dRelu_bottom, db_bottom, bottom,
     cutlass::gemm::GemmUniversalMode::kGemm,
     {k, m, n},
     1,

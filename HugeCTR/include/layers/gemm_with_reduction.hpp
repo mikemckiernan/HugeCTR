@@ -420,7 +420,8 @@ struct TestbedGemmWithReduction {
       {
         temp += db_host[i+j*this->m_];
       }
-      sum[i] = (cutlass::half_t)temp;
+//      sum[i] = (cutlass::half_t)temp;
+      sum[i] = (cutlass::half_t)db_host[i];;
     }
     cudaMemcpyAsync(db, sum, this->m_*sizeof(cutlass::half_t), cudaMemcpyHostToDevice, stream);
     
