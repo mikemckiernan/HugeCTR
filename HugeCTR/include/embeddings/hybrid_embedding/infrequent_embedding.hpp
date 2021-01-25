@@ -19,16 +19,16 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 class InfrequentEmbedding {
   // copy of the model parameters and the input data, managed by HybridSparseEmbedding
-  HybridEmbeddingModel<dtype> model_;
-  HybridEmbeddingData<dtype> data_;
+  Model<dtype> model_;
+  Data<dtype> data_;
 
-  Tensor2<TypeEmbedding> infrequent_embedding_vectors_;
+  Tensor2<emtype> infrequent_embedding_vectors_;
 
   // forward-send, backward-receive
   Tensor2<uint32_t> model_indices_;

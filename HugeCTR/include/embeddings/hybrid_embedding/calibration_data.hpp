@@ -17,9 +17,11 @@
 #pragma once
 
 #include "HugeCTR/include/tensor2.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 #include <vector>
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 ///
@@ -94,8 +96,8 @@ class ModelInitializationFunctors {
   static uint32_t calculate_num_frequent_categories(
     const CommunicationType &communication_type,
     const CalibrationData<dtype> &calibration,
-    const HybridEmbeddingStatistics<dtype> &statistics,
-    const HybridEmbeddingData<dtype> &data,
+    const Statistics<dtype> &statistics,
+    const Data<dtype> &data,
     cudaStream_t stream);
 };
 

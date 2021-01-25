@@ -15,16 +15,16 @@
  */
 
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <vector>
 
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>

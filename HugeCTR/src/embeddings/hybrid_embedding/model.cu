@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <vector>
- 
-namespace HugeCTR {
+
+namespace hybrid_embedding {
 
 
 /// init_model calculates the optimal number of frequent categories 
 /// given the calibration of the all-to-all and all-reduce.
 template<dtype>
-void HybridEmbeddingModel::init_model(
+void Model::init_model(
   const CommunicationType communication_type,
   const CalibrationData<dtype> &calibration,
-  const HybridEmbeddingData<dtype> &data,
+  const Data<dtype> &data,
   cudaStream_t stream
 ) {
 
@@ -53,7 +53,7 @@ void HybridEmbeddingModel::init_model(
 
   // list the top categories sorted by count
   Tensor2<dtype> &samples = data.samples;
-  EmbeddingStatistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
+  Statistics statistics(samples.get_size_in_bytes() / sizeof(dtype));
   statistics.sort_categories_by_count(samples, stream);
 
   // from the sorted count, determine the number of frequent categories
@@ -100,6 +100,6 @@ void HybridEmbeddingModel::init_model(
 }
 
 
-template class HybridEmbeddingData<uint32_t>;
-template class HybridEmbeddingData<size_t>;
+template class Data<uint32_t>;
+template class Data<size_t>;
 }

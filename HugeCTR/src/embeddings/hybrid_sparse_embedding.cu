@@ -16,20 +16,20 @@
 
 #include "HugeCTR/include/embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_sparse_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_calibration.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_statistics.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 
 
 namespace HugeCTR {
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::initialize_model() {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::initialize_model() {
   // TODO: create initialize_model()
   //
   // allocate memory and initialize hybrid model objects...
@@ -37,74 +37,74 @@ void HybridSparseEmbedding<dtype, TypeEmbedding>::initialize_model() {
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::forward(bool is_train) {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::forward(bool is_train) {
   // TODO: create forward()
 }
   
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::backward() {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::backward() {
   // TODO: create backward()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::update_params() {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::update_params() {
   // TODO: create update_params()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::init_params() {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::init_params() {
   // TODO: createe init_params()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::load_parameters(std::istream& stream) {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::load_parameters(std::istream& stream) {
   // TODO: create load_parameters()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::dump_parameters(std::ostream& stream) const {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::dump_parameters(std::ostream& stream) const {
   // TODO: create dump_parameters()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-void HybridSparseEmbedding<dtype, TypeEmbedding>::set_learning_rate(float lr) {
+template <typename dtype, typename emtype>
+void HybridSparseEmbedding<dtype, emtype>::set_learning_rate(float lr) {
   // TODO: create set_learning_rate()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-size_t HybridSparseEmbedding<dtype, TypeEmbedding>::get_params_num() const {
+template <typename dtype, typename emtype>
+size_t HybridSparseEmbedding<dtype, emtype>::get_params_num() const {
 
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-size_t HybridSparseEmbedding<dtype, TypeEmbedding>::get_vocabulary_size() const {
+template <typename dtype, typename emtype>
+size_t HybridSparseEmbedding<dtype, emtype>::get_vocabulary_size() const {
   // TODO: create get_vocabulary_size()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-size_t HybridSparseEmbedding<dtype, TypeEmbedding>::get_max_vocabulary_size() const {
+template <typename dtype, typename emtype>
+size_t HybridSparseEmbedding<dtype, emtype>::get_max_vocabulary_size() const {
   // TODO: create get_max_vocabulary_size()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-std::vector<TensorBag2> HybridSparseEmbedding<dtype, TypeEmbedding>::get_train_output_tensors() const {
+template <typename dtype, typename emtype>
+std::vector<TensorBag2> HybridSparseEmbedding<dtype, emtype>::get_train_output_tensors() const {
   // TODO: create get_train_output_tensors()
 }
 
 
-template <typename dtype, typename TypeEmbedding>
-std::vector<TensorBag2> HybridSparseEmbedding<dtype, TypeEmbedding>::get_evaluate_output_tensors() const {
+template <typename dtype, typename emtype>
+std::vector<TensorBag2> HybridSparseEmbedding<dtype, emtype>::get_evaluate_output_tensors() const {
   // TODO: create get_evaluate_output_tensors
 }
 

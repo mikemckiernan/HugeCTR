@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_calibration.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
-  
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+
 #include <algorithm>
 #include <iostream>
 #include <vector>
 
 
-namespace HugeCTR {
-
-
-
+namespace hybrid_embedding {
 
 
 ///
@@ -118,8 +115,8 @@ template <typename dtype>
 uint32_t ModelInitializationFunctors::calculate_num_frequent_categories(
   const CommunicationType &communication_type,
   const CalibrationData<dtype> &calibration,
-  const HybridEmbeddingStatistics<dtype> &statistics,
-  const HybridEmbeddingData<dtype> &data,
+  const Statistics<dtype> &statistics,
+  const Data<dtype> &data,
   cudaStream_t stream
 ) {
   size_t num_frequent = 0;

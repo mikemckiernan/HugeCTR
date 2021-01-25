@@ -19,25 +19,35 @@
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
-namespace HugeCTR {
+
+namespace hybrid_embedding {
 
 
 template <typename dtype>
-struct HybridEmbeddingData {
-  std::vector<uint32_t> table_sizes;
-  size_t batch_size;
-  size_t num_iterations;
-  size_t num_networks;
+struct Statistics {
+  Statistics(size_t num_samples) {
+      // TODO:
+      // allocate num_samples categories of data 
+      // for categories_sorted and counts_sorted
+  }
+  ~Statistics();
 
-  Tensor2<dtype> samples;
+  uint32_t num_unique_categories;
 
-  // convert raw input data such that categories of different 
-  // categorical features have unique indices
-  void data_to_unique_categories(
-    Tensor2<dtype> data,
-    cudaStream_t stream
-  );
+  // top categories sorted by count
+  Tensor2<dtype> categories_sorted;
+  Tensor2<uint32_t> counts_sorted;
 
+  void sort_categories_by_count(
+    dtype *samples,
+    uint32_t num_samples,
+    dtype *categories_sorted,
+    uint32_t *counts_sorted,
+    uint32_t &num_unique_categories,
+    cudaStream_t stream);
+  void sort_categories_by_count(
+    Tensor2<dtype> samples, 
+    cudaStream_t stream);
 };
 
 

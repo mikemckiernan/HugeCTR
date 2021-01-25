@@ -17,19 +17,18 @@
 #pragma once
 
 #include "HugeCTR/include/embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_calibration.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_statistics.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>
@@ -38,8 +37,8 @@ class HybridEmbeddingCommunication {
   InfrequentEmbedding<dtype, emtype> infrequent_embedding_;
 
 public:
-  HybridEmbeddingCommunication();
-  ~HybridembeddingCommmunication();
+  Communication();
+  ~Commmunication();
 
   // reduces the frequent embedding
   void all_reduce();

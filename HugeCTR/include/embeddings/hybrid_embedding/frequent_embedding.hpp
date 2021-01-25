@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 // One FrequentEmbedding instance per gpu
-template <typename dtype, typename TypeEmbedding>
+template <typename dtype, typename emtype>
 class FrequentEmbedding {
   // copy of the model parameters and the input data
-  HybridEmbeddingModel<dtype> model_;
-  HybridEmbeddingData<dtype> data_;
+  Model<dtype> model_;
+  Data<dtype> data_;
 
   // locally stored embedding vectors for the data-parallel part of the embedding
-  Tensor2<TypeEmbedding> frequent_embedding_vectors_;
+  Tensor2<emtype> frequent_embedding_vectors_;
   // locally stored reduced gradients: input for the all-reduce
-  Tensor2<TypeEmbedding> frequent_partial_gradients_;
+  Tensor2<emtype> frequent_partial_gradients_;
 
   void init();
 public:

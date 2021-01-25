@@ -19,7 +19,7 @@
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 ///
@@ -35,10 +35,10 @@ namespace HugeCTR {
 ///    and gpu's (networks).
 ///
 template <typename dtype>
-struct HybridEmbeddingModel {
+struct Model {
 public:
-  HybridEmbeddingModel() {}
-  ~HybridEmbeddingModel() {}
+  Model() {}
+  ~Model() {}
 
   uint32_t node_id;
   uint32_t network_id;
@@ -58,7 +58,7 @@ public:
   void init_model(
     const CommunicationType communication_type,
     const CalibrationData<dtype> &calibration,
-    const HybridEmbeddingData<dtype> &data,
+    const Data<dtype> &data,
     cudaStream_t stream
   );
 

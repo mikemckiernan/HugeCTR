@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_statistics.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
- 
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+
 #include <algorithm>
 #include <iostream>
 #include <vector>
   
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 ///
 /// Perform count of categories within the samples and sort the categories by count
 ///
 template <typename dtype>
-void EmbeddingStatistics::sort_categories_by_count(
+void Statistics::sort_categories_by_count(
   Tensor2<dtype> samples,
   cudaStream_t stream
 ) {
@@ -44,7 +44,7 @@ void EmbeddingStatistics::sort_categories_by_count(
 
 // Kefeng, place your implementation here:
 template <typename dtype>
-void EmbeddingStatistics::sort_categories_by_count(
+void Statistics::sort_categories_by_count(
   dtype *samples,
   uint32_t num_samples,
   dtype *categories_sorted,
@@ -53,6 +53,6 @@ void EmbeddingStatistics::sort_categories_by_count(
   cudaStream_t stream);
 
 
-template class EmbeddingStatistics<uint32_t>;
-template class EmbeddingStatistics<size_t>;
+template class Statistics<uint32_t>;
+template class Statistics<size_t>;
 }

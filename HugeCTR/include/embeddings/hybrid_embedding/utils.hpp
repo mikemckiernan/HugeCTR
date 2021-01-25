@@ -20,35 +20,18 @@
 #include <vector>
 
 
-namespace HugeCTR {
+namespace hybrid_embedding {
+
+
+enum class CommunicationType {IB_NVLink, NVLink};
 
 
 template <typename dtype>
-struct EmbeddingStatistics {
-  EmbeddingStatistics(size_t num_samples) {
-      // TODO:
-      // allocate num_samples categories of data 
-      // for categories_sorted and counts_sorted
-  }
-  ~EmbeddingStatistics();
+void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
 
-  uint32_t num_unique_categories;
 
-  // top categories sorted by count
-  Tensor2<dtype> categories_sorted;
-  Tensor2<uint32_t> counts_sorted;
-
-  void sort_categories_by_count(
-    dtype *samples,
-    uint32_t num_samples,
-    dtype *categories_sorted,
-    uint32_t *counts_sorted,
-    uint32_t &num_unique_categories,
-    cudaStream_t stream);
-  void sort_categories_by_count(
-    Tensor2<dtype> samples, 
-    cudaStream_t stream);
-};
+template <typename dtype>
+void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
 
 
 }

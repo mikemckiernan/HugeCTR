@@ -17,19 +17,22 @@
 #pragma once
 
 #include "HugeCTR/include/embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_calibration.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_statistics.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
+using namespace hybrid_embedding;
+
 namespace HugeCTR {
+
 
 ///
 /// Interface class for the hybrid embedding to HugeCTR. It is responsible for
@@ -47,15 +50,15 @@ private:
   // model-parallel embedding model
   std::vector<InfrequentEmbedding<dtype, emtype>> infrequent_embeddings_;
   // performs the communication scheme
-  std::vector<HybridEmbeddingCommunication<dtype, emtype>> communication_;
+  std::vector<Communication<dtype, emtype>> communication_;
 
   // model_, data_, calibration_ and statistics_ are replications of the model 
   // and input data on each gpu. The HybridSparseEmbedding class manages 
   // it's scope / frees the memory.
-  std::vector<HybridEmbeddingModel<dtype>> model_;
-  std::vector<HybridEmbeddingData<dtype>> data_;
-  std::vector<HybridEmbeddingCalibration<dtype>> calibration_;
-  std::vector<HybridEmbeddingStatistics<dtype>> statistics_;
+  std::vector<Model<dtype>> model_;
+  std::vector<Data<dtype>> data_;
+  std::vector<CalibrationData<dtype>> calibration_;
+  std::vector<Statistics<dtype>> statistics_;
 
 public:
   HybridSparseEmbedding() {}

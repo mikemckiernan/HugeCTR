@@ -19,19 +19,26 @@
 #include "HugeCTR/include/tensor2.hpp"
 #include <vector>
 
-
-namespace HugeCTR {
-
-
-enum class CommunicationType {IB_NVLink, NVLink};
+namespace hybrid_embedding {
 
 
 template <typename dtype>
-void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+struct Data {
+  std::vector<uint32_t> table_sizes;
+  size_t batch_size;
+  size_t num_iterations;
+  size_t num_networks;
 
+  Tensor2<dtype> samples;
 
-template <typename dtype>
-void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, CudaStream_t stream);
+  // convert raw input data such that categories of different 
+  // categorical features have unique indices
+  void data_to_unique_categories(
+    Tensor2<dtype> data,
+    cudaStream_t stream
+  );
+
+};
 
 
 }

@@ -19,12 +19,14 @@
 #include <utility>
 #include <vector>
 
-#include "HugeCTR/include/embeddings/hybrid_embedding/hybrid_embedding_utils.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/utils.cuh"
 
 
-namespace HugeCTR {
+namespace hybrid_embedding {
 
 
 template <typename dtype, typename emtype>
