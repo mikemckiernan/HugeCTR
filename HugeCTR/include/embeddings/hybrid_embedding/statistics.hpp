@@ -17,25 +17,23 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 template <typename dtype>
 struct Statistics {
  public:
   Statistics(size_t num_samples) {
-      // TODO:
-      // allocate num_samples categories of data 
-      // for categories_sorted and counts_sorted
+    // TODO:
+    // allocate num_samples categories of data
+    // for categories_sorted and counts_sorted
   }
   ~Statistics() {}
 
@@ -45,20 +43,12 @@ struct Statistics {
   Tensor2<dtype> categories_sorted;
   Tensor2<uint32_t> counts_sorted;
 
-  void sort_categories_by_count(
-    dtype *samples,
-    uint32_t num_samples,
-    dtype *categories_sorted,
-    uint32_t *counts_sorted,
-    uint32_t &num_unique_categories,
-    cudaStream_t stream);
-  void sort_categories_by_count(
-    Tensor2<dtype> samples, 
-    cudaStream_t stream);
+  void sort_categories_by_count(dtype *samples, uint32_t num_samples, dtype *categories_sorted,
+                                uint32_t *counts_sorted, uint32_t &num_unique_categories,
+                                cudaStream_t stream);
+  void sort_categories_by_count(Tensor2<dtype> samples, cudaStream_t stream);
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

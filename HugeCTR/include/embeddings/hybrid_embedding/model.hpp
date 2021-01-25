@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
@@ -25,28 +26,25 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-
 namespace HugeCTR {
-
 
 namespace hybrid_embedding {
 
-
 ///
-/// This class defines the hybrid embedding model: 
-///    which categories are frequent, which are infrequent 
+/// This class defines the hybrid embedding model:
+///    which categories are frequent, which are infrequent
 ///    where are the corresponding embedding vectors stored.
 ///
 /// Also the mlp network - nodes topology is defined here:
 ///    The node_id, network_id where the current model instance is
-///    associated with is stored. However, keep in mind that these are the only 
-///    differentiating variables inside this class that differ from other 
-///    instances. As this model describes the same distribution across the nodes 
+///    associated with is stored. However, keep in mind that these are the only
+///    differentiating variables inside this class that differ from other
+///    instances. As this model describes the same distribution across the nodes
 ///    and gpu's (networks).
 ///
 template <typename dtype>
 struct Model {
-public:
+ public:
   Model() {}
   ~Model() {}
 
@@ -61,22 +59,16 @@ public:
 
   uint32_t num_networks;
   std::vector<uint32_t> h_num_networks_per_node;
-  Tensor2<uint32_t> num_networks_per_node; // number of gpus for each node, .size() == number of nodes
+  Tensor2<uint32_t>
+      num_networks_per_node;  // number of gpus for each node, .size() == number of nodes
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
-  Tensor2<dtype> category_location;        // indicator infrequent category => location embedding vector
+  Tensor2<dtype> category_location;  // indicator infrequent category => location embedding vector
 
-  void init_model(
-    const CommunicationType communication_type,
-    const CalibrationData &calibration,
-    const Data<dtype> &data,
-    cudaStream_t stream
-  );
-
+  void init_model(const CommunicationType communication_type, const CalibrationData &calibration,
+                  const Data<dtype> &data, cudaStream_t stream);
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

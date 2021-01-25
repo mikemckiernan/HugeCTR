@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
@@ -27,9 +28,7 @@
 
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 template <typename dtype, typename emtype>
 class InfrequentEmbedding {
@@ -48,9 +47,10 @@ class InfrequentEmbedding {
 
   // requires model_ and data_ to be set
   void init();
+
  public:
   InfrequentEmbedding() {}
-  ~InfrequentEmbedding() {}  
+  ~InfrequentEmbedding() {}
 
   void initialize_embedding_vectors();
   // only update on the gpu where the embedding vectors are stored
@@ -59,8 +59,6 @@ class InfrequentEmbedding {
   void calculate_network_indices(cudaStream_t stream);
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

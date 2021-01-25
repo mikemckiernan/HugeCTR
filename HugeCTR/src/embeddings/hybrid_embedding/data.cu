@@ -14,41 +14,37 @@
  * limitations under the License.
  */
 
+#include <cuda_runtime.h>
+
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/tensor2.hpp"
- 
-#include <algorithm>
-#include <cuda_runtime.h>
-#include <iostream>
-#include <vector>
-
 
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 /// data_to_unique_categories converts the argument 'data' and stores
 ///        the result in member variable 'samples'.
-///        Per network, the columns corresponding to embedding tables 
+///        Per network, the columns corresponding to embedding tables
 ///        are concatenated and categories get an unique index / label.
 template <typename dtype>
-void Data<dtype>::data_to_unique_categories(
-    Tensor2<dtype> data,
-    cudaStream_t stream
-) {
+void Data<dtype>::data_to_unique_categories(Tensor2<dtype> data, cudaStream_t stream) {
   /// === TODO: PERFORM ON GPU ===
   /// ============================
-  // std::cout << "WARNING: data_to_unique_categories() needs to be placed on the GPU!" << std::endl;
+  // std::cout << "WARNING: data_to_unique_categories() needs to be placed on the GPU!" <<
+  // std::endl;
   // TODO : perform conversion by kernel (before start of iteration ? => see below)
   //        for batch_size = 55*1024
-  //        batch_size * 26 * 4 / 1600e9 = 3.67 microseconds, 
-  // 
+  //        batch_size * 26 * 4 / 1600e9 = 3.67 microseconds,
+  //
   // Remark:
-  //        Doesn't need to be before start of kernel. 
+  //        Doesn't need to be before start of kernel.
   //        Would be nice to have just before calculating indices, since
   //        those would be in L2 cache already.
 
@@ -58,7 +54,7 @@ void Data<dtype>::data_to_unique_categories(
   size_t network_batch_size = batch_size / num_networks;
   const size_t num_tables = table_sizes.size();
   std::vector<dtype> embedding_offsets(num_tables);
-  dtype embedding_offset = (dtype) 0;
+  dtype embedding_offset = (dtype)0;
   for (size_t embedding = 0; embedding < num_tables; ++embedding) {
     embedding_offsets[embedding] = embedding_offset;
     embedding_offset += table_sizes[embedding];
@@ -69,7 +65,7 @@ void Data<dtype>::data_to_unique_categories(
   size_t indx = 0;
   std::vector<dtype> h_samples(num_tables * batch_size);
   for (size_t i = 0; i < network_batch_size; ++i) {
-    for (size_t embedding=0; embedding < num_tables; ++embedding) {
+    for (size_t embedding = 0; embedding < num_tables; ++embedding) {
       h_samples[indx] = h_data[indx] + embedding_offsets[embedding];
       indx++;
     }
@@ -80,10 +76,8 @@ void Data<dtype>::data_to_unique_categories(
   /// ============================
 }
 
-
 template class Data<uint32_t>;
 template class Data<unsigned long>;
-}
+}  // namespace hybrid_embedding
 
-
-}
+}  // namespace HugeCTR

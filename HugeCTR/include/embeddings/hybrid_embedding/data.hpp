@@ -17,17 +17,15 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 template <typename dtype>
 struct Data {
@@ -38,17 +36,11 @@ struct Data {
 
   Tensor2<dtype> samples;
 
-  // convert raw input data such that categories of different 
+  // convert raw input data such that categories of different
   // categorical features have unique indices
-  void data_to_unique_categories(
-    Tensor2<dtype> data,
-    cudaStream_t stream
-  );
-
+  void data_to_unique_categories(Tensor2<dtype> data, cudaStream_t stream);
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

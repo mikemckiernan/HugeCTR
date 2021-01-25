@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
@@ -25,12 +26,9 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 // One FrequentEmbedding instance per gpu
 template <typename dtype, typename emtype>
@@ -45,7 +43,8 @@ class FrequentEmbedding {
   Tensor2<emtype> frequent_partial_gradients_;
 
   void init();
-public:
+
+ public:
   FrequentEmbedding() {}
   ~FrequentEmbedding() {}
 
@@ -56,8 +55,6 @@ public:
   void update_model();
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

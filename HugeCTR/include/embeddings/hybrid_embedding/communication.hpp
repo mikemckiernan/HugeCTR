@@ -17,25 +17,23 @@
 #pragma once
 
 #include <cuda_runtime.h>
+
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embedding.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-
-namespace HugeCTR{
-
+namespace HugeCTR {
 
 namespace hybrid_embedding {
-
 
 template <typename dtype, typename emtype>
 class Communication {
@@ -44,7 +42,7 @@ class Communication {
 
   void initialize_communication();
 
-public:
+ public:
   Communication() {}
   ~Communication() {}
 
@@ -61,8 +59,6 @@ public:
   void all_to_all_reduce();
 };
 
+}  // namespace hybrid_embedding
 
-}
-
-
-}
+}  // namespace HugeCTR

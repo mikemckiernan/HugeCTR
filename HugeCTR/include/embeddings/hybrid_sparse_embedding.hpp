@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "HugeCTR/include/embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/calibration_data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/communication.hpp"
@@ -25,14 +27,11 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
-
 #include "HugeCTR/include/tensor2.hpp"
-#include <vector>
 
 using namespace HugeCTR::hybrid_embedding;
 
 namespace HugeCTR {
-
 
 ///
 /// Interface class for the hybrid embedding to HugeCTR. It is responsible for
@@ -40,9 +39,8 @@ namespace HugeCTR {
 ///
 template <typename dtype, typename emtype>
 class HybridSparseEmbedding : public IEmbedding {
-private:
-
-  // Embedding models, one instance per frequent and the infrequent embedding 
+ private:
+  // Embedding models, one instance per frequent and the infrequent embedding
   // for each mlp-network in the train session.
   //
   // data-parallel embedding model
@@ -52,15 +50,15 @@ private:
   // performs the communication scheme
   std::vector<Communication<dtype, emtype>> communication_;
 
-  // model_, data_, calibration_ and statistics_ are replications of the model 
-  // and input data on each gpu. The HybridSparseEmbedding class manages 
+  // model_, data_, calibration_ and statistics_ are replications of the model
+  // and input data on each gpu. The HybridSparseEmbedding class manages
   // it's scope / frees the memory.
   std::vector<Model<dtype>> model_;
   std::vector<Data<dtype>> data_;
   std::vector<CalibrationData> calibration_;
   std::vector<Statistics<dtype>> statistics_;
 
-public:
+ public:
   HybridSparseEmbedding() {}
   ~HybridSparseEmbedding() {}
 
@@ -80,5 +78,4 @@ public:
   std::vector<TensorBag2> get_evaluate_output_tensors() const override;
 };
 
-
-}// namespace HugeCTR
+}  // namespace HugeCTR

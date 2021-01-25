@@ -14,82 +14,59 @@
  * limitations under the License.
  */
 
+#include <cuda_runtime.h>
+
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
 #include "HugeCTR/include/common.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/communication.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
-#include <cuda_runtime.h>
-#include <algorithm>
-#include <iostream>
-#include <vector>
-
-
 namespace HugeCTR {
-
 
 namespace hybrid_embedding {
 
-
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::initialize_communication() {
-
-}
-
+void Communication<dtype, emtype>::initialize_communication() {}
 
 // template <typename dtype, typename emtype>
 // Communication<dtype, emtype>::Communication<dtype, emtype>() {
 
 // }
 
-
 // template <typename dtype, typename emtype>
 // Communication<dtype, emtype>::~Communication() {
 
 // }
 
-
 // reduces the frequent embedding
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::all_reduce() {
-
-}
-
+void Communication<dtype, emtype>::all_reduce() {}
 
 // all-to-all forward and backward for the infrequent embedding
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::all_to_all_v_forward() {
-
-}
-
+void Communication<dtype, emtype>::all_to_all_v_forward() {}
 
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::all_to_all_v_backward() {
-
-}
-
+void Communication<dtype, emtype>::all_to_all_v_backward() {}
 
 // performs all-to-all-reduce on the frequent embedding
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::all_to_all_reduce_frequent() {
-
-}
-
+void Communication<dtype, emtype>::all_to_all_reduce_frequent() {}
 
 // performs all-to-all-reduce on the frequent and infrequent
 // embeddings simultaneously (IB)
 template <typename dtype, typename emtype>
-void Communication<dtype, emtype>::all_to_all_reduce() {
-
-}
-
+void Communication<dtype, emtype>::all_to_all_reduce() {}
 
 template class Communication<uint32_t, __half>;
 template class Communication<uint32_t, float>;
 template class Communication<unsigned long, __half>;
 template class Communication<unsigned long, float>;
-}
+}  // namespace hybrid_embedding
 
-
-}
+}  // namespace HugeCTR

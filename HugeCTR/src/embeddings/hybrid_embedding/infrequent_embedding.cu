@@ -14,38 +14,34 @@
  * limitations under the License.
  */
 
-#include <algorithm>
 #include <cuda_runtime.h>
+
+#include <algorithm>
 #include <iostream>
 #include <utility>
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/infrequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
-#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
-#include "HugeCTR/include/utils.cuh"
 #include "HugeCTR/include/tensor2.hpp"
-
+#include "HugeCTR/include/utils.cuh"
 
 namespace HugeCTR {
 
-
 namespace hybrid_embedding {
-
 
 template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create initialize_embedding_vectors()
 }
 
-
 template <typename T>
 static bool lesser_by_first(const std::pair<T, T>& a, const std::pair<T, T>& b) {
   return (a.first < b.first);
 }
-
 
 /// TODO: GPU version
 template <typename dtype, typename emtype>
@@ -87,7 +83,6 @@ void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t st
   upload_tensor(h_model_indices, model_indices_, stream);
   upload_tensor(h_model_indices_offsets, model_indices_offsets_, stream);
 }
-
 
 /// TODO: GPU version
 template <typename dtype, typename emtype>
@@ -150,12 +145,10 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
   upload_tensor(h_network_indices_offsets, network_indices_offsets_, stream);
 }
 
-
 template class InfrequentEmbedding<uint32_t, __half>;
 template class InfrequentEmbedding<uint32_t, float>;
 template class InfrequentEmbedding<unsigned long, __half>;
 template class InfrequentEmbedding<unsigned long, float>;
+}  // namespace hybrid_embedding
+
 }  // namespace HugeCTR
-
-
-}
