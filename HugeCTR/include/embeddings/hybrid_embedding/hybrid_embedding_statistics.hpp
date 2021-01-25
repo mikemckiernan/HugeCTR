@@ -42,7 +42,7 @@ struct EmbeddingStatistics {
     dtype *samples,
     uint32_t num_samples,
     dtype *categories_sorted,
-    dtype *counts_sorted,
+    uint32_t *counts_sorted,
     uint32_t &num_unique_categories,
     cudaStream_t stream);
   void sort_categories_by_count(

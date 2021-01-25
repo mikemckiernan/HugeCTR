@@ -35,7 +35,7 @@ void EmbeddingStatistics::sort_categories_by_count(
   dtype *d_samples = samples.get_ptr();
   uint32_t num_samples = samples.get_size_in_bytes() / sizeof(dtype);
   dtype *d_categories = categories_sorted.get_ptr();
-  dtype *d_counts = counts_sorted.get_ptr();
+  uint32_t *d_counts = counts_sorted.get_ptr();
   sort_categories_by_count(
       d_samples, num_samples, d_categories, d_counts,
       num_unique_categories, stream); // Kefengs' function
@@ -48,7 +48,7 @@ void EmbeddingStatistics::sort_categories_by_count(
   dtype *samples,
   uint32_t num_samples,
   dtype *categories_sorted,
-  dtype *counts_sorted,
+  uint32_t *counts_sorted,
   uint32_t &num_unique_categories,
   cudaStream_t stream);
 
