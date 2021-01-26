@@ -27,10 +27,11 @@ namespace hybrid_embedding {
 enum class CommunicationType { IB_NVLink, NVLink };
 
 template <typename dtype>
-void download_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, cudaStream_t stream);
+void download_tensor(std::vector<dtype>& h_tensor, const Tensor2<dtype> tensor,
+                     cudaStream_t stream);
 
 template <typename dtype>
-void upload_tensor(std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, cudaStream_t stream);
+void upload_tensor(const std::vector<dtype>& h_tensor, Tensor2<dtype> tensor, cudaStream_t stream);
 
 }  // namespace hybrid_embedding
 

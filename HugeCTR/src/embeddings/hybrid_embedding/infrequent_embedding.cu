@@ -149,13 +149,13 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
 
       if (mask)
         h_network_sources_indices[sum - 1] =
-            std::make_pair(static_cast<uint32_t>(model_.global_instance_id), local_mlp_index);
+            std::make_pair(static_cast<uint32_t>(model_id), local_mlp_index);
     }
   }
 
   // Sort by source only, otherwise stable
-  std::sort(h_network_sources_indices.begin(), h_network_sources_indices.begin() + sum,
-            lesser_by_first<dtype>);
+  std::stable_sort(h_network_sources_indices.begin(), h_network_sources_indices.begin() + sum,
+                   lesser_by_first<dtype>);
 
   // Retrieve indices
   std::vector<uint32_t> h_network_indices = std::vector<uint32_t>(local_batch_size * num_tables);

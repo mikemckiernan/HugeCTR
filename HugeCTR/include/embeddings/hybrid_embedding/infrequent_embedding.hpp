@@ -32,6 +32,7 @@ namespace hybrid_embedding {
 
 template <typename dtype, typename emtype>
 class InfrequentEmbedding {
+ public:
   // copy of the model parameters and the input data, managed by HybridSparseEmbedding
   Model<dtype> model_;
   Data<dtype> data_;
@@ -48,7 +49,6 @@ class InfrequentEmbedding {
   // requires model_ and data_ to be set
   void init();
 
- public:
   InfrequentEmbedding() {}
   ~InfrequentEmbedding() {}
 
