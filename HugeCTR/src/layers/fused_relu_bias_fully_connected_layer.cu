@@ -41,7 +41,7 @@ namespace HugeCTR {
 namespace {
 
 template <int BLOCK_WIDTH>
-__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu,__half* middle, const __half* top,
+__global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu, __half* middle, const __half* top,
                                                int ldn) {
   __shared__ __half2 elem[32][BLOCK_WIDTH + 1];
   __shared__ __half2 accu[BLOCK_WIDTH];
