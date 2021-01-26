@@ -408,22 +408,22 @@ struct TestbedGemmWithReduction {
     // {
     //   /* code */
     // }
-    int len = tensor_Reduction.size();
-    float* db_host = new float[len];
-    cudaMemcpyAsync(db_host, db, len*sizeof(float), cudaMemcpyDeviceToHost, stream);
-    cutlass::half_t* sum = new cutlass::half_t[this->m_];
-    int num = (this->n_ - 1 + Gemm::ThreadblockShape::kN) / Gemm::ThreadblockShape::kN;
-    for (int i = 0; i < this->m_; i++)
-    {
-      float temp = 0.0f;
-      for(int j=0;j<num;j++)
-      {
-        temp += db_host[i+j*this->m_];
-      }
-//      sum[i] = (cutlass::half_t)temp;
-      sum[i] = (cutlass::half_t)db_host[i];;
-    }
-    cudaMemcpyAsync(db, sum, this->m_*sizeof(cutlass::half_t), cudaMemcpyHostToDevice, stream);
+//     int len = tensor_Reduction.size();
+//     float* db_host = new float[len];
+//     cudaMemcpyAsync(db_host, db, len*sizeof(float), cudaMemcpyDeviceToHost, stream);
+//     cutlass::half_t* sum = new cutlass::half_t[this->m_];
+//     int num = (this->n_ - 1 + Gemm::ThreadblockShape::kN) / Gemm::ThreadblockShape::kN;
+//     for (int i = 0; i < this->m_; i++)
+//     {
+//       float temp = 0.0f;
+//       for(int j=0;j<num;j++)
+//       {
+//         temp += db_host[i+j*this->m_];
+//       }
+// //      sum[i] = (cutlass::half_t)temp;
+//       sum[i] = (cutlass::half_t)db_host[i];;
+//     }
+//     cudaMemcpyAsync(db, sum, this->m_*sizeof(cutlass::half_t), cudaMemcpyHostToDevice, stream);
     
     
 

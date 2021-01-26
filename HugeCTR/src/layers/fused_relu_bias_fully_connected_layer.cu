@@ -90,6 +90,19 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu, __hal
   }
 }
 
+
+__global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  float temp = 0.0f;
+  if (idx < n ) {
+    for (int i = 0; i < m; i++)
+    {
+      temp += bias_grad_float[idx + i * n];
+    }
+    bgrad[idx] = __float2half(temp);
+  }
+  
+}
 }  // namespace
 
 FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
@@ -316,8 +329,11 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   }
 
   if(pos_ == BODY || pos_ == HEAD) {
-    cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
-         cudaMemcpyDeviceToDevice, get_gpu().get_stream());
+    // printf("%d, %d\n", n, weights_grad_[1].get_num_elements)
+    // __half* bgrad_ref = new __half[n];
+    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(db_out_tensor_.get_ptr(), bias_grad, 16, n);
+    // cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
+    //      cudaMemcpyDeviceToDevice, get_gpu().get_stream());
 
   }
       // cudaMemcpyAsync(middle, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
