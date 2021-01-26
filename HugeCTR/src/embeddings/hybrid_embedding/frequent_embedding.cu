@@ -34,6 +34,23 @@ namespace hybrid_embedding {
 template <typename dtype, typename emtype>
 void FrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create intialize_embedding_vectors()
+
+  // calculate table_offsets
+  //
+  // size_t network_batch_size = data_.batch_size / data_.num_networks;
+  // const size_t num_tables = data_.table_sizes.size();
+  // std::vector<dtype> embedding_offsets(num_tables);
+  // dtype embedding_offset = (dtype)0;
+  // for (size_t embedding = 0; embedding < num_tables; ++embedding) {
+  //   embedding_offsets[embedding] = embedding_offset;
+  //   embedding_offset += table_sizes[embedding];
+  // }
+
+  // Initialize frequent_embedding_vectors_,
+  // for category, buffer_location in enumerate(model_.category_frequent_index):
+  //   if buffer_location < num_categories:
+  //     # initialize category;
+  //     # lookup to which table category belongs using table_offset array
 }
 
 template <typename dtype, typename emtype>
