@@ -36,7 +36,7 @@ namespace hybrid_embedding {
 ///    where are the corresponding embedding vectors stored.
 ///
 /// Also the mlp network - nodes topology is defined here:
-///    The node_id, network_id where the current model instance is
+///    The node_id, instance_id where the current model instance is
 ///    associated with is stored. However, keep in mind that these are the only
 ///    differentiating variables inside this class that differ from other
 ///    instances. As this model describes the same distribution across the nodes
@@ -49,18 +49,18 @@ struct Model {
   ~Model() {}
 
   uint32_t node_id;
-  uint32_t network_id;
-  uint32_t global_network_id;
+  uint32_t instance_id;
+  uint32_t global_instance_id;
 
   CommunicationType communication_type;
 
   dtype num_frequent;
   dtype num_categories;
 
-  uint32_t num_networks;
-  std::vector<uint32_t> h_num_networks_per_node;
+  uint32_t num_instances;
+  std::vector<uint32_t> h_num_instances_per_node;
   Tensor2<uint32_t>
-      num_networks_per_node;  // number of gpus for each node, .size() == number of nodes
+      num_instances_per_node;  // number of gpus for each node, .size() == number of nodes
 
   Tensor2<dtype> category_frequent_index;  // indicator frequent category => location in cache
   Tensor2<dtype> category_location;  // indicator infrequent category => location embedding vector

@@ -94,8 +94,7 @@ class ModelInitializationFunctors {
   static uint32_t calculate_num_frequent_categories(const CommunicationType &communication_type,
                                                     const CalibrationData &calibration,
                                                     const Statistics<dtype> &statistics,
-                                                    const Data<dtype> &data,
-                                                    const size_t num_networks, cudaStream_t stream);
+                                                    const Data<dtype> &data, cudaStream_t stream);
 };
 
 }  // namespace hybrid_embedding

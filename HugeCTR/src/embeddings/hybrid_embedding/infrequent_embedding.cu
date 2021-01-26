@@ -37,8 +37,8 @@ template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create initialize_embedding_vectors()
 
-  // network_id == model_id for the same InfrequentEmbedding instance
-  size_t global_model_id = model_.global_network_id;
+  // instance_id == model_id for the same InfrequentEmbedding instance
+  // size_t global_model_id = model_.global_instance_id;
 
   // device select global_model_id == model_.category_location
 }
@@ -74,7 +74,9 @@ template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t stream) {
   std::cout << "WARNING: calculate_model_indices must be done on GPU!" << std::endl;
 
-  size_t local_batch_size = ceildiv<size_t>(data_.batch_size, data_.num_networks);
+  size_t num_models = model_.num_instances;
+
+  size_t local_batch_size = ceildiv<size_t>(data_.batch_size, num_models);
   const size_t num_tables = data_.table_sizes.size();
 
   std::vector<dtype> h_samples;
@@ -83,7 +85,7 @@ void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t st
   download_tensor<dtype>(h_category_location, model_.category_location, stream);
 
   std::vector<uint32_t> h_model_indices = std::vector<uint32_t>(data_.batch_size * num_tables);
-  std::vector<uint32_t> h_model_indices_offsets = std::vector<uint32_t>(data_.num_networks + 1);
+  std::vector<uint32_t> h_model_indices_offsets = std::vector<uint32_t>(num_models + 1);
 
   // Prefix sum
   size_t sum = 0;
@@ -95,8 +97,8 @@ void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t st
       size_t idx = j * num_tables + i;
 
       dtype category = h_samples[idx];
-      dtype network_id = h_category_location[2 * category];
-      bool mask = network_id == model_.global_network_id;
+      dtype model_id = h_category_location[2 * category];
+      bool mask = model_id == model_.global_instance_id;
 
       sum += static_cast<size_t>(mask);
 
@@ -104,7 +106,7 @@ void InfrequentEmbedding<dtype, emtype>::calculate_model_indices(cudaStream_t st
     }
   }
   // Total size stored at the end of the offsets vector
-  h_model_indices_offsets[data_.num_networks] = sum;
+  h_model_indices_offsets[num_models] = sum;
 
   upload_tensor(h_model_indices, model_indices_, stream);
   upload_tensor(h_model_indices_offsets, model_indices_offsets_, stream);
@@ -115,7 +117,10 @@ template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t stream) {
   std::cout << "WARNING: calculate_network_indices must be done on GPU!" << std::endl;
 
-  size_t local_batch_size = ceildiv<size_t>(data_.batch_size, data_.num_networks);
+  const size_t num_networks = data_.num_networks;
+  const size_t num_models = model_.num_instances;
+
+  size_t local_batch_size = ceildiv<size_t>(data_.batch_size, num_networks);
   const size_t num_tables = data_.table_sizes.size();
 
   std::vector<dtype> h_samples;
@@ -128,22 +133,23 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
 
   // Prefix sum only of this GPU's sub-batch
   size_t sum = 0;
-  for (size_t j = local_batch_size * model_.global_network_id;
-       j < std::min(data_.batch_size, local_batch_size * (model_.global_network_id + 1)); j++) {
+  for (size_t j = local_batch_size * model_.global_instance_id;
+       j < std::min(data_.batch_size, local_batch_size * (model_.global_instance_id + 1)); j++) {
     for (size_t i = 0; i < num_tables; i++) {
       size_t idx = j * num_tables + i;
 
       dtype category = h_samples[idx];
-      dtype network_id = h_category_location[2 * category];
-      bool mask = network_id < data_.num_networks;
+      dtype model_id = h_category_location[2 * category];
+      bool mask = model_id < model_.num_instances;
 
       sum += static_cast<size_t>(mask);
 
-      uint32_t local_mlp_index = (j - local_batch_size * model_.global_network_id) * num_tables + i;
+      uint32_t local_mlp_index =
+          (j - local_batch_size * model_.global_instance_id) * num_tables + i;
 
       if (mask)
         h_network_sources_indices[sum - 1] =
-            std::make_pair(static_cast<uint32_t>(model_.global_network_id), local_mlp_index);
+            std::make_pair(static_cast<uint32_t>(model_.global_instance_id), local_mlp_index);
     }
   }
 
@@ -157,15 +163,15 @@ void InfrequentEmbedding<dtype, emtype>::calculate_network_indices(cudaStream_t 
     h_network_indices[idx] = h_network_sources_indices[idx].second;
   }
   // Compute offsets
-  std::vector<uint32_t> h_network_indices_offsets = std::vector<uint32_t>(data_.num_networks + 1);
-  for (size_t i = 0; i < data_.num_networks; i++) {
+  std::vector<uint32_t> h_network_indices_offsets = std::vector<uint32_t>(num_models + 1);
+  for (size_t i = 0; i < num_models; i++) {
     h_network_indices_offsets[i] =
         std::lower_bound(h_network_sources_indices.begin(), h_network_sources_indices.begin() + sum,
                          std::make_pair<uint32_t, uint32_t>(i, 0), lesser_by_first<uint32_t>) -
         h_network_sources_indices.begin();
   }
   // Total size stored at the end of the offsets vector
-  h_network_indices_offsets[data_.num_networks] = sum;
+  h_network_indices_offsets[num_models] = sum;
 
   upload_tensor(h_network_indices, network_indices_, stream);
   upload_tensor(h_network_indices_offsets, network_indices_offsets_, stream);

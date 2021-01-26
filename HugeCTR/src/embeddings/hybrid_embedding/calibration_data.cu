@@ -100,8 +100,7 @@ double ModelInitializationFunctors<dtype>::calculate_threshold(
 template <typename dtype>
 uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
     const CommunicationType &communication_type, const CalibrationData &calibration,
-    const Statistics<dtype> &statistics, const Data<dtype> &data, const size_t num_networks,
-    cudaStream_t stream) {
+    const Statistics<dtype> &statistics, const Data<dtype> &data, cudaStream_t stream) {
   size_t num_frequent = 0;
 
   if (calibration.all_to_all_times.get_size_in_bytes() > 0) {

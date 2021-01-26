@@ -45,9 +45,9 @@ void Model<dtype>::init_model(const CommunicationType communication_type,
 
   num_categories = (dtype)0;
   for (size_t i = 0; i < data.table_sizes.size(); ++i) num_categories += data.table_sizes[i];
-  num_networks = 0;
-  for (size_t n = 0; n < h_num_networks_per_node.size(); ++n)
-    num_networks += h_num_networks_per_node[n];
+  num_instances = 0;
+  for (size_t n = 0; n < h_num_instances_per_node.size(); ++n)
+    num_instances += h_num_instances_per_node[n];
 
   // determine the number of frequent categories
 
@@ -82,12 +82,13 @@ void Model<dtype>::init_model(const CommunicationType communication_type,
 
   // initialize category_location
   //   for each category: global_network_id, local_buffer_index
+  const size_t num_models = num_instances;
   std::vector<dtype> h_category_location(2 * num_categories, num_categories);
   size_t indx = 0;
   for (size_t category = 0; category < num_categories; ++category) {
     if (h_category_frequent_index[category] == num_categories) {
-      h_category_location[2 * category] = indx % num_networks;
-      h_category_location[2 * category + 1] = indx / num_networks;
+      h_category_location[2 * category] = indx % num_models;
+      h_category_location[2 * category + 1] = indx / num_models;
     }
   }
 
