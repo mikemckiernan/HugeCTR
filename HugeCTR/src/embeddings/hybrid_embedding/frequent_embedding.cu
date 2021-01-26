@@ -37,6 +37,18 @@ void FrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
 }
 
 template <typename dtype, typename emtype>
+void FrequentEmbedding<dtype, emtype>::forward_network(const emtype *interaction_layer_input) {
+  // concatenate the embedding vectors into the buffer for
+  // top-mlp input
+
+  // Kefeng: type here, use FrequentEmbedding::frequent_sample_indices
+  // in short this is what it should do:
+  //   for index in frequent_sample_indices:
+  //      output[index][0..em_vec_size-1] =
+  //      frequent_embedding_vectors_[category_frequent_index[samples[index]]][0..em_vec_size-1]
+}
+
+template <typename dtype, typename emtype>
 void FrequentEmbedding<dtype, emtype>::update_network() {
   // TODO: create update()
 }

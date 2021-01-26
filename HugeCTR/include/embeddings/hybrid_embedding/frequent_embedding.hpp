@@ -42,6 +42,8 @@ class FrequentEmbedding {
   // locally stored reduced gradients: input for the all-reduce
   Tensor2<emtype> frequent_partial_gradients_;
 
+  Tensor2<uint32_t> frequent_sample_indices_;
+
   void init();
 
  public:
@@ -49,6 +51,7 @@ class FrequentEmbedding {
   ~FrequentEmbedding() {}
 
   void initialize_embedding_vectors();
+  void forward_network(const emtype *interaction_layer_input);
   // update on the gpu where the sample gradients are calculated
   void update_network();
   // update on the gpu where the embedding vectors are stored

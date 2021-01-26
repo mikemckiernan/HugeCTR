@@ -36,6 +36,32 @@ namespace hybrid_embedding {
 template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
   // TODO: create initialize_embedding_vectors()
+
+  // network_id == model_id for the same InfrequentEmbedding instance
+  size_t global_model_id = model_.global_network_id;
+
+  // device select global_model_id == model_.category_location
+}
+
+///
+/// Place the embedding vector from the message buffer into
+/// it's corresponding location within the buffer for mlp network
+/// concatenated input.
+///
+template <typename dtype, typename emtype>
+void InfrequentEmbedding<dtype, emtype>::forward_network(const emtype* message_buffer,
+                                                         const emtype* interaction_layer_input) {
+  // use network_indices_ and network_indices_offsets_ to
+  // place the received embedding vectors into the input buffre
+  // for the interaction layer.
+
+  // Kefeng: type here
+  //
+  // In short this is what it should do:
+  //
+  // for i, index in enumerate(network_indices_):
+  //    # copying embedding vector of category = samples[index] into location index of ouput array
+  //    ouput[index][0..em_vec_size-1] = message_buffer[i*em_vec_size][0..em_vec_size-1]
 }
 
 template <typename T>

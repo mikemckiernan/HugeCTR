@@ -53,6 +53,7 @@ class InfrequentEmbedding {
   ~InfrequentEmbedding() {}
 
   void initialize_embedding_vectors();
+  void forward_network(const emtype *message_buffer, const emtype *interaction_layer_input);
   // only update on the gpu where the embedding vectors are stored
   void update_model();
   void calculate_model_indices(cudaStream_t stream);
