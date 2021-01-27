@@ -95,11 +95,12 @@ __global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   float temp = 0.0f;
   if (idx < n ) {
-    for (int i = 0; i < m; i++)
-    {
-      temp += bias_grad_float[idx + i * n];
-    }
-    bgrad[idx] = __float2half(temp);
+    //for (int i = 0; i < m; i++)
+    //{
+    //  temp += bias_grad_float[idx + i * n];
+    //}
+    //bgrad[idx] = __float2half(temp);
+    bgrad[idx] = __float2half(bias_grad_float[idx]);
   }
   
 }
@@ -331,7 +332,8 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   if(pos_ == BODY || pos_ == HEAD) {
     // printf("%d, %d\n", n, weights_grad_[1].get_num_elements)
     // __half* bgrad_ref = new __half[n];
-    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(db_out_tensor_.get_ptr(), bias_grad, 16, n);
+    int nTile = (m - 1 + 128) / 128;
+    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(db_out_tensor_.get_ptr(), bias_grad, nTile, n);
     // cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
     //      cudaMemcpyDeviceToDevice, get_gpu().get_stream());
 
