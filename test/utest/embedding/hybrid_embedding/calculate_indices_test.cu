@@ -58,8 +58,10 @@ void calculate_indices_test(const CalculateIndicesTestInputs<dtype>& inputs) {
   std::shared_ptr<GeneralBuffer2<CudaAllocator>> buff = GeneralBuffer2<CudaAllocator>::create();
 
   /* Create objects */
-  std::vector<InfrequentEmbedding<dtype, emtype>> infrequent_embeddings =
-      std::vector<InfrequentEmbedding<dtype, emtype>>(num_instances);
+  std::vector<InfrequentEmbedding<dtype, emtype>> infrequent_embeddings;
+  for(size_t i = 0; i < num_instances; i++) {
+    infrequent_embeddings.emplace_back(test::get_default_gpu());
+  }
   size_t local_batch_size = ceildiv<size_t>(inputs.batch_size, num_instances);
   for (size_t i = 0; i < num_instances; i++) {
     Model<dtype>& model = infrequent_embeddings[i].model_;
@@ -74,7 +76,7 @@ void calculate_indices_test(const CalculateIndicesTestInputs<dtype>& inputs) {
     model.num_instances = num_instances;
 
     data.batch_size = inputs.batch_size;
-    data.table_sizes = inputs.table_sizes;
+    data.local_table_sizes = inputs.table_sizes;
     data.num_networks = num_instances;
 
     std::vector<size_t> batch_dims = {inputs.batch_size * num_slots};

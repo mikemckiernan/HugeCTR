@@ -29,7 +29,9 @@ namespace hybrid_embedding {
 
 template <typename dtype>
 struct Data {
-  std::vector<uint32_t> table_sizes;
+  std::vector<uint32_t> global_table_sizes;
+  std::vector<uint32_t> local_table_sizes;
+  size_t num_tables;
   size_t batch_size;
   size_t num_iterations;
   size_t num_networks;

@@ -44,7 +44,7 @@ void Model<dtype>::init_model(const CommunicationType communication_type,
   // calculate the total number of categories
 
   num_categories = (dtype)0;
-  for (size_t i = 0; i < data.table_sizes.size(); ++i) num_categories += data.table_sizes[i];
+  for (size_t i = 0; i < data.num_tables; ++i) num_categories += data.table_sizes[i];
   num_instances = 0;
   for (size_t n = 0; n < h_num_instances_per_node.size(); ++n)
     num_instances += h_num_instances_per_node[n];

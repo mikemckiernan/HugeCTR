@@ -43,7 +43,8 @@ class Communication {
   void initialize_communication();
 
  public:
-  Communication() {}
+  Communication(const std::shared_ptr<GPUResource>& gpu_resource)
+      : frequent_embedding_(gpu_resource), infrequent_embedding_(gpu_resource) {}
   ~Communication() {}
 
   // reduces the frequent embedding

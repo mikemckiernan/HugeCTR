@@ -24,6 +24,7 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/gpu_resource.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
 namespace HugeCTR {
@@ -37,7 +38,7 @@ class InfrequentEmbedding {
   Model<dtype> model_;
   Data<dtype> data_;
 
-  Tensor2<emtype> infrequent_embedding_vectors_;
+  std::vector<Tensor2<float>> infrequent_embedding_vectors_;
 
   // forward-send, backward-receive
   Tensor2<uint32_t> model_indices_;
@@ -46,10 +47,13 @@ class InfrequentEmbedding {
   Tensor2<uint32_t> network_indices_;
   Tensor2<uint32_t> network_indices_offsets_;
 
+  std::shared_ptr<GPUResource> gpu_resource_;
+
   // requires model_ and data_ to be set
   void init();
 
-  InfrequentEmbedding() {}
+  InfrequentEmbedding(const std::shared_ptr<GPUResource> &gpu_resource)
+      : gpu_resource_(gpu_resource) {}
   ~InfrequentEmbedding() {}
 
   void initialize_embedding_vectors();

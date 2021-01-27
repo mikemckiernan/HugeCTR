@@ -52,12 +52,11 @@ void Data<dtype>::data_to_unique_categories(Tensor2<dtype> data, cudaStream_t st
   download_tensor<dtype>(h_data, data, stream);
 
   size_t network_batch_size = batch_size / num_networks;
-  const size_t num_tables = table_sizes.size();
   std::vector<dtype> embedding_offsets(num_tables);
   dtype embedding_offset = (dtype)0;
   for (size_t embedding = 0; embedding < num_tables; ++embedding) {
     embedding_offsets[embedding] = embedding_offset;
-    embedding_offset += table_sizes[embedding];
+    embedding_offset += local_table_sizes[embedding];
   }
 
   // keep order of input samples, convert each data field such that categories

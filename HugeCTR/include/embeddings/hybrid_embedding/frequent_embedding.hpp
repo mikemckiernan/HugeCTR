@@ -24,6 +24,7 @@
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
+#include "HugeCTR/include/gpu_resource.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
 namespace HugeCTR {
@@ -38,20 +39,23 @@ class FrequentEmbedding {
   Data<dtype> data_;
 
   // locally stored embedding vectors for the data-parallel part of the embedding
-  Tensor2<emtype> frequent_embedding_vectors_;
+  std::vector<Tensor2<float>> frequent_embedding_vectors_;
   // locally stored reduced gradients: input for the all-reduce
   Tensor2<emtype> frequent_partial_gradients_;
 
   Tensor2<uint32_t> frequent_sample_indices_;
 
+  std::shared_ptr<GPUResource> gpu_resource_;
+
   void init();
 
  public:
-  FrequentEmbedding() {}
+  FrequentEmbedding(const std::shared_ptr<GPUResource>& gpu_resource)
+      : gpu_resource_(gpu_resource) {}
   ~FrequentEmbedding() {}
 
   void initialize_embedding_vectors();
-  void forward_network(const emtype *interaction_layer_input);
+  void forward_network(const emtype* interaction_layer_input);
   // update on the gpu where the sample gradients are calculated
   void update_network();
   // update on the gpu where the embedding vectors are stored

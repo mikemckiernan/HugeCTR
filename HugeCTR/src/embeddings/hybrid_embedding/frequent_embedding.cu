@@ -21,11 +21,13 @@
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/data_simulator.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/frequent_embedding.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/model.hpp"
 #include "HugeCTR/include/embeddings/hybrid_embedding/utils.hpp"
 #include "HugeCTR/include/tensor2.hpp"
+#include "HugeCTR/include/utils.hpp"
 
 namespace HugeCTR {
 
@@ -33,24 +35,15 @@ namespace hybrid_embedding {
 
 template <typename dtype, typename emtype>
 void FrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
-  // TODO: create intialize_embedding_vectors()
+  CudaDeviceContext context(gpu_resource_->get_device_id());
 
-  // calculate table_offsets
-  //
-  // size_t network_batch_size = data_.batch_size / data_.num_networks;
-  // const size_t num_tables = data_.table_sizes.size();
-  // std::vector<dtype> embedding_offsets(num_tables);
-  // dtype embedding_offset = (dtype)0;
-  // for (size_t embedding = 0; embedding < num_tables; ++embedding) {
-  //   embedding_offsets[embedding] = embedding_offset;
-  //   embedding_offset += table_sizes[embedding];
-  // }
-
-  // Initialize frequent_embedding_vectors_,
-  // for category, buffer_location in enumerate(model_.category_frequent_index):
-  //   if buffer_location < num_categories:
-  //     # initialize category;
-  //     # lookup to which table category belongs using table_offset array
+  const size_t num_tables = data_.global_table_sizes.size();
+  for (size_t i = 0; i < num_tables; i++) {
+    float up_bound = sqrt(1.f / data_.global_table_sizes[i]);
+    UniformGenerator::fill(
+        frequent_embedding_vectors_[i], -up_bound, up_bound, gpu_resource_->get_sm_count(),
+        gpu_resource_->get_replica_uniform_curand_generator(), gpu_resource_->get_stream());
+  }
 }
 
 template <typename dtype, typename emtype>

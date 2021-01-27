@@ -112,7 +112,7 @@ uint32_t ModelInitializationFunctors<dtype>::calculate_num_frequent_categories(
     size_t batch_size = data.batch_size;
     size_t num_networks = data.num_networks;
     size_t num_iterations = data.num_iterations;
-    size_t num_tables = data.table_sizes.size();
+    size_t num_tables = data.num_tables;
 
     // Use threshold to determine number of frequent categories,
     // calculates optimal number of frequent categories when the all-to-all
