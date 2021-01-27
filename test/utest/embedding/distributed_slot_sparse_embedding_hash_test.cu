@@ -15,9 +15,11 @@
  */
 
 #include <sys/time.h>
+
 #include <fstream>
 #include <functional>
 #include <unordered_set>
+
 #include "HugeCTR/include/data_generator.hpp"
 #include "HugeCTR/include/data_readers/data_reader.hpp"
 #include "HugeCTR/include/embeddings/distributed_slot_sparse_embedding_hash.hpp"
@@ -165,7 +167,7 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
       train_batchsize, test_batchsize, vocabulary_size, {},        embedding_vec_size,
       max_feature_num, slot_num,       combiner,        opt_params};
 
-  std::unique_ptr<Embedding<T, TypeEmbeddingComp>> embedding(
+  std::unique_ptr<DistributedSlotSparseEmbeddingHash<T, TypeEmbeddingComp>> embedding(
       new DistributedSlotSparseEmbeddingHash<T, TypeEmbeddingComp>(
           train_data_reader->get_row_offsets_tensors(), train_data_reader->get_value_tensors(),
           train_data_reader->get_nnz_array(), test_data_reader->get_row_offsets_tensors(),
@@ -211,7 +213,9 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
 
   buf->allocate();
 
-  typedef struct TypeHashValue_ { float data[embedding_vec_size]; } TypeHashValue;
+  typedef struct TypeHashValue_ {
+    float data[embedding_vec_size];
+  } TypeHashValue;
 
   for (int i = 0; i < train_batch_num; i++) {
     printf("Rank%d: Round %d start training:\n", pid, i);
@@ -415,7 +419,7 @@ void load_and_dump(const std::vector<int> &device_list, const Optimizer_t &optim
       train_batchsize, test_batchsize, vocabulary_size, {},        embedding_vec_size,
       max_feature_num, slot_num,       combiner,        opt_params};
 
-  std::unique_ptr<Embedding<T, TypeEmbeddingComp>> embedding(
+  std::unique_ptr<DistributedSlotSparseEmbeddingHash<T, TypeEmbeddingComp>> embedding(
       new DistributedSlotSparseEmbeddingHash<T, TypeEmbeddingComp>(
           train_data_reader->get_row_offsets_tensors(), train_data_reader->get_value_tensors(),
           train_data_reader->get_nnz_array(), train_data_reader->get_row_offsets_tensors(),

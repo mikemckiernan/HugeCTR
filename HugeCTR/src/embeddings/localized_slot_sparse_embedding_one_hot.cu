@@ -187,10 +187,14 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
         for (size_t id = 0; id < Base::get_resource_manager().get_local_gpu_count(); id++) {
           Tensor2<TypeEmbeddingComp> tensor;
-          buf->reserve({Base::get_batch_size_per_lane(true), slot_num_per_node_, Base::get_embedding_vec_size()}, &tensor);
+          buf->reserve({Base::get_batch_size_per_lane(true), slot_num_per_node_,
+                        Base::get_embedding_vec_size()},
+                       &tensor);
           train_intra_a2a_output_vec_.push_back(tensor);
 
-          buf->reserve({Base::get_batch_size_per_lane(false), slot_num_per_node_, Base::get_embedding_vec_size()}, &tensor);
+          buf->reserve({Base::get_batch_size_per_lane(false), slot_num_per_node_,
+                        Base::get_embedding_vec_size()},
+                       &tensor);
           evaluate_intra_a2a_output_vec_.push_back(tensor);
         }
       }
@@ -244,7 +248,7 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         slot_sizes_prefix_sum += slot_size;
       }
     }
-    
+
     // Check whether the P2P access can be enabled
     if (Base::get_resource_manager().get_local_gpu_count() > 1 &&
         !Base::get_resource_manager().all_p2p_enabled()) {
@@ -262,23 +266,19 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
 
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
     if (Base::get_resource_manager().get_device_layout() == DeviceMap::NODE_FIRST) {
-
       inter_node_hier_a2a = std::make_shared<InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>>();
-      inter_node_hier_a2a->init(&Base::get_resource_manager(),
-          Base::get_slot_num(),
-          Base::get_batch_size(true),
-          Base::get_batch_size(false),
-          Base::get_embedding_vec_size());
+      inter_node_hier_a2a->init(&Base::get_resource_manager(), Base::get_slot_num(),
+                                Base::get_batch_size(true), Base::get_batch_size(false),
+                                Base::get_embedding_vec_size());
 
       unified_buf->reserve({Base::get_resource_manager().get_local_gpu_count()},
-          &train_intra_a2a_output_);
+                           &train_intra_a2a_output_);
       unified_buf->reserve({Base::get_resource_manager().get_local_gpu_count()},
-          &evaluate_intra_a2a_output_);
-
+                           &evaluate_intra_a2a_output_);
     }
 #endif
     unified_buf->allocate();
-    
+
     for (size_t id = 0; id < Base::get_resource_manager().get_local_gpu_count(); id++) {
       train_embedding_features_.get_ptr()[id] = Base::get_output_tensors(true)[id].get_ptr();
       evaluate_embedding_features_.get_ptr()[id] = Base::get_output_tensors(false)[id].get_ptr();
@@ -289,7 +289,7 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       }
 #endif
     }
-  
+
     functors_.sync_all_gpus(Base::get_resource_manager());
 #ifdef ENABLE_MPI
     CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
@@ -303,8 +303,8 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       int warmup_iters = 5;
       for (int w = 0; w < warmup_iters; w++) {
         functors_.all2all_forward(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
-            Base::get_embedding_vec_size(), embedding_feature_tensors_,
-            all2all_tensors_, Base::get_resource_manager());
+                                  Base::get_embedding_vec_size(), embedding_feature_tensors_,
+                                  all2all_tensors_, Base::get_resource_manager());
       }
       functors_.sync_all_gpus(Base::get_resource_manager());
 
@@ -316,11 +316,12 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       functors_.sync_all_gpus(Base::get_resource_manager());
       MESSAGE_("All2All Warmup End");
 #else
-    throw std::runtime_error(
-        std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL A2A for multi-node"));
+      throw std::runtime_error(
+          std::string("[HCDEBUG][ERROR] LocalizedSlotSparseEmbeddingOneHot requires MPI and NCCL "
+                      "A2A for multi-node"));
 #endif
     }
-        
+
   } catch (const std::runtime_error &rt_err) {
     std::cerr << rt_err.what() << std::endl;
     throw;
@@ -331,7 +332,7 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
 
 template <typename TypeHashKey, typename TypeEmbeddingComp>
 void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_parameters(
-    std::ifstream &weight_stream, size_t embedding_vec_size,
+    std::istream &weight_stream, size_t embedding_vec_size,
     Tensors2<float> &hash_table_value_tensors, const std::vector<size_t> &slot_sizes,
     const Tensors2<uint32_t> &mapping_offsets_per_gpu_tensors) {
   CudaDeviceContext context;
@@ -419,7 +420,7 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
   functors_.sync_all_gpus(Base::get_resource_manager());
 
 #ifdef ENABLE_MPI
-    CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
+  CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD));
 #endif
 
   // do upload
@@ -440,7 +441,8 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
       size_t gid = slot_id % total_gpu_count;  // global GPU ID
       size_t id = Base::get_resource_manager().get_gpu_local_id_from_global_id(
           gid);  // local GPU ID (not gpudevice id)
-      int dst_rank = Base::get_resource_manager().get_process_id_from_gpu_global_id(gid);  // node id
+      int dst_rank =
+          Base::get_resource_manager().get_process_id_from_gpu_global_id(gid);  // node id
 
       if (Base::get_resource_manager().get_process_id() == dst_rank) {
         TypeHashKey tile_key = *((TypeHashKey *)src_buf);
@@ -530,7 +532,8 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
       size_t gid = slot_id % total_gpu_count;  // global GPU ID
       size_t id = Base::get_resource_manager().get_gpu_local_id_from_global_id(
           gid);  // local GPU ID (not gpudevice id)
-      int dst_rank = Base::get_resource_manager().get_process_id_from_gpu_global_id(gid);  // node id
+      int dst_rank =
+          Base::get_resource_manager().get_process_id_from_gpu_global_id(gid);  // node id
 
       if (Base::get_resource_manager().get_process_id() == dst_rank) {
         TypeHashKey tile_key = *((TypeHashKey *)src_buf);
@@ -613,7 +616,7 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::load_pa
 
 template <typename TypeHashKey, typename TypeEmbeddingComp>
 void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::dump_parameters(
-    std::ofstream &weight_stream, size_t embedding_vec_size,
+    std::ostream &weight_stream, size_t embedding_vec_size,
     const Tensors2<float> &hash_table_value_tensors, const std::vector<size_t> &slot_sizes) const {
   size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
 
@@ -671,8 +674,8 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::dump_pa
       continue;
     }
 
-    MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) + ": Dump embedding table from GPU" +
-             std::to_string(id));
+    MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) +
+             ": Dump embedding table from GPU" + std::to_string(id));
 
     context.set_device(Base::get_local_gpu(id).get_device_id());
 
@@ -742,16 +745,19 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::dump_pa
       offset += value_size;
     }
     if (Base::get_resource_manager().is_master_process()) {
-      MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) + ": Write hash table <key,value> pairs to file");
+      MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) +
+               ": Write hash table <key,value> pairs to file");
       weight_stream.write(file_buf.get(), size_in_B);
     }
 #ifdef ENABLE_MPI
     else {
-      MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) + ": Send hash table <key,value> pairs on GPU" +
-               std::to_string(id) + " to master node  ");
+      MESSAGE_("Rank" + std::to_string(Base::get_resource_manager().get_process_id()) +
+               ": Send hash table <key,value> pairs on GPU" + std::to_string(id) +
+               " to master node  ");
       int tag = (id << 8) | base_tag;
-      CK_MPI_THROW_(
-          MPI_Send(file_buf.get(), size_in_B, MPI_CHAR, Base::get_resource_manager().get_master_process_id(), tag, MPI_COMM_WORLD));
+      CK_MPI_THROW_(MPI_Send(file_buf.get(), size_in_B, MPI_CHAR,
+                             Base::get_resource_manager().get_master_process_id(), tag,
+                             MPI_COMM_WORLD));
     }
 #endif
   }
@@ -804,8 +810,8 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::init_em
   size_t total_gpu_count = Base::get_resource_manager().get_global_gpu_count();
 
 #ifndef NDEBUG
-  MESSAGE_("local_gpu_count=" + std::to_string(local_gpu_count) + ", total_gpu_count=" +
-           std::to_string(total_gpu_count));
+  MESSAGE_("local_gpu_count=" + std::to_string(local_gpu_count) +
+           ", total_gpu_count=" + std::to_string(total_gpu_count));
 #endif
 
   for (size_t id = 0; id < local_gpu_count; id++) {
@@ -828,22 +834,6 @@ void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::init_em
   }
 
   return;
-}
-
-template <typename TypeHashKey, typename TypeEmbeddingComp>
-void LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::reset() {
-  CudaDeviceContext context;
-  for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
-    functors_.init_embedding_per_gpu(Base::get_local_gpu(i).get_global_id(),
-                                     Base::get_resource_manager().get_global_gpu_count(),
-                                     slot_size_array_, Base::get_embedding_vec_size(),
-                                     value_table_tensors_[i], hash_table_slot_id_tensors_[i],
-                                     Base::get_local_gpu(i));
-  }
-
-  for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
-    CK_CUDA_THROW_(cudaStreamSynchronize(Base::get_local_gpu(i).get_stream()));
-  }
 }
 
 template class LocalizedSlotSparseEmbeddingOneHot<unsigned int, float>;

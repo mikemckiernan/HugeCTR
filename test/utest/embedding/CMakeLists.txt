@@ -15,6 +15,7 @@
 
 cmake_minimum_required(VERSION 3.8)
 file(GLOB embedding_test_src
+  hybrid_embedding/calculate_indices_test.cu
   distributed_slot_sparse_embedding_hash_test.cu 
   localized_slot_sparse_embedding_hash_test.cu 
   localized_slot_sparse_embedding_one_hot_test.cu 

@@ -16,6 +16,7 @@
 
 #include <nvToolsExt.h>
 #include <omp.h>
+
 #include <algorithm>
 #include <embedding.hpp>
 #include <random>
@@ -79,7 +80,8 @@ static void check_device(int device_id, int min_major, int min_minor) {
 
 Session::Session(const SolverParser& solver_config, const std::string& config_file,
                  bool use_model_oversubscriber, const std::string temp_embedding_dir)
-    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed, solver_config.device_layout)) {
+    : resource_manager_(ResourceManager::create(solver_config.vvgpu, solver_config.seed,
+                                                solver_config.device_layout)) {
   for (auto dev : resource_manager_->get_local_gpu_device_id_list()) {
     if (solver_config.use_mixed_precision) {
       check_device(dev, 7,
@@ -97,16 +99,20 @@ Session::Session(const SolverParser& solver_config, const std::string& config_fi
   parser.create_pipeline(data_reader_, data_reader_eval_, embedding_, networks_, resource_manager_);
 
 #ifndef DATA_READING_TEST
-  for (auto& network : networks_) {
-    network->initialize();
-  }
-  if (solver_config.use_algorithm_search) {
-    for (auto& network : networks_) {
-      network->search_algorithm();
+
+#pragma omp parallel num_threads(networks_.size())
+  {
+    size_t id = omp_get_thread_num();
+    networks_[id]->initialize();
+    if (solver_config.use_algorithm_search) {
+      networks_[id]->search_algorithm();
     }
   }
+  for (size_t i = 0; i < resource_manager_->get_local_gpu_count(); i++) {
+    CK_CUDA_THROW_(cudaStreamSynchronize(resource_manager_->get_local_gpu(i)->get_stream()));
+  }
 #endif
-  
+
   init_or_load_params_for_dense_(solver_config.model_file);
   if (use_model_oversubscriber) {
     if (solver_config.use_mixed_precision) {
@@ -424,7 +430,7 @@ std::shared_ptr<ModelOversubscriber> Session::create_model_oversubscriber_(
 
 void Session::check_overflow() const {
   for (auto& one_embedding : embedding_) {
-    one_embedding->check_overflow();
+    std::dynamic_pointer_cast<IHashEmbedding>(one_embedding)->check_overflow();
   }
 }
 

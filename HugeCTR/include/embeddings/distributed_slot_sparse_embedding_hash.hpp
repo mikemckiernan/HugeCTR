@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "HugeCTR/include/common.hpp"
-#include "HugeCTR/include/embeddings/embedding.hpp"
+#include "HugeCTR/include/embeddings/embedding_base.hpp"
 #include "HugeCTR/include/embeddings/sparse_embedding_functors.hpp"
 #include "HugeCTR/include/utils.hpp"
 
@@ -41,33 +41,36 @@ namespace HugeCTR {
  * GPUs(which named load_parameters()), and for downloading hash tables from GPUs to
  * a host file(which named dump_parameters()).
  */
-template <typename TypeHashKey, typename TypeEmbeddingComp>
-class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmbeddingComp> {
-  using Base = Embedding<TypeHashKey, TypeEmbeddingComp>;
+template <typename TypeKey, typename TypeEmbedding>
+class DistributedSlotSparseEmbeddingHash
+    : public EmbeddingBase<IHashEmbedding, TypeKey, TypeEmbedding>,
+      public IEmbeddingForUnitTest<TypeKey, TypeEmbedding>,
+      public IEmbeddingForPrefetcher<TypeEmbedding>,
+      public IEmbeddingForTensorFlowPlugin {
+  using Base = EmbeddingBase<IHashEmbedding, TypeKey, TypeEmbedding>;
 
-  using NvHashTable = HashTable<TypeHashKey, size_t>;
+  using NvHashTable = HashTable<TypeKey, size_t>;
 
  private:
   std::vector<std::shared_ptr<NvHashTable>> hash_tables_; /**< Hash table.  */
 
   // define tensors
-  Tensors2<float> hash_table_value_tensors_;  /**< Hash table value. */
-  Tensors2<size_t> hash_value_index_tensors_; /**< Hash table value index. The index is
-                                                   corresponding to the line number of the value. */
-  Tensors2<TypeEmbeddingComp>
-      embedding_feature_tensors_;             /**< the output tensor of the forward(). */
-  Tensors2<TypeEmbeddingComp> wgrad_tensors_; /**< the input tensor of the backward(). */
-  Tensors2<TypeEmbeddingComp>
+  Tensors2<float> hash_table_value_tensors_;          /**< Hash table value. */
+  Tensors2<size_t> hash_value_index_tensors_;         /**< Hash table value index. The index is
+                                                           corresponding to the line number of the value. */
+  Tensors2<TypeEmbedding> embedding_feature_tensors_; /**< the output tensor of the forward(). */
+  Tensors2<TypeEmbedding> wgrad_tensors_;             /**< the input tensor of the backward(). */
+  Tensors2<TypeEmbedding>
       opt_m_tensors_; /**< The mi variable storage for adam optimizer in the update_params(). */
-  Tensors2<TypeEmbeddingComp>
+  Tensors2<TypeEmbedding>
       opt_v_tensors_; /**< The vi variable storage for adam optimizer in the update_params(). */
-  Tensors2<uint64_t> opt_prev_time_tensors_; /**< The previous update time storage for lazy adam
-                                                  in update_params(). */
-  Tensors2<TypeEmbeddingComp> opt_momentum_tensors_; /**< The momentum variable storage
+  Tensors2<uint64_t> opt_prev_time_tensors_;     /**< The previous update time storage for lazy adam
+                                                      in update_params(). */
+  Tensors2<TypeEmbedding> opt_momentum_tensors_; /**< The momentum variable storage
                                            for the momentum optimizer in the update_params(). */
-  Tensors2<TypeEmbeddingComp> opt_accm_tensors_;     /**< The accm variable storage for the
+  Tensors2<TypeEmbedding> opt_accm_tensors_;     /**< The accm variable storage for the
                                                          nesterov optimizer in the update_params(). */
-  Tensors2<TypeHashKey>
+  Tensors2<TypeKey>
       row_offset_allreduce_tensors_; /**< The temp memory to store the row_offset after all_reduce
                                         operation among multi-gpu in forward(). */
   Tensors2<size_t> hash_value_index_sort_tensors_; /**< The temp memory to store the sorted hash
@@ -83,17 +86,17 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
   Tensors2<uint32_t> new_hash_value_flag_tensors_;
   Tensors2<uint32_t> hash_value_flag_sumed_tensors_;
 
-  Tensors2<TypeHashKey> sample_id_tensors_; /**< The temp memory to store the sample ids of hash
-                                              table value in      update_params(). */
-  Tensors2<TypeHashKey> sample_id_sort_tensors_; /**< The temp memory to store the sorted sample
+  Tensors2<TypeKey> sample_id_tensors_;      /**< The temp memory to store the sample ids of hash
+                                                   table value in      update_params(). */
+  Tensors2<TypeKey> sample_id_sort_tensors_; /**< The temp memory to store the sorted sample
                                                    ids of hash table value in update_params(). */
-  Tensors2<void> temp_storage_sort_tensors_;     /**< The temp memory for the CUB lib sorting
-                                                          API in update_params(). */
+  Tensors2<void> temp_storage_sort_tensors_; /**< The temp memory for the CUB lib sorting
+                                                      API in update_params(). */
 
   Tensors2<void> temp_storage_scan_tensors_; /**< The temp memory for the CUB lib scaning API
                                                       in update_params(). */
 
-  Tensors2<TypeEmbeddingComp> utest_forward_temp_tensors_;
+  Tensors2<TypeEmbedding> utest_forward_temp_tensors_;
 
   size_t max_vocabulary_size_;         /**< Max vocabulary size for each GPU. */
   size_t max_vocabulary_size_per_gpu_; /**< Max vocabulary size for each GPU. */
@@ -121,10 +124,10 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param device_resources all gpus device resources.
    * @param context gpu device context, for switching device
    */
-  void load_parameters(const Tensor2<TypeHashKey> &keys, const Tensor2<float> &embeddings,
-                       size_t num, size_t vocabulary_size, size_t embedding_vec_size,
+  void load_parameters(const Tensor2<TypeKey> &keys, const Tensor2<float> &embeddings, size_t num,
+                       size_t vocabulary_size, size_t embedding_vec_size,
                        size_t max_vocabulary_size_per_gpu, Tensors2<float> &embedding_tensors,
-                       std::vector<std::shared_ptr<HashTable<TypeHashKey, size_t>>> &hash_tables);
+                       std::vector<std::shared_ptr<HashTable<TypeKey, size_t>>> &hash_tables);
 
   /**
    * dump_parameters for DistributedSlotSparseEmbeddingHash
@@ -138,13 +141,13 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param context gpu device context, for switching device
    */
   void dump_parameters(
-      std::ofstream &weight_stream, size_t vocabulary_size, size_t embedding_vec_size,
+      std::ostream &weight_stream, size_t vocabulary_size, size_t embedding_vec_size,
       const Tensors2<float> &hash_table_value_tensors,
-      const std::vector<std::shared_ptr<HashTable<TypeHashKey, size_t>>> &hash_tables) const;
+      const std::vector<std::shared_ptr<HashTable<TypeKey, size_t>>> &hash_tables) const;
   void dump_parameters(
-      Tensor2<TypeHashKey> &keys, Tensor2<float> &embeddings, size_t *num, size_t vocabulary_size,
+      Tensor2<TypeKey> &keys, Tensor2<float> &embeddings, size_t *num, size_t vocabulary_size,
       size_t embedding_vec_size, const Tensors2<float> &embedding_tensors,
-      const std::vector<std::shared_ptr<HashTable<TypeHashKey, size_t>>> &hash_tables) const;
+      const std::vector<std::shared_ptr<HashTable<TypeKey, size_t>>> &hash_tables) const;
 
  public:
   /**
@@ -157,13 +160,13 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param resource_manager the GPU resource group
    */
   DistributedSlotSparseEmbeddingHash(
-      const Tensors2<TypeHashKey> &train_row_offsets_tensors,
-      const Tensors2<TypeHashKey> &train_value_tensors,
+      const Tensors2<TypeKey> &train_row_offsets_tensors,
+      const Tensors2<TypeKey> &train_value_tensors,
       const std::vector<std::shared_ptr<size_t>> &train_nnz_array,
-      const Tensors2<TypeHashKey> &evaluate_row_offsets_tensors,
-      const Tensors2<TypeHashKey> &evaluate_value_tensors,
+      const Tensors2<TypeKey> &evaluate_row_offsets_tensors,
+      const Tensors2<TypeKey> &evaluate_value_tensors,
       const std::vector<std::shared_ptr<size_t>> &evaluate_nnz_array,
-      const SparseEmbeddingHashParams<TypeEmbeddingComp> &embedding_params,
+      const SparseEmbeddingHashParams<TypeEmbedding> &embedding_params,
       const std::shared_ptr<ResourceManager> &resource_manager);
 
   /**
@@ -269,7 +272,7 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * upload it onto multi-GPUs global memory.
    * @param weight_stream the host file stream for reading data from.
    */
-  void load_parameters(std::ifstream &stream) override;
+  void load_parameters(std::istream &stream) override;
   void load_parameters(const TensorBag2 &keys, const Tensor2<float> &embeddings,
                        size_t num) override;
 
@@ -278,13 +281,17 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * and write it to the weight_stream on the host.
    * @param weight_stream the host file stream for writing data to.
    */
-  void dump_parameters(std::ofstream &weight_stream) const override;
+  void dump_parameters(std::ostream &weight_stream) const override;
   void dump_parameters(TensorBag2 keys, Tensor2<float> &embeddings, size_t *num) const override;
 
   /**
    * Reset the embedding
    */
   void reset() override;
+
+  const SparseEmbeddingHashParams<TypeEmbedding> &get_embedding_params() const {
+    return Base::get_embedding_params();
+  }
 
   /**
    * Get the total size of hash tables on all GPUs.
@@ -317,7 +324,7 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param embedding_feature the host pointer for storing the forward()
    * results.
    */
-  void get_forward_results(bool is_train, Tensor2<TypeEmbeddingComp> &embedding_feature) override {
+  void get_forward_results(bool is_train, Tensor2<TypeEmbedding> &embedding_feature) override {
     size_t memcpy_size = Base::get_batch_size_per_gpu(is_train) * Base::get_slot_num() *
                          Base::get_embedding_vec_size();
 
@@ -330,13 +337,14 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
 
   /**
    * Get the forward() results from GPUs and copy them to TensorFlow's tensor.
-  */
-  void get_forward_results_tf(const bool is_train, const bool on_gpu, void* const forward_result) override {
-    size_t memcpy_size = Base::get_batch_size_per_gpu(is_train) * Base::get_slot_num() * 
+   */
+  void get_forward_results_tf(const bool is_train, const bool on_gpu,
+                              void *const forward_result) override {
+    size_t memcpy_size = Base::get_batch_size_per_gpu(is_train) * Base::get_slot_num() *
                          Base::get_embedding_vec_size();
-    functors_.get_forward_results(memcpy_size, Base::get_output_tensors(is_train),
-                                  forward_result, utest_forward_temp_tensors_,
-                                  Base::get_resource_manager(), on_gpu);
+    functors_.get_forward_results(memcpy_size, Base::get_output_tensors(is_train), forward_result,
+                                  utest_forward_temp_tensors_, Base::get_resource_manager(),
+                                  on_gpu);
     return;
   }
 
@@ -347,7 +355,7 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param wgrad the host pointer for stroing the backward() results.
    * @param devIndex the GPU device id.
    */
-  void get_backward_results(Tensor2<TypeEmbeddingComp> &wgrad, int devIndex) override {
+  void get_backward_results(Tensor2<TypeEmbedding> &wgrad, int devIndex) override {
     // wgard shuld be the same on multi-gpus after backward()
     size_t memcpy_size =
         Base::get_batch_size(true) * Base::get_slot_num() * Base::get_embedding_vec_size();
@@ -365,7 +373,7 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
    * @param hash_table_key the host pointer for stroing the hash table keys.
    * @param hash_table_value the host pointer for stroing the hash table values.
    */
-  void get_update_params_results(Tensor2<TypeHashKey> &hash_table_key,
+  void get_update_params_results(Tensor2<TypeKey> &hash_table_key,
                                  Tensor2<float> &hash_table_value) override {
     functors_.get_update_params_results(Base::get_embedding_vec_size(), max_vocabulary_size_,
                                         hash_table_value_tensors_, hash_tables_, hash_table_key,
@@ -396,23 +404,23 @@ class DistributedSlotSparseEmbeddingHash : public Embedding<TypeHashKey, TypeEmb
   }
 
   /** only used in tf embedding plugin to distribute top_gradients to each GPUs' output tensor.
-  */
-  cudaError_t update_top_gradients(const bool on_gpu, const void* const top_gradients) override {
+   */
+  cudaError_t update_top_gradients(const bool on_gpu, const void *const top_gradients) override {
     auto output_tensors = Base::get_output_tensors(true);
     CudaDeviceContext context;
 
-    const auto top_gradients_internel = reinterpret_cast<const TypeEmbeddingComp*>(top_gradients);
+    const auto top_gradients_internel = reinterpret_cast<const TypeEmbedding *>(top_gradients);
     cudaMemcpyKind direction = (on_gpu ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice);
 
     cudaError_t error = cudaError_t::cudaSuccess;
     for (size_t dev_id = 0; dev_id < Base::get_resource_manager().get_local_gpu_count(); ++dev_id) {
       context.set_device(Base::get_local_gpu(dev_id).get_device_id());
 
-      error = cudaMemcpyAsync(output_tensors[dev_id].get_ptr(), 
-                              top_gradients_internel + dev_id * output_tensors[dev_id].get_num_elements(),
-                              output_tensors[dev_id].get_size_in_bytes(),
-                              direction, 
-                              Base::get_local_gpu(dev_id).get_stream());
+      error = cudaMemcpyAsync(
+          output_tensors[dev_id].get_ptr(),
+          top_gradients_internel + dev_id * output_tensors[dev_id].get_num_elements(),
+          output_tensors[dev_id].get_size_in_bytes(), direction,
+          Base::get_local_gpu(dev_id).get_stream());
       if (error != cudaError_t::cudaSuccess) return error;
     }
 

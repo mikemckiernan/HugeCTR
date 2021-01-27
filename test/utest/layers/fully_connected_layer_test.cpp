@@ -15,9 +15,11 @@
  */
 
 #include "HugeCTR/include/layers/fully_connected_layer.hpp"
+
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+
 #include "utest/test_utils.h"
 using namespace std;
 using namespace HugeCTR;
@@ -75,7 +77,6 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
   // Initialize tensors to 0 and choose cublas algorithms
   blobs_buff->allocate();
   fully_connected_layer.initialize();
-  // fully_connected_layer.search_algorithm();
   // Reset tensors to 0 to ensure all the data are the same as original utest(clear the side effect
   // of optimize)
   Tensor2<float> weight = weight_buff->as_tensor();
@@ -117,8 +118,8 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
   fully_connected_layer.fprop(true);
   CK_CUDA_THROW_(cudaDeviceSynchronize());
 
-  ASSERT_EQ(true, check_cpu_gpu(h_out.get(), d_out, m * n)) << "fprop cross_check result fail"
-                                                            << endl;
+  ASSERT_EQ(true, check_cpu_gpu(h_out.get(), d_out, m * n))
+      << "fprop cross_check result fail" << endl;
 
   simulator.fill(h_out.get(), test::align_to_even(m * n));
 
@@ -138,8 +139,8 @@ static void fully_connected_layer_test(size_t m, size_t n, size_t k) {
   fully_connected_layer.bprop();
   CK_CUDA_THROW_(cudaDeviceSynchronize());
 
-  ASSERT_EQ(true, check_cpu_gpu(h_in.get(), d_in, m * k)) << " bprop cross_check input_grad fail"
-                                                          << endl;
+  ASSERT_EQ(true, check_cpu_gpu(h_in.get(), d_in, m * k))
+      << " bprop cross_check input_grad fail" << endl;
   ASSERT_EQ(true, check_cpu_gpu(h_weight_grad.get(), d_weight_grad, k * n))
       << " bprop cross_check weight_grad fail" << endl;
   ASSERT_EQ(true, check_cpu_gpu(h_bias_grad.get(), d_weight_grad + k * n, n))
