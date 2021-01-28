@@ -21,13 +21,19 @@ using nlohmann::json;
 namespace HugeCTR {
 
   Profiler::GPUTimer::GPUTimer() {
+    CK_CUDA_THROW_(cudaEventCreateWithFlags(&iter_start_, cudaEventBlockingSync));
     CK_CUDA_THROW_(cudaEventCreateWithFlags(&start_, cudaEventBlockingSync));
     CK_CUDA_THROW_(cudaEventCreateWithFlags(&stop_, cudaEventBlockingSync));
   }
 
   Profiler::GPUTimer::~GPUTimer() {
+    cudaEventDestroy(iter_start_);
     cudaEventDestroy(start_);
     cudaEventDestroy(stop_);
+  }
+
+  void Profiler::GPUTimer::iter_start(cudaStream_t stream) {
+    CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
   }
 
   void Profiler::GPUTimer::event_start(cudaStream_t stream) {
@@ -36,13 +42,22 @@ namespace HugeCTR {
 
   void Profiler::GPUTimer::event_stop(cudaStream_t stream) {
     CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
-    CK_CUDA_THROW_(cudaEventSynchronize(stop_));
-    CK_CUDA_THROW_(cudaEventElapsedTime(&measured_time_ms_, start_, stop_));
-    // MESSAGE_("Result " + std::to_string(measured_time_ms_));
   }
 
-  float Profiler::GPUTimer::get_result() {
-    return measured_time_ms_;
+  void Profiler::GPUTimer::sync_stop() {
+    CK_CUDA_THROW_(cudaEventSynchronize(stop_));
+  }
+
+  float Profiler::GPUTimer::get_iter_start_to_event_start_ms() {
+    float get_iter_start_to_event_start_ms;
+    CK_CUDA_THROW_(cudaEventElapsedTime(&get_iter_start_to_event_start_ms, iter_start_, start_));
+    return get_iter_start_to_event_start_ms;
+  }
+
+  float Profiler::GPUTimer::get_measured_time_ms() {
+    float measured_time_ms;
+    CK_CUDA_THROW_(cudaEventElapsedTime(&measured_time_ms, start_, stop_));
+    return measured_time_ms;
   }
 
   void Profiler::initialize(const char* schedule_file) {
@@ -76,20 +91,28 @@ namespace HugeCTR {
         it->second = 0;
       }
     }
-    auto last_check = iter_check_;
-    iter_check_ = std::chrono::high_resolution_clock::now();
+    auto last_check = iter_start_check_;
+    iter_start_check_ = std::chrono::high_resolution_clock::now();
     if(current_iteration_ > warmup_iterations_) {
       iter_time_ms_.push_back(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(iter_check_ - last_check).count() / 1000000.0
+        std::chrono::duration_cast<std::chrono::nanoseconds>(iter_start_check_ - last_check).count() / 1000000.0
       );
+      for(auto& s_and_gt : map_stream_to_gpu_timer_) {
+        s_and_gt.second->iter_start(s_and_gt.first);
+      }
     }
-
     // MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
   void Profiler::iter_end() {
     if (current_iteration_ > warmup_iterations_) {
       current_schedule_idx_++;
+      for(auto& s_and_gt : map_stream_to_gpu_timer_) {
+        s_and_gt.second->sync_stop();
+        int event_idx = s_and_gt.second->event_idx_for_this_iter;
+        events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
+        events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
+      }
     }
 
     if (current_schedule_idx_ >= int(scheduled_events_.size())) {
@@ -167,6 +190,7 @@ namespace HugeCTR {
           gpu_event->start_index = events_num_;
           gpu_event->end_index = -1; // wait for stop event to set,
           gpu_event->measured_times_ms = std::vector<float>();
+          gpu_event->iter_start_to_event_start_times_ms = std::vector<float>();
           gpu_event->device_id = device_id;
           gpu_event->stream = stream;
           events_.push_back(std::shared_ptr<Event>(static_cast<Event*>(gpu_event)));
@@ -213,17 +237,14 @@ namespace HugeCTR {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
               std::string("Current event ") + event_name + std::string(" not registered!"));
           }
+          gpu_timer->event_idx_for_this_iter = event_idx;
           // mtx_.lock();
-          events_[event_idx]->measured_times_ms.push_back(gpu_timer->get_result());
           map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
           // After measuring, the cpu overhead is around 0.000x ms.
           // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
           // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
           // mtx_.unlock();
         }
-
-
-
       }
     } catch (const std::runtime_error& rt_err) {
       std::cerr << rt_err.what() << std::endl;
@@ -253,7 +274,9 @@ namespace HugeCTR {
       j["stream"] = stream_str(gep->stream);
       j["start_index"] = gep->start_index;
       j["end_index"] = gep->end_index;
+      j["same_name_events_occured_order_in_code"] = gep->same_name_events_occured_order_in_code;
       j["measured_times_ms"] = gep->measured_times_ms;
+      j["iter_start_to_event_start_times_ms"] = gep->iter_start_to_event_start_times_ms;
       result["events"].push_back(j);
     }
     std::string result_jstring = result.dump();

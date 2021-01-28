@@ -5,106 +5,74 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
 
-FUSED_FULLY_CONNECTED_FORWARD_EVENTS = [
-    'fused_fully_connected.fprop',
-    'fused_fully_connected.fprop.cublasGemmEx',
-    'fused_fully_connected.fprop.add_bias_and_re_kernel',
-]
-
-FUSED_FULLY_CONNECTED_BACKWARD_EVENTS = [
-    'fused_fully_connected.bprop',
-    'fused_fully_connected.bprop.initialize_array',
-    'fused_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-    'fused_fully_connected.bprop.convert_array',
-    'fused_fully_connected.bprop.cublasGemmEx_1',
-    'fused_fully_connected.bprop.cublasGemmEx_2'
-]
-
-LOCALIZED_SLOT_SPARSE_EMBEDDING_ONE_HOT_FORWARD_EVENTS = [
-    'localized_slot_sparse_embedding_one_hot.forward.mapping_and_fuse'
-]
-
 
 DRLM_EVENTS = {
     # interested event name
     'BottomMLP.fc1': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 6,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'BottomMLP.fc2': {
         'same_name_events_occured_order_in_code_forward': 1,
         'same_name_events_occured_order_in_code_backward': 5,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'BottomMLP.fc3': {
         'same_name_events_occured_order_in_code_forward': 2,
         'same_name_events_occured_order_in_code_backward': 4,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'sparse_embedding1': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 0,
-        'forward_events': LOCALIZED_SLOT_SPARSE_EMBEDDING_ONE_HOT_FORWARD_EVENTS,
-        'backward_events': []
     },
     'interaction1': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 0,
-        'forward_events': [],
-        'backward_events': []
     },
     'TopMLP.fc4': {
         'same_name_events_occured_order_in_code_forward': 3,
         'same_name_events_occured_order_in_code_backward': 3,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'TopMLP.fc5': {
         'same_name_events_occured_order_in_code_forward': 4,
         'same_name_events_occured_order_in_code_backward': 2,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'TopMLP.fc6': {
         'same_name_events_occured_order_in_code_forward': 5,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
         'same_name_events_occured_order_in_code_backward': 1,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
     },
     'TopMLP.fc7': {
         'same_name_events_occured_order_in_code_forward': 6,
-        'forward_events': FUSED_FULLY_CONNECTED_FORWARD_EVENTS,
         'same_name_events_occured_order_in_code_backward': 0,
-        'backward_events': FUSED_FULLY_CONNECTED_BACKWARD_EVENTS
+    },
+    'TopMLP.fc8': {
+        'same_name_events_occured_order_in_code_forward': 0,
+        'same_name_events_occured_order_in_code_backward': 0,
     }
 }
 
 
 def generate_schedule(schedule, repeat_for_each_event=50, warmup_iterations=10, outfile='prof.schedule'):
-    with open(outfile, 'w') as f:
-        f.write(str(warmup_iterations))
+    with open(outfile, 'wb') as f:
+        f.write(str(warmup_iterations).encode('ascii', 'ignore'))
         iteration = warmup_iterations + 1
         for layer in schedule:
-            for interested_event in schedule[layer]:
-                if interested_event in DRLM_EVENTS[layer]['forward_events']:
-                    same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_forward']
-                elif interested_event in DRLM_EVENTS[layer]['backward_events']:
-                    same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_backward']
-                else:
-                    raise Exception("{} is not a registered event!".format(interested_event))
-                for _ in range(repeat_for_each_event):
-                    line = "\n{} {} {} {}".format(
-                        interested_event,
-                        iteration,
-                        layer,
-                        same_name_events_occured_order_in_code
-                    )
-                    f.write(line)
-                    iteration += 1
+            for f_or_b_event in schedule[layer].keys():
+                for interested_event in schedule[layer][f_or_b_event]:
+                    if f_or_b_event == 'forward_events':
+                        same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_forward']
+                    elif f_or_b_event == 'backward_events':
+                        same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_backward']
+                    else:
+                        raise Exception("{} not a forward_event nor a backward_event".format(interested_event))
+                    for _ in range(repeat_for_each_event):
+                        line = "\n{} {} {} {}".format(
+                            interested_event,
+                            iteration,
+                            layer,
+                            same_name_events_occured_order_in_code
+                        ).encode('ascii', 'ignore')
+                        f.write(line)
+                        iteration += 1
 
 def parse_result(prof_file='prof.json'):
     with open(prof_file, 'r') as f:
@@ -113,7 +81,7 @@ def parse_result(prof_file='prof.json'):
         timeline = prof['events']
         timeline.sort(key=lambda e: e["start_index"])
         result = {
-            'iter_time_ms': sum(prof['iter_time_ms']) / len(prof['iter_time_ms']),
+            'avg_iter_time_ms': sum(prof['iter_time_ms']) / len(prof['iter_time_ms']),
             'layers': split_by_layer_device_stream(timeline)
         }
     return result
@@ -145,8 +113,12 @@ def split_by_layer_device_stream(timeline):
         new_event["start_index"] = event["start_index"]
         new_event["end_index"] = event["end_index"]
 
-        measured_times_ms = reject_outliers(event["measured_times_ms"])
-        new_event["avg_measured_times_ms"] = sum(measured_times_ms) / len(measured_times_ms)
+        #measured_times_ms = reject_outliers(event["measured_times_ms"])
+        measured_times_ms = event["measured_times_ms"]
+        new_event["avg_measured_time_ms"] = sum(measured_times_ms) / len(measured_times_ms)
+        #iter_start_to_event_start_times_ms = reject_outliers(event["iter_start_to_event_start_times_ms"])
+        iter_start_to_event_start_times_ms = event["iter_start_to_event_start_times_ms"]
+        new_event["avg_iter_start_to_event_start_time_ms"] = sum(iter_start_to_event_start_times_ms) / len(iter_start_to_event_start_times_ms)
         result[layer_name][device_id][stream_id].append(new_event)
     return result
 

@@ -36,10 +36,11 @@ class Profiler {
   struct Event {
     std::string name;
     std::string layer_name;
-    std::string same_name_events_occured_order_in_code;
+    int same_name_events_occured_order_in_code;
     int start_index;
     int end_index;
     // std::vector<int> on_iters;
+    std::vector<float> iter_start_to_event_start_times_ms;
     std::vector<float> measured_times_ms;
   };
 
@@ -54,15 +55,21 @@ class Profiler {
    private:
     cudaEvent_t start_;
     cudaEvent_t stop_;
-    float measured_time_ms_;
+    cudaEvent_t iter_start_;
 
    public:
+    int event_idx_for_this_iter;
+
     GPUTimer();
     ~GPUTimer();
     // stream is a pointer itself
+    void iter_start(cudaStream_t stream);
     void event_start(cudaStream_t stream);
     void event_stop(cudaStream_t stream);
-    float get_result();
+    float get_measured_time_ms();
+    float get_iter_start_to_event_start_ms();
+    void sync_stop();
+
   };
 
   class CPUTimer {};
@@ -70,7 +77,7 @@ class Profiler {
  private:
   std::string host_name_;
   std::vector<float> iter_time_ms_;
-  std::chrono::high_resolution_clock::time_point iter_check_;
+  std::chrono::high_resolution_clock::time_point iter_start_check_;
 
   int warmup_iterations_;
   int current_iteration_;
