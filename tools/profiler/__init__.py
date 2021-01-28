@@ -81,6 +81,7 @@ def parse_result(prof_file='prof.json'):
         timeline = prof['events']
         timeline.sort(key=lambda e: e["start_index"])
         result = {
+            'host_name': prof['host_name'],
             'avg_iter_time_ms': sum(prof['iter_time_ms']) / len(prof['iter_time_ms']),
             'layers': split_by_layer_device_stream(timeline)
         }

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <omp.h>
 
+#include <unistd.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -68,6 +69,9 @@ namespace HugeCTR {
     //    ...
 
     // TBD how to get host_name in CPP ?
+    char host_name[50];
+    gethostname(host_name, 50);
+    host_name_ = std::string(host_name);
 
     MESSAGE_(std::string("Profiler initializing using ") + schedule_file + " ...");
     std::ifstream schedule_f(schedule_file);
@@ -263,6 +267,7 @@ namespace HugeCTR {
   std::string Profiler::write_result(const char* result_file) {
     // TBD dump events_ to json file
     json result;
+    result["host_name"] = host_name_;
     result["iter_time_ms"] = iter_time_ms_;
     result["events"] = json::array();
     for (auto& event_p : events_) {
