@@ -120,7 +120,7 @@ namespace HugeCTR {
     }
 
     if (current_schedule_idx_ >= int(scheduled_events_.size())) {
-        auto result_file = write_result("prof.json");
+        auto result_file = write_result((host_name_ + ".prof.json").c_str());
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
         std::exit(0);
     }
