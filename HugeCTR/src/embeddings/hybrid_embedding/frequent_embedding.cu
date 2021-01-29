@@ -45,27 +45,9 @@ void FrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
         gpu_resource_->get_replica_uniform_curand_generator(), gpu_resource_->get_stream());
   }
 }
-template <typename dtype, typename emtype>
-__global__ void forward_network_frequent_embedding(
-    uint32_t embedding_vec_size, uint32_t global_sample_index_base,
-    const uint32_t* frequent_sample_indices,  // local
-    const dtype* samples,                     // global
-    const dtype* category_frequent_index,     // global
-    const float* frequent_embedding_vectors,  // global
-    emtype* interaction_layer_input)          // local
-{
-  int bid = blockIdx.x;   // each block corresponding to one category
-  int tid = threadIdx.x;  // each thread corresponding to one element in the embedding vector
-  uint32_t index = frequent_sample_indices[bid];
-  dtype category = samples[index + global_sample_index_base];
-  dtype frequent_index = category_frequent_index[category];
-  interaction_layer_input[index * embedding_vec_size + tid] =
-      frequent_embedding_vectors[frequent_index * embedding_vec_size + tid];
-}
 
 template <typename dtype, typename emtype>
-void FrequentEmbedding<dtype, emtype>::forward_network(emtype* interaction_layer_input,
-                                                       cudaStream_t stream) {
+void FrequentEmbedding<dtype, emtype>::forward_network(const emtype *interaction_layer_input) {
   // concatenate the embedding vectors into the buffer for
   // top-mlp input
 
@@ -74,17 +56,6 @@ void FrequentEmbedding<dtype, emtype>::forward_network(emtype* interaction_layer
   //   for index in frequent_sample_indices:
   //      output[index][0..em_vec_size-1] =
   //      frequent_embedding_vectors_[category_frequent_index[samples[index]]][0..em_vec_size-1]
-
-  // carefully check
-  uint32_t samples_per_instance = data_.samples.get_num_elements() / model_.num_instances;
-  uint32_t global_sample_index_base = model_.global_instance_id * samples_per_instance;
-
-  const size_t block_size = embedding_vec_size_;
-  const size_t grid_size = frequent_sample_indices_.get_num_elements();
-  forward_network_frequent_embedding<<<grid_size, block_size, 0, stream>>>(
-      embedding_vec_size_, global_sample_index_base, frequent_sample_indices_.get_ptr(),
-      data_.samples.get_ptr(), model_.category_frequent_index.get_ptr(),
-      frequent_embedding_vectors_block_.get_ptr(), interaction_layer_input);
 }
 
 template <typename dtype, typename emtype>

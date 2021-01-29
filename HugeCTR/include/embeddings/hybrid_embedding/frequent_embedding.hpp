@@ -38,19 +38,15 @@ class FrequentEmbedding {
   Model<dtype> model_;
   Data<dtype> data_;
 
-  // locally stored embedding vectors for the data-parallel part of the embedding for each table
+  // locally stored embedding vectors for the data-parallel part of the embedding
   std::vector<Tensor2<float>> frequent_embedding_vectors_;
-  Tensor2<float> frequent_embedding_vectors_block_; //  memory block for frequent_embedding_vectors_
-
   // locally stored reduced gradients: input for the all-reduce
   Tensor2<emtype> frequent_partial_gradients_;
 
   Tensor2<uint32_t> frequent_sample_indices_;
 
   std::shared_ptr<GPUResource> gpu_resource_;
-  // to do, we need to initialize it in the constructor
-  uint32_t embedding_vec_size_ = 128;
-  
+
   void init();
 
  public:
@@ -59,7 +55,7 @@ class FrequentEmbedding {
   ~FrequentEmbedding() {}
 
   void initialize_embedding_vectors();
-  void forward_network(emtype* interaction_layer_input, cudaStream_t stream);
+  void forward_network(const emtype* interaction_layer_input);
   // update on the gpu where the sample gradients are calculated
   void update_network();
   // update on the gpu where the embedding vectors are stored

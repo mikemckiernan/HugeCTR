@@ -53,22 +53,9 @@ void InfrequentEmbedding<dtype, emtype>::initialize_embedding_vectors() {
 /// it's corresponding location within the buffer for mlp network
 /// concatenated input.
 ///
-template <typename emtype>
-__global__ void forward_network_infrequent_embedding(uint32_t embedding_vec_size,
-                                                     const uint32_t* network_indices,  // local
-                                                     const emtype* message_buffer,     // local
-                                                     emtype* interaction_layer_input)  // local
-{
-  int bid = blockIdx.x;   // each block corresponding to one category
-  int tid = threadIdx.x;  // each thread corresponding to one element in the embedding vector
-  uint32_t index = network_indices[bid];
-  interaction_layer_input[index * embedding_vec_size + tid] =
-      message_buffer[bid * embedding_vec_size + tid];
-}
 template <typename dtype, typename emtype>
 void InfrequentEmbedding<dtype, emtype>::forward_network(const emtype* message_buffer,
-                                                         emtype* interaction_layer_input,
-                                                         cudaStream_t stream) {
+                                                         const emtype* interaction_layer_input) {
   // use network_indices_ and network_indices_offsets_ to
   // place the received embedding vectors into the input buffre
   // for the interaction layer.
@@ -80,10 +67,6 @@ void InfrequentEmbedding<dtype, emtype>::forward_network(const emtype* message_b
   // for i, index in enumerate(network_indices_):
   //    # copying embedding vector of category = samples[index] into location index of ouput array
   //    ouput[index][0..em_vec_size-1] = message_buffer[i*em_vec_size][0..em_vec_size-1]
-  const size_t block_size = embedding_vec_size_;
-  const size_t grid_size = network_indices_.get_num_elements();
-  forward_network_infrequent_embedding<<<grid_size, block_size, 0, stream>>>(
-      embedding_vec_size_, network_indices_.get_ptr(), message_buffer, interaction_layer_input);
 }
 
 template <typename T>
