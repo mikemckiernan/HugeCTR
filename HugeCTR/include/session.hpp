@@ -23,6 +23,7 @@
 #include <thread>
 #include <utility>
 #include <string>
+#include "HugeCTR/include/embeddings/embedding.hpp"
 #include "HugeCTR/include/model_oversubscriber/model_oversubscriber.hpp"
 
 namespace HugeCTR {

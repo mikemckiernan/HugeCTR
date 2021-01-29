@@ -45,9 +45,8 @@ void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::load_(
       ptr_ps->load_param_from_embedding_file(ps_manager_.get_embedding_ptr(),
                                              ps_manager_.get_keyset_ptr(), &hit_size);
 
-      std::dynamic_pointer_cast<IEmbeddingForPrefetcher<TypeEmbeddingComp>>(embeddings_[i])
-          ->load_parameters(ps_manager_.get_keyset_tensor(), ps_manager_.get_embedding_tensor(),
-                            hit_size);
+      embeddings_[i]->load_parameters(ps_manager_.get_keyset_tensor(),
+                                      ps_manager_.get_embedding_tensor(), hit_size);
     }
   } catch (const internal_runtime_error& rt_err) {
     std::cerr << rt_err.what() << std::endl;
@@ -68,9 +67,8 @@ void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::store(
 
     for (int i = 0; i < static_cast<int>(embeddings_.size()); i++) {
       size_t dump_size = 0;
-      std::dynamic_pointer_cast<IEmbeddingForPrefetcher<TypeEmbeddingComp>>(embeddings_[i])
-          ->dump_parameters(ps_manager_.get_keyset_tensor(), ps_manager_.get_embedding_tensor(),
-                            &dump_size);
+      embeddings_[i]->dump_parameters(ps_manager_.get_keyset_tensor(),
+                                      ps_manager_.get_embedding_tensor(), &dump_size);
 
       auto ptr_ps = ps_manager_.get_parameter_server(i);
       ptr_ps->dump_param_to_embedding_file(ps_manager_.get_embedding_ptr(),
@@ -96,7 +94,7 @@ void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::update(
   try {
     store();
     for (auto& one_embedding : embeddings_) {
-      std::dynamic_pointer_cast<IEmbeddingForPrefetcher<TypeEmbeddingComp>>(one_embedding)->reset();
+      one_embedding->reset();
     }
     load_(keyset_file_list);
   } catch (const internal_runtime_error& rt_err) {
@@ -109,7 +107,8 @@ void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::update(
 }
 
 template <typename TypeHashKey, typename TypeEmbeddingComp>
-void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::update(std::string& keyset_file) {
+void ModelOversubscriberImpl<TypeHashKey, TypeEmbeddingComp>::update(
+  std::string& keyset_file) {
   try {
     std::vector<std::string> keyset_file_list(embeddings_.size(), keyset_file);
     update(keyset_file_list);

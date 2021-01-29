@@ -15,7 +15,6 @@
  */
 
 #include <math.h>
-
 #include <layers/fully_connected_layer.hpp>
 #include <linalg/matrix_vector_op.cuh>
 #include <linalg/reduce.cuh>
@@ -178,6 +177,7 @@ void FullyConnectedLayer::bprop() {
 
 void FullyConnectedLayer::search_algorithm() {
   // Set to the CUDA device where this layer assigned to
+  CudaDeviceContext context(get_device_id());
   const int repeat_num = 5;
 
   // Device Tensors to be used
