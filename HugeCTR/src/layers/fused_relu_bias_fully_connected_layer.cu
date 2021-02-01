@@ -97,10 +97,10 @@ __global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
   if (idx < n ) {
     for (int i = 0; i < m; i++)
     {
-      temp += bias_grad_float[idx + i * n];
+     temp += bias_grad_float[idx + i * n];
     }
     bgrad[idx] = __float2half(temp);
-    //bgrad[idx] = __float2half(bias_grad_float[idx]);
+    // bgrad[idx] = __float2half(bias_grad_float[idx]);
   }
   
 }
@@ -475,7 +475,6 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
 
   using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->run(
-    db_bottom,
     get_gpu().get_stream()
   );
 }
