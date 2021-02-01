@@ -61,18 +61,18 @@ namespace HugeCTR {
     return measured_time_ms;
   }
 
-  void Profiler::initialize(const char* schedule_file) {
-    // read from a schedule file, schedule file format:
-    //    warmup_iterations
-    //    event_name_1, iteration1,
-    //    event_name_2, iteration2
-    //    ...
-
-    // TBD how to get host_name in CPP ?
+  void Profiler::initialize() {
+    try {
+      profiling_dir_ = std::string(std::getenv("PROFILING_DIR"));
+    } catch (const std::runtime_error& rt_err) {
+      std::cerr << rt_err.what() << std::endl;
+      std::cerr << "Got empty for env PROFILING_DIR. You must specify if when using this profiler" << std::endl;
+      throw;
+    }
     char host_name[50];
     gethostname(host_name, 50);
     host_name_ = std::string(host_name);
-
+    std::string schedule_file = profiling_dir_ + "/prof.schedule";
     MESSAGE_(std::string("Profiler initializing using ") + schedule_file + " ...");
     std::ifstream schedule_f(schedule_file);
     int line_no = 0;
@@ -120,8 +120,9 @@ namespace HugeCTR {
     }
 
     if (current_schedule_idx_ >= int(scheduled_events_.size())) {
-        auto result_file = write_result((host_name_ + ".prof.json").c_str());
+        std::string result_file = profiling_dir_ + '/' + host_name_ + ".prof.json";
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
+        write_result(result_file.c_str());
         std::exit(0);
     }
     current_iteration_++;
@@ -264,7 +265,7 @@ namespace HugeCTR {
     return idx;
   }
 
-  std::string Profiler::write_result(const char* result_file) {
+  void Profiler::write_result(const char* result_file) {
     // TBD dump events_ to json file
     json result;
     result["host_name"] = host_name_;
@@ -289,7 +290,6 @@ namespace HugeCTR {
     outfile.open(result_file);
     outfile << result_jstring;
     outfile.close();
-    return result_file;
   }
 
   // A global variable

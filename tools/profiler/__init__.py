@@ -53,8 +53,8 @@ DRLM_EVENTS = {
 }
 
 
-def generate_schedule(schedule, repeat_for_each_event=50, warmup_iterations=10, outfile='prof.schedule'):
-    with open(outfile, 'wb') as f:
+def generate_schedule(schedule, profiling_dir, repeat_for_each_event=50, warmup_iterations=10):
+    with open(os.path.join(profiling_dir, 'prof.schedule'), 'wb') as f:
         f.write(str(warmup_iterations).encode('ascii', 'ignore'))
         iteration = warmup_iterations + 1
         for layer in schedule:
@@ -76,8 +76,8 @@ def generate_schedule(schedule, repeat_for_each_event=50, warmup_iterations=10, 
                         f.write(line)
                         iteration += 1
 
-def parse_result(prof_dir='.'):
-    prof_jsons = glob.glob(os.path.join(prof_dir, '*.prof.json'))
+def parse_result(profiling_dir):
+    prof_jsons = glob.glob(os.path.join(profiling_dir, '*.prof.json'))
     ret = []
     for prof_file in prof_jsons:
         with open(prof_file, 'r') as f:
@@ -156,7 +156,7 @@ def split_by_device_stream_layer_label(events):
         result[device_id][stream_id].append(new_event)
     for _, device_events in result.items():
         for _, stream_events in device_events.items():
-            stream_events.sort(key=lambda e: e["start_index"])
+            stream_events.sort(key=lambda e: e["avg_iter_start_to_event_start_time_ms"])
     return result
 
 

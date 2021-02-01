@@ -75,6 +75,7 @@ class Profiler {
   class CPUTimer {};
 
  private:
+  std::string profiling_dir_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
   std::chrono::high_resolution_clock::time_point iter_start_check_;
@@ -96,12 +97,12 @@ class Profiler {
   std::mutex mtx_;
 
  public:
-  void initialize(const char* schedule_file);
+  void initialize();
   void record_event(const char* event_label_char, cudaStream_t stream, int device_id);
   void iter_start();
   void iter_end();
   int find_event(std::string& event_key);
-  std::string write_result(const char* result_dir);
+  void write_result(const char* result_dir);
 
   static std::vector<std::string> split_string(std::string& str, char delim = '.') {
     std::stringstream ss(str);

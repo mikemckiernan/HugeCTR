@@ -147,7 +147,7 @@ void train(std::string config_file) {
 #endif
 
 #ifdef ENABLE_PROFILING
-  HugeCTR::global_profiler.initialize("prof.schedule");
+  HugeCTR::global_profiler.initialize();
 #endif
 
   // train
