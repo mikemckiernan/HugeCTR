@@ -391,7 +391,7 @@ struct TestbedGemmWithReduction {
   }
 
   /// Executes one test
-  bool run(float* db, cudaStream_t stream=0) {
+  bool run(cudaStream_t stream=0) {
 
     // this->initialize(problem_size);
     // this->copyin_val(W, dRelu_top, dRelu_bottom, db, mask, stream);
