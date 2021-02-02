@@ -36,6 +36,7 @@ file(GLOB huge_ctr_src
   ../src/layers/fully_connected_layer.cu
   ../src/layers/fully_connected_layer_half.cu
   ../src/layers/fused_fully_connected_layer.cu
+  ../src/layers/fused_relu_bias_fully_connected_layer.cu
   ../src/layers/interaction_layer.cu
   ../src/layers/relu_layer.cu
   ../src/layers/reshape_layer.cu
@@ -107,10 +108,10 @@ set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_shared SHARED ${huge_ctr_src})
 
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
 endif()
 
 #target_link_libraries(huge_ctr_shared PRIVATE nlohmann_json::nlohmann_json)

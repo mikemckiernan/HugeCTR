@@ -16,6 +16,7 @@
 
 #pragma once
 #include <cublas_v2.h>
+#include <cublasLt.h>
 #include <cudnn.h>
 #include <curand.h>
 #include <nccl.h>
@@ -36,6 +37,7 @@ class GPUResource {
   curandGenerator_t replica_variant_curand_generator_;
   cublasHandle_t cublas_handle_;
   cudnnHandle_t cudnn_handle_;
+  cublasLtHandle_t cublaslt_handle_;
   ncclComm_t comm_;
   size_t sm_count_;
   int cc_major_;
@@ -59,11 +61,13 @@ class GPUResource {
     return replica_variant_curand_generator_;
   }
   const cublasHandle_t& get_cublas_handle() const { return cublas_handle_; }
+  const cublasLtHandle_t& get_cublaslt_handle() const { return cublaslt_handle_; }
   const cudnnHandle_t& get_cudnn_handle() const { return cudnn_handle_; }
   const ncclComm_t& get_nccl() const { return comm_; }
   size_t get_sm_count() const { return sm_count_; }
   int get_cc_major() const { return cc_major_; }
   int get_cc_minor() const { return cc_minor_; }
+  bool support_nccl() const { return comm_ != nullptr; }
 };
 
 }  // namespace HugeCTR
