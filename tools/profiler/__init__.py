@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
 DRLM_EVENTS = {
@@ -143,10 +144,10 @@ def split_by_device_stream_layer_label(events):
         if stream_id not in result[device_id].keys():
             result[device_id][stream_id] = []
         new_event = OrderedDict()
-        new_event["name"] = event["name"]
+        new_event["label"] = event["layer_name"] + '.' + event['name']
         new_event["start_index"] = event["start_index"]
         new_event["end_index"] = event["end_index"]
-        new_event["label"] = event["layer_name"] + '.' + event['name']
+
         #measured_times_ms = reject_outliers(event["measured_times_ms"])
         measured_times_ms = event["measured_times_ms"]
         new_event["avg_measured_time_ms"] = sum(measured_times_ms) / len(measured_times_ms)
@@ -163,3 +164,121 @@ def split_by_device_stream_layer_label(events):
 def reject_outliers(data, m=2.):
     data = np.array(data)
     return data[abs(data - np.mean(data)) < m * np.std(data)].tolist()
+
+def timeline_chart(result):
+    max_iter_time = 0.0
+    for host in result:
+        max_iter_time = max(max_iter_time, host["avg_iter_time_ms"])
+
+    fig, ax = plt.subplots()
+    color_options = ['steelblue', 'mediumorchid', 'yellowgreen', 'lightcoral']
+
+    y_label_font_size = 8
+    figure_width_inches = 11
+
+    stream_num = 0
+    h_between_stream = 7
+    addtion_base_h = 1
+    stream_base_h = 10
+    h_val_inches_ratio = 0.05
+
+    current_base_h_pos = h_between_stream
+    y_labels = []
+    y_ticks = []
+
+    for host in result:
+        for device_id, streams in host["timeline"].items():
+            stream_num += len(streams)
+            for stream_name, timeline in streams.items():
+                max_height_stream_bar = 0
+                color_idx = 0
+                overlapped_check = []
+                for event in timeline:
+                    occupied_h = []
+                    for idx, (end, h) in enumerate(overlapped_check):
+                        if end > event["avg_iter_start_to_event_start_time_ms"]:
+                            # overlaped
+                            occupied_h.append(h)
+                    h = 0
+                    while h in occupied_h:
+                        h += 1
+                    height = stream_base_h + addtion_base_h * h
+                    max_height_stream_bar = max(height, max_height_stream_bar)
+                    overlapped_check.append(
+                        (event["avg_iter_start_to_event_start_time_ms"] + event["avg_measured_time_ms"], h)
+                    )
+
+                    label = "{}\navg_measured_time_ms: {}\navg_iter_start_to_event_start_time_ms: {}".format(
+                        event["label"], event['avg_measured_time_ms'], event["avg_iter_start_to_event_start_time_ms"]
+                    )
+
+                    ax.add_patch(
+                        patches.Rectangle(
+                            xy=(event["avg_iter_start_to_event_start_time_ms"], current_base_h_pos),  # point of origin.
+                            width=event["avg_measured_time_ms"],
+                            height=height,
+                            color=color_options[color_idx % len(color_options)],
+                            fill=True,
+                            alpha=0.6,
+                            label=label
+                        )
+                    )
+                    color_idx += 1
+
+                y_ticks.append(current_base_h_pos + float(max_height_stream_bar) / 2)
+                y_labels.append(
+                    host["host_name"] + '_'
+                    + 'd' + device_id.split('_')[-1] + '_'
+                    + 's' + stream_name.split('_')[-1])
+                current_base_h_pos += max_height_stream_bar + h_between_stream
+
+    ax.add_patch(
+        patches.Rectangle(
+            xy=(0, current_base_h_pos),  # point of origin.
+            width=max_iter_time,
+            height=height,
+            color='steelblue',
+            fill=True,
+            label="Whole Iter: {}".format(max_iter_time)
+        )
+    )
+
+    annot = ax.annotate("", xy=(0,0), xytext=(0, 35), textcoords="offset points",
+                        arrowprops=dict(arrowstyle="->"), fontsize=8, ha='center', va='center')
+    annot.set_visible(False)
+
+    y_ticks.append(current_base_h_pos + float(max_height_stream_bar) / 2)
+    y_labels.append("Whole Iteration")
+    current_base_h_pos += max_height_stream_bar + h_between_stream
+
+    def click(event):
+        min_distance = 9999999.0
+        min_idx = -1
+        for idx, p in enumerate(ax.patches):
+            p.set_hatch(None)
+            if p.contains(event)[0]:
+                if event.ydata - p.get_x() < min_distance:
+                    min_idx = idx
+                    min_distance = event.ydata - p.get_x()
+
+        if min_idx > 0:
+            x, y = ax.patches[min_idx].get_xy()
+            annot.xy = (x + ax.patches[min_idx].get_width() / 2.0, y + ax.patches[min_idx].get_height() / 2.0)
+            annot.set_text(ax.patches[min_idx].get_label())
+            ax.patches[min_idx].set_hatch('/')
+            annot.set_visible(True)
+        else:
+            annot.set_visible(False)
+        fig.canvas.draw_idle()
+
+    # add callback for mouse moves
+    fig.canvas.mpl_connect('button_press_event', click)
+
+    fig.set_size_inches(figure_width_inches, current_base_h_pos * h_val_inches_ratio)
+    ax.set_xlim(0, max_iter_time)
+    ax.set_ylim(0, current_base_h_pos)
+    ax.grid(True)
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels(y_labels, fontdict={ 'fontsize' : y_label_font_size })
+
+    plt.show()
