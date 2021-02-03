@@ -50,9 +50,9 @@ namespace HugeCTR {
   }
 
   float Profiler::GPUTimer::get_iter_start_to_event_start_ms() {
-    float get_iter_start_to_event_start_ms;
-    CK_CUDA_THROW_(cudaEventElapsedTime(&get_iter_start_to_event_start_ms, iter_start_, start_));
-    return get_iter_start_to_event_start_ms;
+    float iter_start_to_event_start_ms;
+    CK_CUDA_THROW_(cudaEventElapsedTime(&iter_start_to_event_start_ms, iter_start_, start_));
+    return iter_start_to_event_start_ms;
   }
 
   float Profiler::GPUTimer::get_measured_time_ms() {
@@ -103,17 +103,22 @@ namespace HugeCTR {
       );
       for(auto& s_and_gt : map_stream_to_gpu_timer_) {
         s_and_gt.second->iter_start(s_and_gt.first);
+        s_and_gt.second->event_idx_for_this_iter = -1;
       }
     }
-    // MESSAGE_(std::string("Current iter: " + std::to_string(current_iteration_)));
   }
 
   void Profiler::iter_end() {
+
     if (current_iteration_ > warmup_iterations_) {
       current_schedule_idx_++;
       for(auto& s_and_gt : map_stream_to_gpu_timer_) {
-        s_and_gt.second->sync_stop();
         int event_idx = s_and_gt.second->event_idx_for_this_iter;
+        if (event_idx < 0) {
+          // no event is recorded on this stream
+          break;
+        }
+        s_and_gt.second->sync_stop();
         events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
         events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
       }
@@ -147,6 +152,7 @@ namespace HugeCTR {
         auto map_iter = map_stream_to_gpu_timer_.find(stream);
         if(map_iter == map_stream_to_gpu_timer_.end()) {
           auto gpu_timer = std::make_shared<GPUTimer>();
+
           map_stream_to_gpu_timer_[stream] = gpu_timer;
           map_internal_[stream] = std::make_shared<std::map<std::string, int>>();
         }
