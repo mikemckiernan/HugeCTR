@@ -145,8 +145,8 @@ def split_by_device_stream_layer_label(events):
             result[device_id][stream_id] = []
         new_event = OrderedDict()
         new_event["label"] = event["layer_name"] + '.' + event['name']
-        new_event["start_index"] = event["start_index"]
-        new_event["end_index"] = event["end_index"]
+        #new_event["start_index"] = event["start_index"]
+        #new_event["end_index"] = event["end_index"]
 
         #measured_times_ms = reject_outliers(event["measured_times_ms"])
         measured_times_ms = event["measured_times_ms"]
