@@ -4,7 +4,7 @@ import json
 import glob
 from collections import OrderedDict
 
-import numpy as np
+#import numpy as np
 
 DRLM_EVENTS = {
     # interested event name
@@ -155,6 +155,6 @@ def split_by_device_stream_layer_label(events):
     return result
 
 
-def reject_outliers(data, m=2.):
-    data = np.array(data)
-    return data[abs(data - np.mean(data)) < m * np.std(data)].tolist()
+#def reject_outliers(data, m=2.):
+#    data = np.array(data)
+#    return data[abs(data - np.mean(data)) < m * np.std(data)].tolist()
