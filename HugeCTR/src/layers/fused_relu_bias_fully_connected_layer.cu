@@ -129,17 +129,18 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const Tensor2<__half>& train_in_tensor, 
     const Tensor2<__half>& mask_in_tensor,
     const Tensor2<__half>& dRelu_in_tensor,
-    const Tensor2<float>& db_in_tensor,   
+    const Tensor2<__half>& db_in_tensor,   
     const Tensor2<__half>& train_out_tensor, 
     const Tensor2<__half>& mask_out_tensor, 
     const Tensor2<__half>& dRelu_out_tensor,
-    const Tensor2<float>& db_out_tensor,
+    const Tensor2<__half>& db_out_tensor,
     const std::shared_ptr<GPUResource>& gpu_resource,
-    const std::string& pos,
+    const FcPosition_t& pos,
     std::vector<Initializer_t> initializer_types)
     : Layer(gpu_resource, initializer_types),
       balgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
-      balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP) {
+      balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
+      pos_(pos) {
   const auto& bottom_tensor_dim = train_in_tensor.get_dimensions();
   const auto& top_tensor_dim = train_out_tensor.get_dimensions();
 
@@ -191,16 +192,9 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     weights_grad_.push_back(tensor);
   }
 
-  if(pos=="Head")
-    pos_ = HEAD;
-  else if(pos=="Body")
-    pos_ = BODY;
-  else if(pos=="Tail")
-    pos_ = TAIL;
-  else if(pos=="Isolated")
-    pos_ = ISOLATED;
+  pos_ = pos;
   train_in_tensor_ = train_in_tensor;
-  if(pos_ == HEAD || pos_ == ISOLATED)
+  if(pos_ == FcPosition_t::Head || pos_ == FcPosition_t::Isolated)
     mask_in_tensor_ = train_in_tensor;
   else {
     mask_in_tensor_  = mask_in_tensor;
@@ -253,7 +247,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
 
   memcpy(&falgo_k_, &heuristic_result.algo, sizeof(falgo_k_));
 
-  if(pos_ == BODY || pos_ == TAIL) gemm_dRelu_bgrad_init();
+  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) gemm_dRelu_bgrad_init();
 
   if (returned_res == 0) {
     CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
@@ -296,7 +290,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
               cublaslt_workspace_size_,
               get_gpu().get_stream()));
 
-    if(pos_ == TAIL || pos_ == ISOLATED)
+    if(pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated)
     {
         size_t len = train_out_tensor_.get_num_elements();
         CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
@@ -320,7 +314,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_top    = dRelu_out_tensor_.get_ptr();    
-  float* db_top    = db_out_tensor_.get_ptr();    
+  __half* db_top    = db_out_tensor_.get_ptr();    
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -333,7 +327,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float beta_k = 1.0f;
   const float beta_x = 0.0f;
 
-  if(pos_ == TAIL) {
+  if(pos_ == FcPosition_t::Tail) {
 	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
                                                                             0.0f);
 
@@ -344,12 +338,12 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                                                          n);
   }
 
-  if(pos_ == BODY || pos_ == HEAD) {
+  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Head) {
     // printf("%d, %d\n", n, weights_grad_[1].get_num_elements)
     // __half* bgrad_ref = new __half[n];
-    // int nTile = (m - 1 + 128) / 128;
-    // reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(db_out_tensor_.get_ptr(), bias_grad, nTile, n);
-    reduce_block_manually<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(dRelu_out_tensor_.get_ptr(), bias_grad, 160, n);
+    int nTile = (m - 1 + 128) / 128;
+    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>((float*)db_out_tensor_.get_ptr(), bias_grad, nTile, n);
+    // reduce_block_manually<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(dRelu_out_tensor_.get_ptr(), bias_grad, 128, n);
     // cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
     //      cudaMemcpyDeviceToDevice, get_gpu().get_stream());
 
@@ -360,12 +354,12 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
-  if(pos_ == HEAD) {
+  if(pos_ == FcPosition_t::Head) {
 	  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
                                 &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
                                 bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
   }
-  if(pos_ == BODY || pos_ == TAIL) {
+  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
     gemm_dRelu_bgrad_run();
   }
 
@@ -388,7 +382,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
   __half* dRelu_top = dRelu_out_tensor_.get_ptr();
-  float* db_bottom = db_in_tensor_.get_ptr();
+  __half* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -434,7 +428,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   // );
   bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
-    kernel, dRelu_top, dRelu_bottom, db_bottom, bottom,
+    kernel, dRelu_top, dRelu_bottom, (float*)db_bottom, bottom,
     cutlass::gemm::GemmUniversalMode::kGemm,
     {k, m, n},
     1,
@@ -454,7 +448,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-  float* db_bottom = db_in_tensor_.get_ptr();
+  __half* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();

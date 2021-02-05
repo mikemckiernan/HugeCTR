@@ -206,6 +206,18 @@ static const std::map<std::string, Regularizer_t> REGULARIZER_TYPE_MAP = {
     {"L2", Regularizer_t::L2},
 };
 
+static const std::map<std::string, FcPosition_t> FCPOSITION_TYPE_MAP = {
+    {"Head", FcPosition_t::Head},
+    {"Body", FcPosition_t::Body},
+    {"Tail", FcPosition_t::Tail},
+    {"Isolated", FcPosition_t::Isolated},
+};
+
+static const std::map<std::string, Activation_t> ACTIVATION_TYPE_MAP = {
+    {"Relu", Activation_t::Relu},
+    {"None", Activation_t::None},
+};
+
 inline bool has_key_(const nlohmann::json& j_in, const std::string& key_in) {
   if (j_in.find(key_in) == j_in.end()) {
     return false;
