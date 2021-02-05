@@ -67,7 +67,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   Tensor2<__half> train_in_tensor_;
   Tensor2<__half> mask_in_tensor_;
   Tensor2<__half> dRelu_in_tensor_;
-  Tensor2<float> db_in_tensor_;
+  Tensor2<__half> db_in_tensor_;
 
   /*
    * stores the references to the top tensors of this layer.
@@ -75,7 +75,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   Tensor2<__half> train_out_tensor_;
   Tensor2<__half> mask_out_tensor_;
   Tensor2<__half> dRelu_out_tensor_;
-  Tensor2<float> db_out_tensor_;
+  Tensor2<__half> db_out_tensor_;
 
   /*
    * stores the references to the intermediate bias grad tensors of this layer.
@@ -144,11 +144,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const Tensor2<__half>& train_in_tensor,
       const Tensor2<__half>& mask_in_tensor,
       const Tensor2<__half>& dRelu_in_tensor,
-      const Tensor2<float>& db_in_tensor,
+      const Tensor2<__half>& db_in_tensor,
       const Tensor2<__half>& train_out_tensor, 
       const Tensor2<__half>& mask_out_tensor, 
       const Tensor2<__half>& dRelu_out_tensor,
-      const Tensor2<float>& db_out_tensor,
+      const Tensor2<__half>& db_out_tensor,
       const std::shared_ptr<GPUResource>& gpu_resource,
       const FcPosition_t& pos,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());

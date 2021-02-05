@@ -495,15 +495,13 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
         if (use_mixed_precision) {
           Tensor2<__half> train_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.inputs[0]);
-          Tensor2<__half> mask_in_tensor, dRelu_in_tensor;
-          Tensor2<float> db_in_tensor;
+          Tensor2<__half> mask_in_tensor, dRelu_in_tensor, db_in_tensor;
           if(pos_type != FcPosition_t::Head && pos_type != FcPosition_t::Isolated) {
               mask_in_tensor  = Tensor2<__half>::stretch_from(input_output_info.inputs[1]);
               dRelu_in_tensor = Tensor2<__half>::stretch_from(input_output_info.inputs[2]);
-              db_in_tensor    = Tensor2<float>::stretch_from(input_output_info.inputs[3]);
+              db_in_tensor    = Tensor2<__half>::stretch_from(input_output_info.inputs[3]);
           }
-          Tensor2<__half> train_out_tensor, mask_out_tensor, dRelu_out_tensor;
-          Tensor2<float> db_out_tensor;
+          Tensor2<__half> train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor;
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &train_out_tensor);
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &mask_out_tensor);
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &dRelu_out_tensor);

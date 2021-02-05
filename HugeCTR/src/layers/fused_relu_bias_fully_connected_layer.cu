@@ -129,11 +129,11 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const Tensor2<__half>& train_in_tensor, 
     const Tensor2<__half>& mask_in_tensor,
     const Tensor2<__half>& dRelu_in_tensor,
-    const Tensor2<float>& db_in_tensor,   
+    const Tensor2<__half>& db_in_tensor,   
     const Tensor2<__half>& train_out_tensor, 
     const Tensor2<__half>& mask_out_tensor, 
     const Tensor2<__half>& dRelu_out_tensor,
-    const Tensor2<float>& db_out_tensor,
+    const Tensor2<__half>& db_out_tensor,
     const std::shared_ptr<GPUResource>& gpu_resource,
     const FcPosition_t& pos,
     std::vector<Initializer_t> initializer_types)
@@ -314,7 +314,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_top    = dRelu_out_tensor_.get_ptr();    
-  float* db_top    = db_out_tensor_.get_ptr();    
+  __half* db_top    = db_out_tensor_.get_ptr();    
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -342,7 +342,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     // printf("%d, %d\n", n, weights_grad_[1].get_num_elements)
     // __half* bgrad_ref = new __half[n];
     int nTile = (m - 1 + 128) / 128;
-    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(db_out_tensor_.get_ptr(), bias_grad, nTile, n);
+    reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>((float*)db_out_tensor_.get_ptr(), bias_grad, nTile, n);
     // reduce_block_manually<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(dRelu_out_tensor_.get_ptr(), bias_grad, 128, n);
     // cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
     //      cudaMemcpyDeviceToDevice, get_gpu().get_stream());
@@ -382,7 +382,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
   __half* dRelu_top = dRelu_out_tensor_.get_ptr();
-  float* db_bottom = db_in_tensor_.get_ptr();
+  __half* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -428,7 +428,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   // );
   bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
-    kernel, dRelu_top, dRelu_bottom, db_bottom, bottom,
+    kernel, dRelu_top, dRelu_bottom, (float*)db_bottom, bottom,
     cutlass::gemm::GemmUniversalMode::kGemm,
     {k, m, n},
     1,
@@ -448,7 +448,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-  float* db_bottom = db_in_tensor_.get_ptr();
+  __half* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
