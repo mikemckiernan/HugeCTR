@@ -28,6 +28,7 @@ tools/embedding_plugin/performance_profile/*.txt
 tools/profiler/*
 !tools/profiler/*.py
 !tools/profiler/*.ipynb
+!tools/profiler/README.MD
 prof.*
 prof_report.*
 __pycache__/
