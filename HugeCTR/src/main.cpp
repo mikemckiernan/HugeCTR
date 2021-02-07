@@ -160,6 +160,11 @@ void train(std::string config_file) {
 
   if (solver_config.max_iter > 0) {
     for (int i = 0; i < solver_config.max_iter; i++) {
+
+#ifdef ENABLE_PROFILING
+      HugeCTR::global_profiler.iter_start();
+#endif
+
       float lr = lr_sch->get_next();
       session_instance->set_learning_rate(lr);
 
@@ -180,6 +185,10 @@ void train(std::string config_file) {
         }
         timer_train.start();
       }
+#ifdef ENABLE_PROFILING
+      HugeCTR::global_profiler.iter_end();
+      continue;
+#endif
       if (i % solver_config.snapshot == 0 && i != 0) {
         // snapshot
         session_instance->download_params_to_files(solver_config.snapshot_prefix, i);
