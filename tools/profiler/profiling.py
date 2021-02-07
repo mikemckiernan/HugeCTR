@@ -200,7 +200,8 @@ def gen_schedule():
 
 if __name__ == '__main__':
     '''
-    4. First you should create a profiling_dir. Just uncomment it.
+    4. First you should create a profiling_dir. Just uncomment, execute it and somehow upload the profiling dir to
+       the corresponding location on cluster.
     '''
     #gen_schedule()
     '''
@@ -228,7 +229,7 @@ if __name__ == '__main__':
     #os.system(cmd)
 
     '''
-    6. Parse the result into more human readable format. Just uncomment it.
+    6. Parse the result into more human readable format. Just uncomment and execute it.
 
     And you can do anything you like from the result, for instance save it as a file.
     '''
