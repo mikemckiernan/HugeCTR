@@ -137,7 +137,6 @@ namespace HugeCTR {
     try {
       // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
       // auto t_start = std::chrono::high_resolution_clock::now();
-
       std::string event_label = std::string(event_label_char);
       int dot_pos = event_label.find_last_of(std::string("."));
       std::string event_type = event_label.substr(dot_pos + 1);
@@ -149,6 +148,11 @@ namespace HugeCTR {
 
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
+        thread_local int current_device_id;
+        cudaGetDevice(&current_device_id);
+        if (current_device_id != device_id) {
+          CK_CUDA_THROW_(cudaSetDevice(device_id));
+        }
         auto map_iter = map_stream_to_gpu_timer_.find(stream);
         if(map_iter == map_stream_to_gpu_timer_.end()) {
           auto gpu_timer = std::make_shared<GPUTimer>();
@@ -179,6 +183,9 @@ namespace HugeCTR {
           if (event_type == "stop") {
             map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
           }
+          if (current_device_id != device_id) {
+            CK_CUDA_THROW_(cudaSetDevice(current_device_id));
+          }
           mtx_.unlock();
           return;
         }
@@ -189,6 +196,9 @@ namespace HugeCTR {
         if (event_type == "start") {
           if(event_idx >= 0) {
             // event exist!
+            if (current_device_id != device_id) {
+              CK_CUDA_THROW_(cudaSetDevice(current_device_id));
+            }
             mtx_.unlock();
             return;
           }
@@ -208,7 +218,9 @@ namespace HugeCTR {
           map_event_key_to_event_idx[event_key] = events_.size() - 1;
           events_num_++;
           //PROFILER_DEBUG_(std::string("Parsed a new GPU event ") + event_label + " occured_time " + std::to_string(met_times_within_this_stream));
-
+          if (current_device_id != device_id) {
+            CK_CUDA_THROW_(cudaSetDevice(current_device_id));
+          }
         } else { // event_name == "stop"
           // only update the end_index
           if (event_idx >= 0) {
@@ -223,7 +235,9 @@ namespace HugeCTR {
             throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
               std::string("Event ") + event_name + std::string(" has stop but no start"));
           }
-
+        }
+        if (current_device_id != device_id) {
+          CK_CUDA_THROW_(cudaSetDevice(current_device_id));
         }
         mtx_.unlock();
       } else {
@@ -235,6 +249,12 @@ namespace HugeCTR {
                 map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
               }
               return;
+        }
+
+        thread_local int current_device_id;
+        cudaGetDevice(&current_device_id);
+        if (current_device_id != device_id) {
+          CK_CUDA_THROW_(cudaSetDevice(device_id));
         }
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
         if (event_type == "start") {
@@ -255,6 +275,9 @@ namespace HugeCTR {
           // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
           // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
           // mtx_.unlock();
+        }
+        if (current_device_id != device_id) {
+          CK_CUDA_THROW_(cudaSetDevice(current_device_id));
         }
       }
     } catch (const std::runtime_error& rt_err) {

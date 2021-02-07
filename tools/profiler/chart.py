@@ -76,6 +76,7 @@ def timeline_chart(result):
             height=height,
             color='steelblue',
             fill=True,
+            alpha=0.9,
             label="Whole Iter: {}".format(max_iter_time)
         )
     )
@@ -108,7 +109,7 @@ def timeline_chart(result):
             annot.set_visible(False)
         fig.canvas.draw_idle()
 
-    # add callback for mouse moves
+    # add callback for mouse click
     fig.canvas.mpl_connect('button_press_event', click)
 
     fig.set_size_inches(figure_width_inches, current_base_h_pos * h_val_inches_ratio)
@@ -123,20 +124,20 @@ def timeline_chart(result):
 
 def scaling_chart(results, names):
     bar_width = 0.2
-    x_label_font_size = 7
+    space_between_result = 0.1
+    x_label_font_size = 8
     names_font_size = 9
+    color_options = ['steelblue', 'mediumorchid', 'yellowgreen', 'lightcoral']
     fig, ax = plt.subplots()
 
-    iter_time_data = []
-    label_time_avg_data = []
-    label_time_max_data = []
-
-    x_axis = np.array([i + 1 for i in range(len(results))])
-    for result in results:
+    x_ticks = []
+    x_labels = []
+    current_start_x = space_between_result
+    max_h = 0.0
+    for i, result in enumerate(results):
         iter_times = [host["avg_iter_time_ms"] for host in result]
-        avg_iter_times = sum(iter_times) / len(iter_times)
-        iter_time_data.append(avg_iter_times)
-
+        iter_times = max(iter_times)
+        max_h = max(iter_times, max_h)
         labels = {}
         for host in result:
             for device in host["timeline"].keys():
@@ -146,41 +147,89 @@ def scaling_chart(results, names):
                             labels[event['label']] = []
                         labels[event['label']].append(event['avg_measured_time_ms'])
 
-        label_time_avg_data_this_result = []
-        label_time_max_data_this_result = []
-        for _, times in labels.items():
-            label_time_avg_data_this_result.append(sum(times) / len(times))
-            label_time_max_data_this_result.append(max(times))
-        label_time_avg_data.append(label_time_avg_data_this_result)
-        label_time_max_data.append(label_time_max_data_this_result)
+        ax.add_patch(
+            patches.Rectangle(
+                xy=(current_start_x, 0),  # point of origin.
+                width=bar_width,
+                height=iter_times,
+                color='steelblue',
+                fill=True,
+                alpha=0.9,
+                label="Whole Iter: {}".format(iter_times)
+            )
+        )
+        x_ticks.append(current_start_x + bar_width / 2)
+        x_labels.append("Whole Iter ms")
+        color_idx = 0
+        current_height_avg = 0.0
+        current_height_max = 0.0
+        for label, times in labels.items():
+            avg_time = sum(times) / len(times)
+            max_time = max(times)
+            ax.add_patch(
+                patches.Rectangle(
+                    xy=(current_start_x + bar_width, current_height_avg),  # point of origin.
+                    width=bar_width,
+                    height=avg_time,
+                    color=color_options[color_idx % len(color_options)],
+                    fill=True,
+                    alpha=0.6,
+                    label="{}\n{}".format(label, avg_time)
+                )
+            )
+            x_ticks.append(current_start_x + bar_width +  bar_width / 2)
+            x_labels.append("Avg Time ms")
+            ax.add_patch(
+                patches.Rectangle(
+                    xy=(current_start_x + 2 * bar_width, current_height_max),  # point of origin.
+                    width=bar_width,
+                    height=max_time,
+                    color=color_options[color_idx % len(color_options)],
+                    fill=True,
+                    alpha=0.6,
+                    label="{}\n{}".format(label, max_time)
+                )
+            )
+            x_ticks.append(current_start_x + 2 * bar_width +  bar_width / 2)
+            x_labels.append("Max Time ms")
 
-    iter_time_data = np.array(iter_time_data)
-    label_time_avg_data = np.array(label_time_avg_data)
-    label_time_max_data = np.array(label_time_max_data)
+            max_h = max([current_height_avg, current_height_max, max_h])
+            current_height_avg += avg_time
+            current_height_max += max_time
+            color_idx += 1
 
-    plt.bar(x_axis, iter_time_data, bar_width, align='edge')
-    accumulate_label_time_avg_data = np.zeros_like(label_time_avg_data[:, 0])
-    accumulate_label_time_max_data = np.zeros_like(label_time_max_data[:, 0])
+        ax.annotate(names[i], xy=(current_start_x + 3 * bar_width / 2, 0), xytext=(0, -30),
+                    textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
+        current_start_x += 3 * bar_width + space_between_result
 
-    for i in range(label_time_avg_data.shape[1]):
-        plt.bar(x_axis + bar_width, label_time_avg_data[:, i], bar_width,
-                bottom=accumulate_label_time_avg_data, align='edge')
-        plt.bar(x_axis + 2 * bar_width, label_time_max_data[:, i], bar_width,
-                bottom=accumulate_label_time_max_data, align='edge')
-        accumulate_label_time_avg_data += label_time_avg_data[:, i]
-        accumulate_label_time_max_data += label_time_max_data[:, i]
-
-    x_ticks = np.concatenate((x_axis + bar_width / 2, x_axis + bar_width + bar_width / 2,
-                             x_axis + 2 * bar_width + bar_width / 2))
-    x_labels = ['Whole iteration', 'Avg_mesured_ms', 'Max_measured_ms'] * len(results)
-    print(x_ticks)
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels, fontdict={ 'fontsize' : x_label_font_size })
 
-    for i in range(len(results)):
-        annot = ax.annotate(names[i], xy=(i + 1 + 3 * bar_width / 2, 0), xytext=(0, -30), 
-                            textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
+    click_annot = ax.annotate("", xy=(0,0), xytext=(15, 35), textcoords="offset points",
+                        arrowprops=dict(arrowstyle="->"), fontsize=8, ha='center', va='center')
+    click_annot.set_visible(False)
 
+    def click(event):
+        find = None
+        for bar in ax.patches:
+            bar.set_hatch(None)
+            if bar.contains(event)[0]:
+                find = bar
+        if find:
+            x, y = find.get_xy()
+            click_annot.xy = (x + find.get_width() / 2.0, y + find.get_height() / 2.0)
+            click_annot.set_text(find.get_label())
+            find.set_hatch('/')
+            click_annot.set_visible(True)
+        else:
+            click_annot.set_visible(False)
+        fig.canvas.draw_idle()
+
+    # add callback for mouse click
+    fig.canvas.mpl_connect('button_press_event', click)
+
+    ax.set_xlim(0, current_start_x)
+    ax.set_ylim(0, max_h)
     ax.grid(True)
     fig.set_size_inches(8, 10)
     plt.show()

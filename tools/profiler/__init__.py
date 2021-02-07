@@ -47,6 +47,15 @@ DRLM_EVENTS = {
     'TopMLP.fc8': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 0,
+    },
+    'Loss' : {
+        'same_name_events_occured_order_in_code_forward': 0,
+    },
+    'AllReduce_wgrads' : {
+        'same_name_events_occured_order_in_code_forward': 0,
+    },
+    'Update_Params': {
+        'same_name_events_occured_order_in_code_forward': 0,
     }
 }
 
