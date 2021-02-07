@@ -201,7 +201,8 @@ def gen_schedule():
 if __name__ == '__main__':
     '''
     4. First you should create a profiling_dir. Just uncomment, execute it and somehow upload the profiling dir to
-       the corresponding location on cluster.
+       the corresponding location on cluster. The will be a schedule file in the profiling dir, which is used to instruct
+       cpp profiler how to profile.
     '''
     #gen_schedule()
     '''
