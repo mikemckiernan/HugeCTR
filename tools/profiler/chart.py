@@ -174,7 +174,7 @@ def scaling_chart(results, names):
                     color=color_options[color_idx % len(color_options)],
                     fill=True,
                     alpha=0.6,
-                    label="{}\n{}".format(label, avg_time)
+                    label="{}\n{} ms".format(label, avg_time)
                 )
             )
             x_ticks.append(current_start_x + bar_width +  bar_width / 2)
@@ -187,7 +187,7 @@ def scaling_chart(results, names):
                     color=color_options[color_idx % len(color_options)],
                     fill=True,
                     alpha=0.6,
-                    label="{}\n{}".format(label, max_time)
+                    label="{}\n{} ms".format(label, max_time)
                 )
             )
             x_ticks.append(current_start_x + 2 * bar_width +  bar_width / 2)
@@ -204,6 +204,7 @@ def scaling_chart(results, names):
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels, fontdict={ 'fontsize' : x_label_font_size })
+    plt.ylabel("In Milliseconds")
 
     click_annot = ax.annotate("", xy=(0,0), xytext=(15, 35), textcoords="offset points",
                         arrowprops=dict(arrowstyle="->"), fontsize=8, ha='center', va='center')
