@@ -110,7 +110,7 @@ namespace HugeCTR {
         int event_idx = s_and_gt.second->event_idx_for_this_iter;
         if (event_idx < 0) {
           // no event is recorded on this stream
-          break;
+          continue;
         }
         s_and_gt.second->sync_stop();
         events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
