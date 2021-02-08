@@ -101,15 +101,11 @@ namespace HugeCTR {
         s_and_gt.second->event_idx_for_this_iter = -1;
       }
     }
-    iter_start_check_ = std::chrono::high_resolution_clock::now();
+    iter_start_check_ = std::chrono::steady_clock::now();
   }
 
   void Profiler::iter_end() {
     if (current_iteration_ > warmup_iterations_) {
-      iter_end_check_ = std::chrono::high_resolution_clock::now();
-      iter_time_ms_.push_back(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
-      );
       for(auto& s_and_gt : map_stream_to_gpu_timer_) {
         int event_idx = s_and_gt.second->event_idx_for_this_iter;
         if (event_idx < 0) {
@@ -120,6 +116,12 @@ namespace HugeCTR {
         events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
         events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
       }
+
+      iter_end_check_ = std::chrono::steady_clock::now();
+      iter_time_ms_.push_back(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
+      );
+
       current_schedule_idx_++;
     }
 
@@ -135,7 +137,7 @@ namespace HugeCTR {
   void Profiler::record_event(const char* event_label_char, cudaStream_t stream, int device_id) {
     try {
       // event_label is xxx.xxx.start or xxx.xxx.end, parse suffix out of it
-      // auto t_start = std::chrono::high_resolution_clock::now();
+      // auto t_start = std::chrono::steady_clock::now();
       std::string event_label = std::string(event_label_char);
       int dot_pos = event_label.find_last_of(std::string("."));
       std::string event_type = event_label.substr(dot_pos + 1);
@@ -259,7 +261,7 @@ namespace HugeCTR {
         if (event_type == "start") {
           gpu_timer->event_start(stream);
         } else {
-          // auto t_end = std::chrono::high_resolution_clock::now();
+          // auto t_end = std::chrono::steady_clock::now();
           gpu_timer->event_stop(stream);
           std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
           int event_idx = find_event(event_key);

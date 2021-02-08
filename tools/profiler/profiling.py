@@ -201,7 +201,7 @@ def gen_schedule():
 if __name__ == '__main__':
     '''
     4. First you should create a profiling_dir. Just uncomment, execute it and somehow upload the profiling dir to
-       the corresponding location on cluster. The will be a schedule file in the profiling dir, which is used to instruct
+       the corresponding location on cluster. There will be a schedule file in the profiling dir, which is used to instruct
        cpp profiler how to profile.
     '''
     #gen_schedule()
@@ -234,8 +234,8 @@ if __name__ == '__main__':
 
     And you can do anything you like from the result, for instance save it as a file.
     '''
-    #result = parse_result(profiling_dir)
-    #with open(os.path.join(profiling_dir, profiling_dir_name + '.json'), 'w') as f:
-    #    json.dump(result, f, indent=2)
-    #print(json.dumps(result, indent=2))
+    result = parse_result(os.path.join(project_root, profiling_dir))
+    with open(os.path.join(profiling_dir, profiling_dir_name + '.json'), 'w') as f:
+        json.dump(result, f, indent=2)
+    print(json.dumps(result, indent=2))
 

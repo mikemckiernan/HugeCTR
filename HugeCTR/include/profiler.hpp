@@ -78,8 +78,8 @@ class Profiler {
   std::string profiling_dir_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
-  std::chrono::high_resolution_clock::time_point iter_start_check_;
-  std::chrono::high_resolution_clock::time_point iter_end_check_;
+  std::chrono::time_point<std::chrono::steady_clock> iter_start_check_;
+  std::chrono::time_point<std::chrono::steady_clock> iter_end_check_;
 
   int warmup_iterations_;
   int current_iteration_;
