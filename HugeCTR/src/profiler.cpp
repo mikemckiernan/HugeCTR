@@ -112,7 +112,7 @@ namespace HugeCTR {
           // no event is recorded on this stream
           continue;
         }
-        s_and_gt.second->sync_stop();
+        CK_CUDA_THROW_(cudaStreamSynchronize(s_and_gt.first));
         events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
         events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
       }
