@@ -24,12 +24,13 @@
 #define PROFILE_RECORD(...) do {} while (0)
 #endif
 
-#define PROFILER_DEBUG_(msg)                                                 \
-  do {                                                                      \
-    MESSAGE_(msg + " on thread " + std::to_string(omp_get_thread_num()) +    \
-             ", on stream " + stream_str(stream) +                          \
-             ", on device " + std::to_string(device_id));                   \
-  } while (0)                                                               \
+#define PROFILER_DEBUG_(msg)                                                              \
+  do {                                                                                    \
+    MESSAGE_(std::string(msg) + " on thread " + std::to_string(omp_get_thread_num()) +    \
+                           ", on stream " + stream_str(stream) +                          \
+                           ", on device " + std::to_string(device_id) +                   \
+                           ", iter " + std::to_string(current_iteration_));               \
+  } while (0)                                                                             \
 
 namespace HugeCTR {
 class Profiler {
@@ -75,6 +76,7 @@ class Profiler {
   class CPUTimer {};
 
  private:
+ bool use_cuda_graph_;
   std::string profiling_dir_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
@@ -91,14 +93,15 @@ class Profiler {
   std::map<std::string, int> map_event_key_to_event_idx;
   int events_num_;
 
-  // stream : {event_name : how many times does record_event meet this event_name within this stream }
   std::map<cudaStream_t, std::shared_ptr<std::map<std::string, int>>> map_internal_;
 
   // for thread safe
   std::mutex mtx_;
 
  public:
-  void initialize();
+  bool init_cuda_graph_this_iter;
+
+  void initialize(bool use_cuda_graph = false);
   void record_event(const char* event_label_char, cudaStream_t stream, int device_id);
   void iter_start();
   void iter_end();

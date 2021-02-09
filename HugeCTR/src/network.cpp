@@ -19,6 +19,8 @@
 #include <network.hpp>
 #include <regularizers/no_regularizer.hpp>
 
+#include <omp.h>
+
 namespace HugeCTR {
 
 void conv_weight_gpu(size_t grid, size_t block, __half* dst, const float* src, int elems,
@@ -64,7 +66,11 @@ void Network::train(long long current_batchsize) {
   }
 
   if (enable_cuda_graph_) {
+#ifdef ENABLE_PROFILING
+    if (!train_fprop_graph_created_ || global_profiler.init_cuda_graph_this_iter) {
+#else
     if (!train_fprop_graph_created_) {
+#endif
       CK_CUDA_THROW_(
           cudaStreamBeginCapture(gpu_resource_->get_stream(), cudaStreamCaptureModeRelaxed));
       for (auto& layer : train_layers_) {
@@ -74,7 +80,6 @@ void Network::train(long long current_batchsize) {
       CK_CUDA_THROW_(
           cudaGraphInstantiate(&train_fprop_instance_, train_fprop_graph_, NULL, NULL, 0));
       train_fprop_graph_created_ = true;
-
     }
     CK_CUDA_THROW_(cudaGraphLaunch(train_fprop_instance_, gpu_resource_->get_stream()));
   } else {
@@ -86,7 +91,11 @@ void Network::train(long long current_batchsize) {
   train_loss_->compute(true, current_batchsize);
 
   if (enable_cuda_graph_) {
+#ifdef ENABLE_PROFILING
+    if (!train_bprop_graph_created_ || global_profiler.init_cuda_graph_this_iter) {
+#else
     if (!train_bprop_graph_created_) {
+#endif
       CK_CUDA_THROW_(
           cudaStreamBeginCapture(gpu_resource_->get_stream(), cudaStreamCaptureModeRelaxed));
 

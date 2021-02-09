@@ -60,7 +60,7 @@ DRLM_EVENTS = {
 }
 
 
-def generate_schedule(schedule, profiling_dir, repeat_for_each_event=50, warmup_iterations=10):
+def generate_schedule(schedule, profiling_dir, repeat_for_each_event=50, warmup_iterations=5):
     with open(os.path.join(profiling_dir, 'prof.schedule'), 'wb') as f:
         f.write(str(warmup_iterations).encode('ascii', 'ignore'))
         iteration = warmup_iterations + 1

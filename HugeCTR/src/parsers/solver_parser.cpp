@@ -221,10 +221,6 @@ SolverParser::SolverParser(const std::string& file) {
     MESSAGE_("Algorithm search: " + std::string(use_algorithm_search ? "ON" : "OFF"));
 
     use_cuda_graph = get_value_from_json_soft<bool>(j, "cuda_graph", true);
-#ifdef ENABLE_PROFILING
-    MESSAGE_("Turned off CUDA Graph when ENABLE_PROFILING = ON");
-    use_cuda_graph = false;
-#endif
     MESSAGE_("CUDA Graph: " + std::string(use_cuda_graph? "ON" : "OFF"));
 
   } catch (const std::runtime_error& rt_err) {
