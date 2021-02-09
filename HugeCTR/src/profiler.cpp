@@ -33,16 +33,40 @@ namespace HugeCTR {
     cudaEventDestroy(stop_);
   }
 
-  void Profiler::GPUTimer::iter_start(cudaStream_t stream) {
-    CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
+  void Profiler::GPUTimer::iter_start(cudaStream_t stream, bool use_cuda_graph) {
+    if (use_cuda_graph) {
+      cudaError_t retval = cudaEventRecordWithFlags(iter_start_, stream, cudaEventRecordExternal);
+      if (retval != cudaSuccess) {
+        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
+        CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
+      }
+    } else {
+      CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
+    }
   }
 
-  void Profiler::GPUTimer::event_start(cudaStream_t stream) {
-    CK_CUDA_THROW_(cudaEventRecord(start_, stream));
+  void Profiler::GPUTimer::event_start(cudaStream_t stream, bool use_cuda_graph) {
+    if (use_cuda_graph) {
+      cudaError_t retval = cudaEventRecordWithFlags(start_, stream, cudaEventRecordExternal);
+      if (retval != cudaSuccess) {
+        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
+        CK_CUDA_THROW_(cudaEventRecord(start_, stream));
+      }
+    } else {
+      CK_CUDA_THROW_(cudaEventRecord(start_, stream));
+    }
   }
 
-  void Profiler::GPUTimer::event_stop(cudaStream_t stream) {
-    CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
+  void Profiler::GPUTimer::event_stop(cudaStream_t stream, bool use_cuda_graph) {
+    if (use_cuda_graph) {
+      cudaError_t retval = cudaEventRecordWithFlags(stop_, stream, cudaEventRecordExternal);
+      if (retval != cudaSuccess) {
+        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
+        CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
+      }
+    } else {
+      CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
+    }
   }
 
   void Profiler::GPUTimer::sync_stop() {
@@ -114,7 +138,7 @@ namespace HugeCTR {
         }
       }
       for(auto& s_and_gt : map_stream_to_gpu_timer_) {
-        s_and_gt.second->iter_start(s_and_gt.first);
+        s_and_gt.second->iter_start(s_and_gt.first, false);
         if(!use_cuda_graph_ || init_cuda_graph_this_iter) {
           s_and_gt.second->event_idx_for_this_iter = -1;
         }
@@ -132,17 +156,18 @@ namespace HugeCTR {
     if (current_iteration_ > warmup_iterations_) {
       if (!init_cuda_graph_this_iter) {
         for(auto& s_and_gt : map_stream_to_gpu_timer_) {
+          cudaStreamSynchronize(s_and_gt.first);
+        }
+        iter_end_check_ = std::chrono::steady_clock::now();
+        for(auto& s_and_gt : map_stream_to_gpu_timer_) {
           int event_idx = s_and_gt.second->event_idx_for_this_iter;
           if (event_idx < 0) {
             // no event is recorded on this stream
             continue;
           }
-          cudaStreamSynchronize(s_and_gt.first);
           events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
           events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
         }
-
-        iter_end_check_ = std::chrono::steady_clock::now();
         iter_time_ms_.push_back(
           std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
         );
@@ -281,10 +306,10 @@ namespace HugeCTR {
         }
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
         if (event_type == "start") {
-          gpu_timer->event_start(stream);
+          gpu_timer->event_start(stream, use_cuda_graph_);
         } else {
           // auto t_end = std::chrono::steady_clock::now();
-          gpu_timer->event_stop(stream);
+          gpu_timer->event_stop(stream, use_cuda_graph_);
           std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
           int event_idx = find_event(event_key);
           if (event_idx < 0) {

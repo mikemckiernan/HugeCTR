@@ -64,9 +64,9 @@ class Profiler {
     GPUTimer();
     ~GPUTimer();
     // stream is a pointer itself
-    void iter_start(cudaStream_t stream);
-    void event_start(cudaStream_t stream);
-    void event_stop(cudaStream_t stream);
+    void iter_start(cudaStream_t stream, bool use_cuda_graph = false);
+    void event_start(cudaStream_t stream, bool use_cuda_graph = false);
+    void event_stop(cudaStream_t stream, bool use_cuda_graph = false);
     float get_measured_time_ms();
     float get_iter_start_to_event_start_ms();
     void sync_stop();
