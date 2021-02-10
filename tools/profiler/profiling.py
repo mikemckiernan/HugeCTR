@@ -208,6 +208,8 @@ if __name__ == '__main__':
     '''
     5. Run the training
 
+    5.a on the cluter, in the login node
+
     You may want to first
         salloc -p luna -A {account} -N{nodes_num} bash
     to apply for resources in advance. Remeber the jobid and fill in above.
@@ -217,6 +219,7 @@ if __name__ == '__main__':
     The hugectr will exit after the profiling is completed, usually only run for 1000 - 3000 iters, depends on how many
     interested events you defined in the dlrm_perf_schedule. The raw result will appear in profiling_dir as ${host_name}.prof.json.
     If you use multiple nodes, there will be several jsons appear. The result json is not human readable, so please use function below to parse it.
+
     '''
 
     cmd = '''
@@ -228,6 +231,14 @@ if __name__ == '__main__':
                profiling_dir=profiling_dir, config_file=config_file, account=account, jobid=jobid)
 
     #os.system(cmd)
+
+    '''
+    5.b If you are already in the hugectr container, you have to run the trainning with env PROFILING_DIR, like:
+
+    export NCCL_LAUNCH_MODE=PARALLEL
+    export PROFILING_DIR={profiling_dir in the container}
+    numactl --interleave=all ./build/bin/huge_ctr --train {config_file}
+    '''
 
     '''
     6. Parse the result into more human readable format. Just uncomment and execute it.

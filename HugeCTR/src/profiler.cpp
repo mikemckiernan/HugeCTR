@@ -62,13 +62,14 @@ namespace HugeCTR {
   }
 
   void Profiler::initialize() {
-    try {
-      profiling_dir_ = std::string(std::getenv("PROFILING_DIR"));
-    } catch (const std::runtime_error& rt_err) {
-      std::cerr << rt_err.what() << std::endl;
-      std::cerr << "Got empty for env PROFILING_DIR. You must specify if when using this profiler" << std::endl;
-      throw;
+    char* pd = std::getenv("PROFILING_DIR");
+    if (pd == NULL) {
+      std::string msg("Got empty for env PROFILING_DIR. You must specify if when using this profiler")
+      ERROR_MESSAGE_(msg);
+      throw std::invalid_argument(msg);
     }
+    profiling_dir_ = std::string(pd);
+
     char host_name[50];
     gethostname(host_name, 50);
     host_name_ = std::string(host_name);
