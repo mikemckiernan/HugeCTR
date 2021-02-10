@@ -23,7 +23,11 @@
 #include <data_readers/data_collector.hpp>
 #include <data_readers/data_reader_worker_group.hpp>
 #include <data_readers/data_reader_worker_group_norm.hpp>
+
+#ifndef DISABLE_CUDF
 #include <data_readers/data_reader_worker_group_parquet.hpp>
+#endif
+
 #include <data_readers/data_reader_worker_group_raw.hpp>
 #include <data_readers/file_list.hpp>
 #include <fstream>
@@ -68,9 +72,11 @@ public:
                         bool data_shuffle, 
                         bool start_reading_from_beginning = true) = 0;
 
+#ifndef DISABLE_CUDF
   virtual void create_drwg_parquet( std::string file_list,
                             const std::vector<long long> slot_offset,
                             bool start_reading_from_beginning = true) = 0;
+#endif
 
   virtual void set_file_list_source(std::string file_list = std::string()) = 0;
 };
