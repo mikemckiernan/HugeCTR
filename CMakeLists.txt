@@ -47,6 +47,14 @@ if (NCCL_A2A)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DNCCL_A2A")
 endif()
 
+option(DISABLE_CUDF "Disable cudf: disable parquet format related features" OFF)
+if (DISABLE_CUDF) 
+  message(STATUS "-- DISABLE_CUDF is ON")
+  set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DDISABLE_CUDF")
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DDISABLE_CUDF")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DDISABLE_CUDF")
+endif()
+
 find_package(CUDA REQUIRED)
 find_package(CUDNN REQUIRED)
 find_package(NCCL REQUIRED)
@@ -126,6 +134,8 @@ if(ENABLE_MULTINODES)
   include_directories(${HWLOC_INC_PATHS})
   include_directories(${UCX_INC_PATHS})
 endif()
+
+
 
 configure_file(${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp.in ${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp)
 
