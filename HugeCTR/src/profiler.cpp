@@ -86,13 +86,14 @@ namespace HugeCTR {
   }
 
   void Profiler::initialize(bool use_cuda_graph) {
-    try {
-      profiling_dir_ = std::string(std::getenv("PROFILING_DIR"));
-    } catch (const std::runtime_error& rt_err) {
-      std::cerr << rt_err.what() << std::endl;
-      std::cerr << "Got empty for env PROFILING_DIR. You must specify if when using this profiler" << std::endl;
-      throw;
+    char* pd = std::getenv("PROFILING_DIR");
+    if (pd == NULL) {
+      std::string msg("Got empty for env PROFILING_DIR. You must specify if when using this profiler");
+      ERROR_MESSAGE_(msg);
+      throw std::invalid_argument(msg);
     }
+    profiling_dir_ = std::string(pd);
+
     char host_name[50];
     gethostname(host_name, 50);
     host_name_ = std::string(host_name);
@@ -159,6 +160,10 @@ namespace HugeCTR {
           cudaStreamSynchronize(s_and_gt.first);
         }
         iter_end_check_ = std::chrono::steady_clock::now();
+        iter_time_ms_.push_back(
+          std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
+        );
+
         for(auto& s_and_gt : map_stream_to_gpu_timer_) {
           int event_idx = s_and_gt.second->event_idx_for_this_iter;
           if (event_idx < 0) {
@@ -168,9 +173,6 @@ namespace HugeCTR {
           events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
           events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
         }
-        iter_time_ms_.push_back(
-          std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
-        );
       }
       current_schedule_idx_++;
     }
