@@ -76,7 +76,7 @@ class Profiler {
   class CPUTimer {};
 
  private:
- bool use_cuda_graph_;
+  bool use_cuda_graph_;
   std::string profiling_dir_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;

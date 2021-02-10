@@ -95,11 +95,11 @@ def timeline_chart(result):
         for idx, p in enumerate(ax.patches):
             p.set_hatch(None)
             if p.contains(event)[0]:
-                if event.ydata - p.get_x() < min_distance:
+                if event.xdata - p.get_x() < min_distance:
                     min_idx = idx
-                    min_distance = event.ydata - p.get_x()
+                    min_distance = event.xdata - p.get_x()
 
-        if min_idx > 0:
+        if min_idx >= 0:
             x, y = ax.patches[min_idx].get_xy()
             annot.xy = (x + ax.patches[min_idx].get_width() / 2.0, y + ax.patches[min_idx].get_height() / 2.0)
             annot.set_text(ax.patches[min_idx].get_label())
@@ -111,7 +111,7 @@ def timeline_chart(result):
 
     # add callback for mouse click
     fig.canvas.mpl_connect('button_press_event', click)
-
+    plt.xlabel("In Milliseconds")
     fig.set_size_inches(figure_width_inches, current_base_h_pos * h_val_inches_ratio)
     ax.set_xlim(0, max_iter_time)
     ax.set_ylim(0, current_base_h_pos)

@@ -197,6 +197,7 @@ namespace HugeCTR {
           std::string("Invalid event name. Should end with .start or .stop"));
         }
         std::string event_name = event_label.substr(0, dot_pos);
+        // above string operation cost 0.000xxx ms on DGXA100. x usually is 1 - 2.
 
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
@@ -300,18 +301,22 @@ namespace HugeCTR {
               }
               return;
         }
-
+        // above map and if compare costs 0.000x ms on DGXA100, x is usually 1 - 7.
         thread_local int current_device_id;
         cudaGetDevice(&current_device_id);
         if (current_device_id != device_id) {
           CK_CUDA_THROW_(cudaSetDevice(device_id));
         }
         auto gpu_timer = map_stream_to_gpu_timer_[stream];
+        // above getdevice and mapping costs 0.000x ms on DGXA100, x is usually 1 - 2.
+
         if (event_type == "start") {
           gpu_timer->event_start(stream, use_cuda_graph_);
+
         } else {
-          // auto t_end = std::chrono::steady_clock::now();
           gpu_timer->event_stop(stream, use_cuda_graph_);
+          // event_start and event_stop usually costs 0.002ms on DGXA100
+
           std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
           int event_idx = find_event(event_key);
           if (event_idx < 0) {
@@ -319,12 +324,9 @@ namespace HugeCTR {
               std::string("Current event ") + event_name + std::string(" not registered!"));
           }
           gpu_timer->event_idx_for_this_iter = event_idx;
-          // mtx_.lock();
           map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
-          // After measuring, the cpu overhead is around 0.000x ms.
-          // auto prior_cpu_overhead_ms = std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count() / 1000000.0 );
-          // PROFILER_DEBUG_(std::string("CPU prior overhead ") + prior_cpu_overhead_ms);
-          // mtx_.unlock();
+          // Above post event record operation costs 0.00x on DGXA100, usually x is 1 - 2.
+
         }
         if (current_device_id != device_id) {
           CK_CUDA_THROW_(cudaSetDevice(current_device_id));
