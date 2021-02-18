@@ -78,6 +78,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   Tensor2<__half> dRelu_out_tensor_;
   Tensor2<__half> db_out_tensor_;
 
+
   /*
    * stores the references to the output tensors of GEMM.
    */
@@ -159,7 +160,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const Tensor2<__half>& train_out_tensor, 
       const Tensor2<__half>& mask_out_tensor, 
       const Tensor2<__half>& dRelu_out_tensor,
-      const Tensor2<__half>& db_out_tensor,
+      Tensor2<__half>& db_out_tensor,
       const std::shared_ptr<GPUResource>& gpu_resource,
       const FcPosition_t& pos,
       const Activation_t& act,
