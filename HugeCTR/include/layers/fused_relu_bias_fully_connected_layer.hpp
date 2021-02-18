@@ -34,6 +34,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   cublasLtMatmulAlgo_t falgo_k_;
   cublasGemmAlgo_t balgo_k_{CUBLAS_GEMM_DEFAULT};
   cublasGemmAlgo_t balgo_x_{CUBLAS_GEMM_DEFAULT};
+  cublasGemmAlgo_t balgo_b_{CUBLAS_GEMM_DEFAULT};
 
   cublasLtMatrixLayout_t cublas_kernel_desc_ = NULL;
   cublasLtMatrixLayout_t cublas_top_desc_ = NULL;
@@ -78,6 +79,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   Tensor2<__half> db_out_tensor_;
 
   /*
+   * stores the references to the output tensors of GEMM.
+   */
+  Tensor2<__half> identity_tensor_;
+  
+  /*
    * stores the references to the intermediate bias grad tensors of this layer.
    */
   Tensor2<float> bias_grad_tensor_;
@@ -88,6 +94,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
    * stores the position of this layer in the network
    */
   FcPosition_t pos_;
+
+  /*
+   * stores the activation function of this layer
+   */
+  Activation_t act_;
 
   std::unique_ptr<DataSimulator> get_uniform_initializer(const int index) override;
   std::unique_ptr<DataSimulator> get_xavier_uniform_initializer(const int index) override;
@@ -151,6 +162,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const Tensor2<__half>& db_out_tensor,
       const std::shared_ptr<GPUResource>& gpu_resource,
       const FcPosition_t& pos,
+      const Activation_t& act,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());
   FusedReluBiasFullyConnectedLayer(const FusedReluBiasFullyConnectedLayer&) = delete;
   FusedReluBiasFullyConnectedLayer& operator=(const FusedReluBiasFullyConnectedLayer&);

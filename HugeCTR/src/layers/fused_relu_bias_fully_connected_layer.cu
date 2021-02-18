@@ -17,6 +17,7 @@
 #include <layers/fused_relu_bias_fully_connected_layer.hpp>
 #include <utils.cuh>
 #include <utils.hpp>
+#include <linalg/reduce.cuh>
 
 #include "cutlass/cutlass.h"
 #include "cutlass/functional.h"
@@ -136,11 +137,14 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const Tensor2<__half>& db_out_tensor,
     const std::shared_ptr<GPUResource>& gpu_resource,
     const FcPosition_t& pos,
+    const Activation_t& act,
     std::vector<Initializer_t> initializer_types)
     : Layer(gpu_resource, initializer_types),
       balgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
-      pos_(pos) {
+      balgo_b_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
+      pos_(pos),
+      act_(act) {
   const auto& bottom_tensor_dim = train_in_tensor.get_dimensions();
   const auto& top_tensor_dim = train_out_tensor.get_dimensions();
 
@@ -152,14 +156,17 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   size_t n = top_tensor_dim[1];
   size_t k = bottom_tensor_dim[1];
 
-  if (m % 32 != 0 || n % 64 != 0) {
-    CK_THROW_(Error_t::WrongInput,
+  if(pos_ == FcPosition_t::Tail && act_ != Activation_t::None) {
+    if (m % 32 != 0 || n % 64 != 0) {
+      CK_THROW_(Error_t::WrongInput,
               "The first dimension of bottom tensor must be a multiple of 32, the second dimension "
               "of top tensor must be a multiple of 64.");
+    }
   }
 
   std::vector<size_t> kernel_dim = {k, n};
   std::vector<size_t> bias_dim = {1, n};
+  std::vector<size_t> identity_dim = {1, m};
 
   {
     Tensor2<float> tensor;
@@ -191,8 +198,8 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     weights_grad_buff->reserve(bias_dim, &tensor);
     weights_grad_.push_back(tensor);
   }
+  blobs_buff->reserve(identity_dim, &identity_tensor_);
 
-  pos_ = pos;
   train_in_tensor_ = train_in_tensor;
   if(pos_ == FcPosition_t::Head || pos_ == FcPosition_t::Isolated)
     mask_in_tensor_ = train_in_tensor;
@@ -225,6 +232,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_TRANSA, &trans, sizeof(trans)));
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_TRANSB, &trans, sizeof(trans)));
   cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_RELU_BIAS;
+  if(act_ == Activation_t::None) epi = CUBLASLT_EPILOGUE_BIAS;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
   const __half* bias = weights_half_[1].get_ptr();
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias, sizeof(bias)));
@@ -315,6 +323,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_top    = dRelu_out_tensor_.get_ptr();    
   __half* db_top    = db_out_tensor_.get_ptr();    
+  const __half* identity = identity_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -326,16 +335,29 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float alpha = 1.0f;
   const float beta_k = 1.0f;
   const float beta_x = 0.0f;
+  const float beta_b = 0.0f;
 
   if(pos_ == FcPosition_t::Tail) {
-	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
+    if(act_ == Activation_t::None) {
+      CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, 1, m,
+                                &alpha, top, CUDA_R_16F, n, identity, CUDA_R_16F, m, &beta_b,
+                                bias_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_b_));
+                       
+    } else {
+  	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
                                                                             0.0f);
 
-	  dim3 blocks(n / 64, m / 32);
-	  reverse_add_bias_and_re_kernel<32>
-	      <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, middle, top, n / 2);
-	  convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
+	    dim3 blocks(n / 64, m / 32);
+	    reverse_add_bias_and_re_kernel<32>
+	        <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, middle, top, n / 2);
+	    convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
                                                                          n);
+    }
+  }
+
+  if(act_ == Activation_t::None) {
+    cudaMemcpyAsync(dRelu_top, top, mask_out_tensor_.get_num_elements()*sizeof(__half),
+        cudaMemcpyDeviceToDevice, get_gpu().get_stream());    
   }
 
   if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Head) {
