@@ -39,3 +39,17 @@ RUN echo "deb http://cuda-repo/release-candidates/repos/nccl_r2.8_CUDA11.2/ubunt
     apt-get update && apt-get install -y --no-install-recommends --allow-downgrades --allow-change-held-packages \
         libnccl2=$NCCL_PKG_VERSION  \
         libnccl-dev=$NCCL_PKG_VERSION
+COPY . HugeCTR
+RUN cd HugeCTR && \
+    git submodule update --init --recursive && \
+    mkdir build && cd build &&\
+    cmake -DCMAKE_BUILD_TYPE=Release -DSM="70;80" \
+         -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
+         -DVAL_MODE=OFF -DENABLE_MULTINODES=ON -DENABLE_MPI=ON -DNCCL_A2A=ON -DUCX_INCLUDE_DIR=/usr/local/ucx/include/ -DUCX_LIBRARIES=/usr/local/ucx/lib/ .. && \
+    make -j$(nproc) &&\
+    mkdir /usr/local/hugectr &&\
+    make install &&\
+    chmod +x /usr/local/hugectr/bin/* &&\
+    rm -rf HugeCTR
+
+ENV PATH=/usr/local/hugectr/bin:$PATH
