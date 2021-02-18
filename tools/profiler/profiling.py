@@ -7,7 +7,7 @@ import json
 project_root = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..')
 sys.path.append(project_root)
 
-from tools.profiler import generate_schedule, parse_result
+from tools.profiler import prepare_prof_dir, parse_result
 
 '''
 Should you have any question, please contact Randy Wang(ruotongw@nvidia.com).
@@ -184,19 +184,11 @@ nodes_num = 1
 container_name = 'hugectr-dlrm-profiling'
 image = 'gitlab-master.nvidia.com/dl/mlperf/optimized:recommendation.hugectr.2035814'
 mounts_str = '/raid:/raid,/lustre/fsw/mlperft-dlrm/ruotongw/hugectr:/etc/workspace/home'
-account = 'mlperft-dlrm'
+account = 'mlperf'
 jobid = '1069007'
 # profiler related
 profiling_dir_name = 'dgxa100_{nodes_num}node_'.format(nodes_num=nodes_num) + config_name
 profiling_dir = os.path.join(working_dir, 'results', profiling_dir_name)
-
-def gen_schedule():
-    # create if profiling_dir non-exist.
-    os.makedirs(os.path.join(project_root, profiling_dir), exist_ok=True)
-    # Copy config to profiling_dir, for backup
-    copy(os.path.join(project_root, config_file), os.path.join(project_root, profiling_dir))
-    # Create a prof.schedule in profiling_dir. This file will instruct cpp profiler how to prof.
-    generate_schedule(dlrm_perf_schedule, os.path.join(project_root, profiling_dir))
 
 if __name__ == '__main__':
     '''
@@ -204,7 +196,7 @@ if __name__ == '__main__':
        the corresponding location on cluster. There will be a schedule file in the profiling dir, which is used to instruct
        cpp profiler how to profile.
     '''
-    #gen_schedule()
+    #prepare_prof_dir(dlrm_perf_schedule, os.path.join(project_root, profiling_dir))
     '''
     5. Run the training
 

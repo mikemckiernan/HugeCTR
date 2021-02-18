@@ -60,7 +60,10 @@ DRLM_EVENTS = {
 }
 
 
-def generate_schedule(schedule, profiling_dir, repeat_for_each_event=50, warmup_iterations=5):
+def prepare_prof_dir(schedule, profiling_dir, repeat_for_each_event=100, warmup_iterations=20):
+    # create if profiling_dir non-exist.
+    os.makedirs(profiling_dir, exist_ok=True)
+    # Create a prof.schedule in profiling_dir. This file will instruct cpp profiler how to prof.
     with open(os.path.join(profiling_dir, 'prof.schedule'), 'wb') as f:
         f.write(str(warmup_iterations).encode('ascii', 'ignore'))
         iteration = warmup_iterations + 1
