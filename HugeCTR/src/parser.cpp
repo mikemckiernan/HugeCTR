@@ -515,7 +515,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &dRelu_out_tensor);
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &db_out_tensor);
           if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated)
-            output_tensor_entries.push_back({input_output_info.output_names[0], mask_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
           else
           {
             output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});

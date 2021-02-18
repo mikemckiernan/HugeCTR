@@ -117,7 +117,14 @@ __global__ void reduce_block_manually(__half* dRelu, __half* bgrad, int N_reduct
     bgrad[idx] = __float2half(temp);
     // bgrad[idx] = __float2half(bias_grad_float[idx]);
   }
-  
+}
+
+__global__ void get_mask_from_top(const __half* top, __half* mask, int n)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx < n) {
+    mask[idx] = top[idx] > __float2half(0.0f) ? __float2half(1.0f) : __float2half(0.0f);
+  }
 }
 
 }  // namespace
@@ -298,12 +305,14 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
               cublaslt_workspace_size_,
               get_gpu().get_stream()));
 
-    if(pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated)
-    {
-        size_t len = train_out_tensor_.get_num_elements();
-        CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
-            len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
-    }
+    int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
+    get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
+    // if(pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated)
+    // {
+    //     size_t len = train_out_tensor_.get_num_elements();
+    //     CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
+    //         len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
+    // }
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
@@ -314,8 +323,10 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
-  const __half* top = mask_out_tensor_.get_ptr();
-  __half* middle = train_out_tensor_.get_ptr();
+  // const __half* top = mask_out_tensor_.get_ptr();
+  const __half* mask_in = mask_in_tensor_.get_ptr();
+  const __half* train_out = train_out_tensor_.get_ptr();
+  __half* mask_out = mask_out_tensor_.get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
   __half* bias_grad = weights_grad_[1].get_ptr();
   const __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
@@ -340,7 +351,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   if(pos_ == FcPosition_t::Tail) {
     if(act_ == Activation_t::None) {
       CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, 1, m,
-                                &alpha, top, CUDA_R_16F, n, identity, CUDA_R_16F, m, &beta_b,
+                                &alpha, train_out, CUDA_R_16F, n, identity, CUDA_R_16F, m, &beta_b,
                                 bias_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_b_));
                        
     } else {
@@ -349,14 +360,14 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
 
 	    dim3 blocks(n / 64, m / 32);
 	    reverse_add_bias_and_re_kernel<32>
-	        <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, middle, top, n / 2);
+	        <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, mask_out, train_out, n / 2);
 	    convert_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad, bias_grad_float,
                                                                          n);
     }
   }
 
   if(act_ == Activation_t::None) {
-    cudaMemcpyAsync(dRelu_top, top, mask_out_tensor_.get_num_elements()*sizeof(__half),
+    cudaMemcpyAsync(dRelu_top, train_out, train_out_tensor_.get_num_elements()*sizeof(__half),
         cudaMemcpyDeviceToDevice, get_gpu().get_stream());    
   }
 
@@ -396,6 +407,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
 {
   const __half* kernel = weights_half_[0].get_ptr();
   const __half* top = mask_out_tensor_.get_ptr();
+  const __half* mask_in = mask_in_tensor_.get_ptr();
   __half* middle = train_out_tensor_.get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
   __half* bias_grad = weights_grad_[1].get_ptr();
@@ -450,7 +462,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   // );
   bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
-    kernel, dRelu_top, dRelu_bottom, (float*)db_bottom, bottom,
+    kernel, dRelu_top, dRelu_bottom, (float*)db_bottom, mask_in,
     cutlass::gemm::GemmUniversalMode::kGemm,
     {k, m, n},
     1,
