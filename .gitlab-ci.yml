@@ -8,7 +8,7 @@ stages:
   - test
 
 variables:
-  IMAGE: "gitlab-master.nvidia.com:5005/dl/hugectr/hugectr:devel_mlperf"
+  IMAGE: "gitlab-master.nvidia.com:5005/dl/hugectr/hugectr:mlperf_multi-node_ib.latest.ci"
   DATASET: /lustre/fsw/devtech/hpc-hugectr/criteo_kaggle
   DATASET_MOUNT: /dataset/criteo_kaggle
   WORK_DIR: /hugectr_ci_workdir
@@ -327,7 +327,6 @@ mlperf_converge_build:
     - 1GPU
   stage: build
   script:
-    - git submodule update --init --recursive
     - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}"
     - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest"
     - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
@@ -342,6 +341,25 @@ mlperf_converge_build:
     variables:
       - $NIGHTLY == "1"
 
+mlperf_ci_build:
+  tags:
+    - 1GPU
+  stage: build
+  script:
+    - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}.ci"
+    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
+    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
+    - docker build --pull
+        -t "${MLPERF_IMAGE_VERSIONED}"
+        -f ./mlperf/ci.Dockerfile
+        ${PWD}
+    - docker push "${MLPERF_IMAGE_VERSIONED}"
+    - docker tag ${MLPERF_IMAGE_VERSIONED} ${MLPERF_IMAGE_LATEST}
+    - docker push ${MLPERF_IMAGE_LATEST}
+  only:
+    variables:
+      - $NIGHTLY == "1"
+      
 # mlperf_converge_test:
 #   extends: .selene_job
 #   allow_failure: false
