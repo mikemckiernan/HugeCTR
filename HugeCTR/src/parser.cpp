@@ -490,6 +490,14 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
             CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
           pos_type = FcPosition_t::Isolated;
         }
+        // check the activation functino of this layer
+        Activation_t act_type = Activation_t::Relu;
+        if (has_key_(j, "activation")) {
+          auto act_name = get_value_from_json<std::string>(j, "activation");
+          if (!find_item_in_map(act_type, act_name, ACTIVATION_TYPE_MAP)) {
+            CK_THROW_(Error_t::WrongInput, "No such activation: "+ act_name);
+          }
+        }
         // establish out tensor
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
         if (use_mixed_precision) {
@@ -507,7 +515,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &dRelu_out_tensor);
           blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &db_out_tensor);
           if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated)
-            output_tensor_entries.push_back({input_output_info.output_names[0], mask_out_tensor.shrink()});
+            output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
           else
           {
             output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
@@ -521,7 +529,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
               weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff,
               train_in_tensor, mask_in_tensor, dRelu_in_tensor, db_in_tensor,
               train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
-              gpu_resource, pos_type, initializer_types));
+              gpu_resource, pos_type, act_type, initializer_types));
         } else {
           CK_THROW_(Error_t::WrongInput, "FusedInnerProduct support half only");
         }
