@@ -9,7 +9,7 @@ stages:
 
 variables:
   IMAGE: "gitlab-master.nvidia.com:5005/dl/hugectr/hugectr:devel_mlperf"
-  DATASET: /lustre/fsw/hpc-hugectr/criteo_kaggle
+  DATASET: /lustre/fsw/devtech/hpc-hugectr/criteo_kaggle
   DATASET_MOUNT: /dataset/criteo_kaggle
   WORK_DIR: /hugectr_ci_workdir
   DEST_FW_IMAGE_VERSIONED: "${CI_REGISTRY}/dl/hugectr/hugectr:devel_${CI_PIPELINE_ID}"
