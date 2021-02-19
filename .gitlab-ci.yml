@@ -432,15 +432,15 @@ mlperf_ci_test_dgx2:
     - export MLPERF_IMAGE_LATEST_CORRECT=$(echo ${MLPERF_IMAGE_LATEST} | sed 's/:5005//g')
     - srun --ntasks=1
       --container-image ${MLPERF_IMAGE_LATEST_CORRECT}
-      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
+      --container-mounts $(pwd):$(pwd),/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
       --ntasks-per-node 1
       bash -cx "
-      cd ${CI_PROJECT_DIR};
+      cd $(pwd);
       huge_ctr --train mlperf/configs/55296_16gpus.json"
   only:
     variables:
       - $NIGHTLY == "1"
-      
+
 # mlperf_converge_test:
 #   extends: .selene_job
 #   allow_failure: false
