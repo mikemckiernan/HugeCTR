@@ -411,7 +411,7 @@ mlperf_ci_test_a100:
     - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
     - srun --ntasks=1
       --container-image ${MLPERF_IMAGE_LATEST}
-      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/etc/workspace/dataset
+      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
       --ntasks-per-node 1
       bash -cx "
       cd ${CI_PROJECT_DIR};
@@ -430,7 +430,7 @@ mlperf_ci_test_dgx2:
     - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
     - srun --ntasks=1
       --container-image ${MLPERF_IMAGE_LATEST}
-      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/etc/workspace/dataset
+      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
       --ntasks-per-node 1
       bash -cx "
       cd ${CI_PROJECT_DIR};
