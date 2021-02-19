@@ -106,19 +106,6 @@ __global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
   
 }
 
-__global__ void reduce_block_manually(__half* dRelu, __half* bgrad, int N_reduction, int n) {
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  float temp = 0.0f;
-  if (idx < n ) {
-    for (int i = 0; i < N_reduction; i++)
-    {
-     temp = temp + __half2float(dRelu[idx + i * n]);
-    }
-    bgrad[idx] = __float2half(temp);
-    // bgrad[idx] = __float2half(bias_grad_float[idx]);
-  }
-}
-
 __global__ void get_mask_from_top(const __half* top, __half* mask, int n)
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -219,7 +206,7 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   mask_out_tensor_   = mask_out_tensor;
   dRelu_out_tensor_  = dRelu_out_tensor;
   db_out_tensor_     = db_out_tensor;
-  blobs_buff->reserve(bias_dim, &bias_grad_tensor_);
+  blobs_buff->reserve(kernel_dim, &bias_grad_tensor_);
 
 }
 
@@ -307,12 +294,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
 
     int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
     get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
-    // if(pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated)
-    // {
-    //     size_t len = train_out_tensor_.get_num_elements();
-    //     CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
-    //         len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
-    // }
+
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
@@ -323,7 +305,6 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
-  // const __half* top = mask_out_tensor_.get_ptr();
   const __half* mask_in = mask_in_tensor_.get_ptr();
   const __half* train_out = train_out_tensor_.get_ptr();
   __half* mask_out = mask_out_tensor_.get_ptr();
@@ -333,7 +314,6 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_top    = dRelu_out_tensor_.get_ptr();    
-  __half* db_top    = db_out_tensor_.get_ptr();    
   const __half* identity = identity_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
@@ -371,18 +351,6 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
         cudaMemcpyDeviceToDevice, get_gpu().get_stream());    
   }
 
-  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Head) {
-    // printf("%d, %d\n", n, weights_grad_[1].get_num_elements)
-    // __half* bgrad_ref = new __half[n];
-    // int nTile = (m - 1 + 128) / 128;
-    // reduceK<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>((float*)db_out_tensor_.get_ptr(), bias_grad, nTile, n);
-    // reduce_block_manually<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(dRelu_out_tensor_.get_ptr(), bias_grad, 128, n);
-    // cudaMemcpyAsync(bias_grad, db_out_tensor_.get_ptr(), weights_grad_[1].get_num_elements()*sizeof(__half),
-    //      cudaMemcpyDeviceToDevice, get_gpu().get_stream());
-
-  }
-      // cudaMemcpyAsync(middle, dRelu_top, dRelu_out_tensor_.get_num_elements()*sizeof(__half),
-        // cudaMemcpyDeviceToDevice, get_gpu().get_stream());
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
@@ -409,17 +377,10 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
 void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
 {
   const __half* kernel = weights_half_[0].get_ptr();
-  const __half* top = mask_out_tensor_.get_ptr();
   const __half* mask_in = mask_in_tensor_.get_ptr();
-  __half* middle = train_out_tensor_.get_ptr();
-  __half* kernel_grad = weights_grad_[0].get_ptr();
-  __half* bias_grad = weights_grad_[1].get_ptr();
-  const __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
-  __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
   float* bias_grad_float = bias_grad_tensor_.get_ptr();
   __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
   __half* dRelu_top = dRelu_out_tensor_.get_ptr();
-  // __half* db_bottom = db_in_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -455,14 +416,7 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
   >::GemmKernel;
 
   using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
-  // cutlassGemmWithReduction<Gemm>(
-  //   W, dRelu_top, dRelu_bottom, db, mask,
-  //   {k, m, n},
-  //   cutlass::gemm::GemmUniversalMode::kGemm,
-  //   1,
-  //   float(1),
-  //   float(0)
-  // );
+
   bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
   reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
     kernel, dRelu_top, dRelu_bottom, bias_grad_float, mask_in,
@@ -476,17 +430,6 @@ void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
 
 void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
 {
-  const __half* kernel = weights_half_[0].get_ptr();
-  const __half* top = mask_out_tensor_.get_ptr();
-  __half* middle = train_out_tensor_.get_ptr();
-  __half* kernel_grad = weights_grad_[0].get_ptr();
-  __half* bias_grad = weights_grad_[1].get_ptr();
-  const __half* bottom = get_bottom_tensor_fprop(true).get_ptr();
-  __half* bottom_bprop = get_bottom_tensor_bprop(true).get_ptr();
-  float* bias_grad_float = bias_grad_tensor_.get_ptr();
-  __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-  __half* db_bottom = db_in_tensor_.get_ptr();
-
   const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
 
