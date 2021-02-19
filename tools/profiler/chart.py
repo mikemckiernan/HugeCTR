@@ -229,5 +229,5 @@ def scaling_chart(results, names):
     ax.set_xlim(0, current_start_x)
     ax.set_ylim(0, max_h)
     ax.grid(True)
-    fig.set_size_inches(8, 10)
+    fig.set_size_inches(10, 10)
     plt.show()
