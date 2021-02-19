@@ -58,7 +58,6 @@ unit_tests:
         bash -cx "
         cd ${WORK_DIR}/build/build_single/bin;
         ./layers_test &&
-        ./embedding_test &&
         ./checker_test &&
         ./data_reader_test &&
         ./device_map_test &&
@@ -69,7 +68,8 @@ unit_tests:
         ./model_oversubscriber_test &&
         ./parser_test &&
         ./session_test &&
-        ./auc_test"
+        ./auc_test &&
+        ./embedding_test"
   only:
     - pushes
 
