@@ -169,6 +169,9 @@ void train(std::string config_file) {
       session_instance->set_learning_rate(lr);
 
       session_instance->train();
+#ifdef ENABLE_PROFILING
+      HugeCTR::global_profiler.iter_end();
+#endif
       if (i % solver_config.display == 0 && i != 0) {
         timer_train.stop();
         // display
@@ -195,10 +198,6 @@ void train(std::string config_file) {
       if (eval_stop) {
         return;
       }
-
-#ifdef ENABLE_PROFILING
-      HugeCTR::global_profiler.iter_end();
-#endif
     }
   } else {
     int i = 0;

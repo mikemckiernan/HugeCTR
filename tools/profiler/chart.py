@@ -158,8 +158,6 @@ def scaling_chart(results, names):
                 label="Whole Iter: {}".format(iter_times)
             )
         )
-        x_ticks.append(current_start_x + bar_width / 2)
-        x_labels.append("Whole Iter ms")
         color_idx = 0
         current_height_avg = 0.0
         current_height_max = 0.0
@@ -177,8 +175,6 @@ def scaling_chart(results, names):
                     label="{}\n{} ms".format(label, avg_time)
                 )
             )
-            x_ticks.append(current_start_x + bar_width +  bar_width / 2)
-            x_labels.append("Avg Time ms")
             ax.add_patch(
                 patches.Rectangle(
                     xy=(current_start_x + 2 * bar_width, current_height_max),  # point of origin.
@@ -190,18 +186,19 @@ def scaling_chart(results, names):
                     label="{}\n{} ms".format(label, max_time)
                 )
             )
-            x_ticks.append(current_start_x + 2 * bar_width +  bar_width / 2)
-            x_labels.append("Max Time ms")
 
             max_h = max([current_height_avg, current_height_max, max_h])
             current_height_avg += avg_time
             current_height_max += max_time
             color_idx += 1
 
-        ax.annotate(names[i], xy=(current_start_x + 3 * bar_width / 2, 0), xytext=(0, -30),
+        ax.annotate(names[i], xy=(current_start_x + 3 * bar_width / 2, 0), xytext=(0, -10),
                     textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
         current_start_x += 3 * bar_width + space_between_result
 
+    ax.annotate("Left bar: Whole iter time\nMid bar: Avg time\nRight bar: Max time",
+                 xy=(current_start_x / 2, 0), xytext=(0, -40),
+            textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels, fontdict={ 'fontsize' : x_label_font_size })
     plt.ylabel("In Milliseconds")
