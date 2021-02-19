@@ -135,6 +135,23 @@ wdl_deepfm:
   only:
     - pushes
 
+mlperf_ci_test_a100:
+  extends: .selene_job
+  allow_failure: false
+  stage: test
+  dependencies: 
+    - build
+  script:
+    - srun --ntasks=1
+      --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
+      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
+      --ntasks-per-node 1
+      bash -cx "
+      cd ${CI_PROJECT_DIR};
+      ${WORK_DIR}/build/build_single/bin/huge_ctr --train mlperf/configs/55296_8gpus.json"
+  only:
+    - pushes
+
 dlrm1:
   extends: .selene_job
   allow_failure: false
@@ -401,27 +418,9 @@ mlperf_ci_build:
     variables:
       - $NIGHTLY == "1"
 
-mlperf_ci_test_a100:
-  extends: .selene_job
-  allow_failure: false
-  stage: test
-  dependencies: 
-    - mlperf_ci_build
-  script:
-    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
-    - export MLPERF_IMAGE_LATEST_CORRECT=$(echo ${MLPERF_IMAGE_LATEST} | sed 's/:5005//g')
-    - srun --ntasks=1
-      --container-image ${MLPERF_IMAGE_LATEST_CORRECT}
-      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
-      --ntasks-per-node 1
-      bash -cx "
-      cd ${CI_PROJECT_DIR};
-      huge_ctr --train mlperf/configs/55296_8gpus.json"
-  only:
-    variables:
-      - $NIGHTLY == "1"
 
-mlperf_ci_test_dgx2:
+
+.mlperf_ci_test_dgx2:
   extends: .circe_job
   allow_failure: false
   stage: test
