@@ -43,7 +43,7 @@ COPY . HugeCTR
 RUN cd HugeCTR && \
     git submodule update --init --recursive && \
     mkdir build && cd build &&\
-    cmake -DCMAKE_BUILD_TYPE=Release -DSM="70;80" \
+    cmake -DCMAKE_BUILD_TYPE=Release -DSM="70;80" -DDISABLE_CUDF=ON \
          -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
          -DVAL_MODE=OFF -DENABLE_MULTINODES=ON -DENABLE_MPI=ON -DNCCL_A2A=ON -DUCX_INCLUDE_DIR=/usr/local/ucx/include/ -DUCX_LIBRARIES=/usr/local/ucx/lib/ .. && \
     make -j$(nproc) &&\

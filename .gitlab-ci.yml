@@ -359,7 +359,26 @@ mlperf_ci_build:
   only:
     variables:
       - $NIGHTLY == "1"
-      
+
+mlperf_ci_test:
+  extends: .selene_job
+  allow_failure: false
+  stage: test
+  dependencies: 
+    - mlperf_ci_build
+  script:
+    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
+    - srun --ntasks=1
+      --container-image ${MLPERF_IMAGE_LATEST}
+      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/etc/workspace/dataset
+      --ntasks-per-node 1
+      bash -cx "
+      cd ${CI_PROJECT_DIR};
+      huge_ctr --train mlperf/configs/55296_8gpus.json"
+  only:
+    variables:
+      - $NIGHTLY == "1"
+
 # mlperf_converge_test:
 #   extends: .selene_job
 #   allow_failure: false
