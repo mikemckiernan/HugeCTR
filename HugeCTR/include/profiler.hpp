@@ -35,9 +35,7 @@
 namespace HugeCTR {
 class Profiler {
   struct Event {
-    std::string name;
-    std::string layer_name;
-    int same_name_events_occured_order_in_code;
+    std::string event_name;
     int start_index;
     int end_index;
     // std::vector<int> on_iters;
@@ -47,6 +45,7 @@ class Profiler {
 
   struct GPUEvent : Event {
     int device_id;
+    int met_times_within_this_stream;
     cudaStream_t stream;
   };
 
@@ -78,6 +77,8 @@ class Profiler {
  private:
   bool use_cuda_graph_;
   std::string profiling_dir_;
+  int repeat_times_;
+  int current_reapted_times_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
   std::chrono::time_point<std::chrono::steady_clock> iter_start_check_;
@@ -85,7 +86,7 @@ class Profiler {
 
   int warmup_iterations_;
   int current_iteration_;
-  int current_schedule_idx_;
+  int current_event_idx_;
 
   std::vector<std::tuple<std::string, int, std::string, int>> scheduled_events_;
   std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_to_gpu_timer_;
@@ -107,16 +108,6 @@ class Profiler {
   void iter_end();
   int find_event(std::string& event_key);
   void write_result(const char* result_dir);
-
-  static std::vector<std::string> split_string(std::string& str, char delim = '.') {
-    std::stringstream ss(str);
-    std::vector<std::string> result;
-    std::string token;
-    while (std::getline(ss, token, delim)) {
-        result.push_back(token);
-    }
-    return result;
-  }
 
   static std::string stream_str(cudaStream_t stream) {
     const void * address = static_cast<const void*>(stream);

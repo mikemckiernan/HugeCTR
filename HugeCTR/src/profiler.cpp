@@ -94,26 +94,21 @@ namespace HugeCTR {
     }
     profiling_dir_ = std::string(pd);
 
+    char* repeat_times_str = std::getenv("PROFILING_REPEAT_TIME_PER_EVENT");
+    if (pd == NULL) {
+      repeat_times_ = 100 + 1;
+    } else {
+      repeat_times_ = std::atoi(repeat_times_str) + 1;
+    }
+    current_reapted_times_ = 0;
+
     char host_name[50];
     gethostname(host_name, 50);
     host_name_ = std::string(host_name);
-    std::string schedule_file = profiling_dir_ + "/prof.schedule";
-    MESSAGE_(std::string("Profiler initializing using ") + schedule_file + " ...");
-    std::ifstream schedule_f(schedule_file);
-    int line_no = 0;
-    for (std::string line; getline(schedule_f, line);) {
-        if (line_no) {
-          auto splited = split_string(line, ' ');
-          scheduled_events_.push_back(std::make_tuple(splited[0], std::stoi(splited[1]), splited[2], std::stoi(splited[3])));
-        } else {
-          warmup_iterations_ = std::stoi(line);
-        }
-        line_no++;
-    }
     use_cuda_graph_ = use_cuda_graph;
     MESSAGE_(std::string("Profiler using cuda graph: ") + std::to_string(use_cuda_graph_));
     current_iteration_ = 1;
-    current_schedule_idx_ = 0;
+    current_event_idx_ = 0;
     init_cuda_graph_this_iter = false;
   }
 
@@ -124,20 +119,22 @@ namespace HugeCTR {
       }
     }
     if(current_iteration_ > warmup_iterations_) {
+      if (events_.size() <= 0) { return; }
       if(use_cuda_graph_) {
-        if(current_schedule_idx_ == 0 ||
-           std::get<0>(scheduled_events_[current_schedule_idx_]) != std::get<0>(scheduled_events_[current_schedule_idx_ - 1]) ||
-           std::get<2>(scheduled_events_[current_schedule_idx_]) != std::get<2>(scheduled_events_[current_schedule_idx_ - 1]) ||
-           std::get<3>(scheduled_events_[current_schedule_idx_]) != std::get<3>(scheduled_events_[current_schedule_idx_ - 1])) {
+        if(current_reapted_times_ == 0) {
           MESSAGE_(std::string("Profiler re-instantiate cuda graph for ") +
-                   std::get<2>(scheduled_events_[current_schedule_idx_]) + "." +
-                   std::get<0>(scheduled_events_[current_schedule_idx_])
+                   events_[current_event_idx_]->event_name + " " +
+                   std::to_string(
+                     static_cast<GPUEvent*>(events_[current_event_idx_].get())->met_times_within_this_stream
+                   ) + " on " +
+                   stream_str(static_cast<GPUEvent*>(events_[current_event_idx_].get())->stream)
           );
           init_cuda_graph_this_iter = true;
         } else {
           init_cuda_graph_this_iter = false;
         }
       }
+      // future use multi-thread below to reduce overhead?
       for(auto& s_and_gt : map_stream_to_gpu_timer_) {
         s_and_gt.second->iter_start(s_and_gt.first, false);
         if(!use_cuda_graph_ || init_cuda_graph_this_iter) {
@@ -155,6 +152,7 @@ namespace HugeCTR {
 
   void Profiler::iter_end() {
     if (current_iteration_ > warmup_iterations_) {
+      if (events_.size() <= 0) { return; }
       if (!init_cuda_graph_this_iter) {
         for(auto& s_and_gt : map_stream_to_gpu_timer_) {
           cudaStreamSynchronize(s_and_gt.first);
@@ -174,10 +172,14 @@ namespace HugeCTR {
           events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
         }
       }
-      current_schedule_idx_++;
+      current_reapted_times_ += 1;
+      if (current_reapted_times_ >= repeat_times_) {
+        current_reapted_times_ = 0;
+        current_event_idx_ += 1;
+      }
     }
 
-    if (current_schedule_idx_ >= int(scheduled_events_.size())) {
+    if (current_event_idx_ >= int(events_.size())) {
         std::string result_file = profiling_dir_ + '/' + host_name_ + ".prof.json";
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
         write_result(result_file.c_str());
@@ -209,7 +211,6 @@ namespace HugeCTR {
         auto map_iter = map_stream_to_gpu_timer_.find(stream);
         if(map_iter == map_stream_to_gpu_timer_.end()) {
           auto gpu_timer = std::make_shared<GPUTimer>();
-
           map_stream_to_gpu_timer_[stream] = gpu_timer;
           map_internal_[stream] = std::make_shared<std::map<std::string, int>>();
         }
@@ -221,26 +222,6 @@ namespace HugeCTR {
           met_times_within_this_stream = 0;
         }
 
-        // parse the event label, register it and create resources.
-        bool found = false;
-        std::string layer_name;
-        for (auto& it : scheduled_events_) {
-          if (std::get<0>(it) == event_name && std::get<3>(it) == met_times_within_this_stream) {
-            layer_name = std::get<2>(it);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          if (event_type == "stop") {
-            map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
-          }
-          if (current_device_id != device_id) {
-            CK_CUDA_THROW_(cudaSetDevice(current_device_id));
-          }
-          mtx_.unlock();
-          return;
-        }
         std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
         int event_idx = find_event(event_key);
 
@@ -256,9 +237,8 @@ namespace HugeCTR {
 
           // create new event
           auto gpu_event = new GPUEvent;
-          gpu_event->name = event_name;
-          gpu_event->layer_name = layer_name;
-          gpu_event->same_name_events_occured_order_in_code = met_times_within_this_stream;
+          gpu_event->event_name = event_name;
+          gpu_event->met_times_within_this_stream = met_times_within_this_stream;
           gpu_event->start_index = events_num_;
           gpu_event->end_index = -1; // wait for stop event to set,
           gpu_event->measured_times_ms = std::vector<float>();
@@ -272,7 +252,9 @@ namespace HugeCTR {
           if (current_device_id != device_id) {
             CK_CUDA_THROW_(cudaSetDevice(current_device_id));
           }
-        } else { // event_name == "stop"
+        }
+        else {
+          // event_name == "stop"
           // only update the end_index
           if (event_idx >= 0) {
             auto event = events_[event_idx];
@@ -291,11 +273,12 @@ namespace HugeCTR {
           CK_CUDA_THROW_(cudaSetDevice(current_device_id));
         }
         mtx_.unlock();
-      } else {
+      }
+      else {
         int met_times_within_this_stream = map_internal_[stream]->at(event_name);
-        if (std::get<0>(scheduled_events_[current_schedule_idx_]) != event_name || \
-            std::get<1>(scheduled_events_[current_schedule_idx_]) != current_iteration_ || \
-            std::get<3>(scheduled_events_[current_schedule_idx_]) != met_times_within_this_stream) {
+        if (events_[current_event_idx_]->event_name != events_[current_event_idx_ - 1]->event_name ||
+            static_cast<GPUEvent*>(events_[current_event_idx_].get())->stream != stream ||
+            static_cast<GPUEvent*>(events_[current_event_idx_].get())->met_times_within_this_stream != met_times_within_this_stream) {
               if (event_type == "stop") {
                 map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
               }
@@ -312,21 +295,12 @@ namespace HugeCTR {
 
         if (event_type == "start") {
           gpu_timer->event_start(stream, use_cuda_graph_);
-
         } else {
           gpu_timer->event_stop(stream, use_cuda_graph_);
           // event_start and event_stop usually costs 0.002ms on DGXA100
-
-          std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
-          int event_idx = find_event(event_key);
-          if (event_idx < 0) {
-            throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
-              std::string("Current event ") + event_name + std::string(" not registered!"));
-          }
-          gpu_timer->event_idx_for_this_iter = event_idx;
+          gpu_timer->event_idx_for_this_iter = current_event_idx_;
           map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
           // Above post event record operation costs 0.00x on DGXA100, usually x is 1 - 2.
-
         }
         if (current_device_id != device_id) {
           CK_CUDA_THROW_(cudaSetDevice(current_device_id));
@@ -355,13 +329,12 @@ namespace HugeCTR {
     for (auto& event_p : events_) {
       GPUEvent* gep = static_cast<GPUEvent*>(event_p.get());
       json j;
-      j["layer_name"] = gep->layer_name;
-      j["name"] = gep->name;
+      j["event_name"] = gep->event_name;
       j["device_id"] = gep->device_id;
       j["stream"] = stream_str(gep->stream);
       j["start_index"] = gep->start_index;
       j["end_index"] = gep->end_index;
-      j["same_name_events_occured_order_in_code"] = gep->same_name_events_occured_order_in_code;
+      j["met_times_within_this_stream"] = gep->met_times_within_this_stream;
       j["measured_times_ms"] = gep->measured_times_ms;
       j["iter_start_to_event_start_times_ms"] = gep->iter_start_to_event_start_times_ms;
       result["events"].push_back(j);
