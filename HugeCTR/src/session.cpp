@@ -215,6 +215,9 @@ bool Session::train() {
       return false;
     }
     train_data_reader_->ready_to_collect();
+#ifdef ENABLE_PROFILING
+    global_profiler.iter_check();
+#endif
     for (const auto& one_embedding : embeddings_) {
       one_embedding->forward(true);
     }

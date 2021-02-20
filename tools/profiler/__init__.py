@@ -59,31 +59,19 @@ DRLM_EVENTS = {
     }
 }
 
-def prepare_prof_dir(schedule, profiling_dir, repeat_for_each_event=100, warmup_iterations=20):
+def gen_prof_config(profiling_dir, interested_events=None):
     # create if profiling_dir non-exist.
     os.makedirs(profiling_dir, exist_ok=True)
-    # Create a prof.schedule in profiling_dir. This file will instruct cpp profiler how to prof.
-    with open(os.path.join(profiling_dir, 'prof.schedule'), 'wb') as f:
-        f.write(str(warmup_iterations).encode('ascii', 'ignore'))
-        iteration = warmup_iterations + 1
-        for layer in schedule:
-            for f_or_b_event in schedule[layer].keys():
-                for interested_event in schedule[layer][f_or_b_event]:
-                    if f_or_b_event == 'forward_events':
-                        same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_forward']
-                    elif f_or_b_event == 'backward_events':
-                        same_name_events_occured_order_in_code = DRLM_EVENTS[layer]['same_name_events_occured_order_in_code_backward']
-                    else:
-                        raise Exception("{} not a forward_event nor a backward_event".format(interested_event))
-                    for _ in range(repeat_for_each_event):
-                        line = "\n{} {} {} {}".format(
-                            interested_event,
-                            iteration,
-                            layer,
-                            same_name_events_occured_order_in_code
-                        ).encode('ascii', 'ignore')
-                        f.write(line)
-                        iteration += 1
+    if interested_events:
+        final_events = {}
+        for layer in interested_events:
+            for _, events in interested_events[layer].items():
+                for e in events:
+                    final_events[e] = True
+    final_events = final_events.keys()
+    with open(os.path.join(profiling_dir, 'prof.events'), 'w') as f:
+        f.write("\n".join(final_events))
+
 
 def sum_result(profiling_dir):
     prof_jsons = glob.glob(os.path.join(profiling_dir, '*.prof.json'))

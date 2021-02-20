@@ -14,13 +14,16 @@ Should you have any question, please contact Randy Wang(ruotongw@nvidia.com).
 
 Usage Guide
 
-1. Add -DENABLE_PROFILING=ON when pass args to Cmake. And then do the normal make process.
-2. Comment out anything you are not interested in dlrm_perf_schedule below. Just comment the event label line,
-   don't comment out the forward_events, backward_events or BottomMLP.fc1 line. You can check for all labels
-   in the cpp code. And also you can add your own label and recompile it, then insert correspond label in dlrm_perf_schedule.
+1. Insert Macro and Complie
+
+a. You can insert macro `PROFILE_RECORD(xxx)` to CPP code to instruct profiler to profile this interval. There are some
+macro inserted already, please have a check if you are looking for example. Remeber to insert a pair of labels `xxx.start`
+and `xxx.stop`.
+
+b. Add `-DENABLE_PROFILING=ON` when pass args to Cmake. And then do the normal `make` process.
 '''
 
-dlrm_perf_schedule = {
+dlrm_interesed_events = {
     # interested event name
     'BottomMLP.fc1': {
         'forward_events': [
@@ -172,46 +175,55 @@ dlrm_perf_schedule = {
 }
 
 '''
-3. Define profiling_dir for this profiling session. Specify the config file you want to use. Also other configs, like slurm related.
+3. Set related variable
 '''
 
+# Define profiling_dir for this profiling session.
+# Specify the config file you want to use. Also other configs, like slurm related.
 working_dir = os.path.join('tools', 'profiler')
+# profiler related
+profiling_dir_name = 'test'
+profiling_dir = os.path.join(working_dir, 'results', profiling_dir_name)
+
 # train configs
-config_name = '55296_8gpus'
-config_file = os.path.join('mlperf', 'configs', config_name + '.json')
+config_file = os.path.join('mlperf', 'configs', '55296_8gpus.json')
 # slurm related
 nodes_num = 1
 container_name = 'hugectr-dlrm-profiling'
 image = 'gitlab-master.nvidia.com/dl/mlperf/optimized:recommendation.hugectr.2035814'
-mounts_str = '/raid:/raid,/lustre/fsw/mlperft-dlrm/ruotongw/hugectr:/etc/workspace/home'
+mounts_str = '/raid:/raid,/lustre/fsw/mlperf/mlperft-dlrm/ruotongw/hugectr:/etc/workspace/home'
 account = 'mlperf'
 jobid = '1069007'
-# profiler related
-profiling_dir_name = 'dgxa100_{nodes_num}node_'.format(nodes_num=nodes_num) + config_name
-profiling_dir = os.path.join(working_dir, 'results', profiling_dir_name)
 
 if __name__ == '__main__':
     '''
-    4. First you should create a profiling_dir. Just uncomment, execute it and somehow upload the profiling dir to
-       the corresponding location on cluster. There will be a schedule file in the profiling dir, which is used to instruct
-       cpp profiler how to profile.
+    4. Generate the profiling dir (optional)
+
+    By default, profiler will prof every label inserted in CPP code, it usually cost 3min - 5min to finish the profiling,
+    depends on how many labels inserted. And the `parse_result` will use `dlrm_interesed_events` to filer the result. So
+    don't worry too many labels in CPP code will ruin the result. 
+
+    But, if you truly want to profile anything you care about, and to shorten the profiling time maybe, you can use below
+    function to generate profiling dir and a `prof.events` file in it. It will instruct profiler to strictly only profile
+    what you list in `dlrm_interesed_events`. And you need to somehow upload the profiling dir to the corresponding
+    location on cluster or container.
     '''
-    #prepare_prof_dir(dlrm_perf_schedule, os.path.join(project_root, profiling_dir))
+    #gen_prof_config(os.path.join(project_root, profiling_dir), interested_events=dlrm_interesed_events)
     '''
     5. Run the training
 
     5.a on the cluter, in the login node
 
     You may want to first
-        salloc -p luna -A {account} -N{nodes_num} bash
+    ```
+    salloc -p luna -A {account} -N{nodes_num} bash
+    ```
     to apply for resources in advance. Remeber the jobid and fill in above.
-
-    On the login node of the cluster, execute the cmd.
 
     The hugectr will exit after the profiling is completed, usually only run for 1000 - 3000 iters, depends on how many
     interested events you defined in the dlrm_perf_schedule. The raw result will appear in profiling_dir as ${host_name}.prof.json.
-    If you use multiple nodes, there will be several jsons appear. The result json is not human readable, so please use function below to parse it.
-
+    If you use multiple nodes, there will be several jsons appear. The result json is not human readable, so please use function
+    below to parse it.
     '''
 
     cmd = '''
@@ -233,12 +245,14 @@ if __name__ == '__main__':
     '''
 
     '''
-    6. Parse the result into more human readable format. Just uncomment and execute it.
+    6. Result
 
-    And you can do anything you like from the result, for instance save it as a file.
+    The hugectr will exit after the profiling is completed. The raw result will appear in `profiling_dir` as
+    `${host_name}.prof.json`. If you use multiple nodes, there will be several jsons appear. The result json is not
+    human readable, so please use function below to parse it.
     '''
-    result = parse_result(os.path.join(project_root, profiling_dir))
-    with open(os.path.join(profiling_dir, profiling_dir_name + '.json'), 'w') as f:
-        json.dump(result, f, indent=2)
-    print(json.dumps(result, indent=2))
+    # result = parse_result(os.path.join(project_root, profiling_dir), dlrm_interesed_events)
+    #with open(os.path.join(project_root, profiling_dir, 'test' + '.json'), 'w') as f:
+    #    json.dump(result, f, indent=2)
+    #print(json.dumps(result, indent=2))
 

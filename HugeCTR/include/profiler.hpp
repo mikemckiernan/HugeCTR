@@ -58,8 +58,6 @@ class Profiler {
     cudaEvent_t iter_start_;
 
    public:
-    int event_idx_for_this_iter;
-
     GPUTimer();
     ~GPUTimer();
     // stream is a pointer itself
@@ -82,14 +80,13 @@ class Profiler {
   int warmup_after_cudagraph_reinit_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
-  std::chrono::time_point<std::chrono::steady_clock> iter_start_check_;
-  std::chrono::time_point<std::chrono::steady_clock> iter_end_check_;
+  std::chrono::time_point<std::chrono::steady_clock> iter_check_;
 
   int warmup_iterations_;
   int current_iteration_;
   int current_event_idx_;
 
-  std::vector<std::tuple<std::string, int, std::string, int>> scheduled_events_;
+  std::vector<std::string> interested_events_;
   std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_to_gpu_timer_;
   std::vector<std::shared_ptr<Event>> events_;
   std::map<std::string, int> map_event_key_to_event_idx;
@@ -105,10 +102,10 @@ class Profiler {
 
   void initialize(bool use_cuda_graph = false);
   void record_event(const char* event_label_char, cudaStream_t stream, int device_id);
-  void iter_start();
-  void iter_end();
+  void iter_check();
+  void prepare_iter_start();
   int find_event(std::string& event_key);
-  void write_result(const char* result_dir);
+  void write_result();
 
   static std::string stream_str(cudaStream_t stream) {
     const void * address = static_cast<const void*>(stream);
