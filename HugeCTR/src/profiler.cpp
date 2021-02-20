@@ -93,13 +93,34 @@ namespace HugeCTR {
       throw std::invalid_argument(msg);
     }
     profiling_dir_ = std::string(pd);
+    MESSAGE_(std::string("Profiler using PROFILING_DIR: ") + profiling_dir_);
 
-    char* repeat_times_str = std::getenv("PROFILING_REPEAT_TIME_PER_EVENT");
-    if (pd == NULL) {
-      repeat_times_ = 100 + 1;
+    char* warmup_iterations_str = std::getenv("PROFILING_WARMUP_ITERS");
+    if (warmup_iterations_str == NULL) {
+      warmup_iterations_ = 10;
     } else {
-      repeat_times_ = std::atoi(repeat_times_str) + 1;
+      warmup_iterations_ = std::atoi(warmup_iterations_str) + 1;
     }
+    MESSAGE_(std::string("Profiler using WARMUP_ITERS: ") + std::to_string(warmup_iterations_));
+
+    char* repeat_times_str = std::getenv("PROFILING_REPEAT_TIMES_PER_EVENT");
+    if (repeat_times_str == NULL) {
+      repeat_times_ = 50;
+    } else {
+      repeat_times_ = std::atoi(repeat_times_str);
+    }
+    MESSAGE_(std::string("Profiler using REPEAT_TIMES_PER_EVENT: ") + std::to_string(repeat_times_));
+
+    char* warmup_after_cudagraph_reinit_str = std::getenv("PROFILING_WARMUP_AFTER_CUDAGRAPH_REINIT");
+    if (warmup_after_cudagraph_reinit_str == NULL) {
+      warmup_after_cudagraph_reinit_ = 10;
+    } else {
+      warmup_after_cudagraph_reinit_ = std::atoi(warmup_after_cudagraph_reinit_str);
+    }
+    MESSAGE_(std::string("Profiler using PROFILING_WARMUP_AFTER_CUDAGRAPH_REINIT: ") + std::to_string(warmup_after_cudagraph_reinit_));
+
+    // for extra cuda graph init iter, it won't count
+    repeat_times_ += warmup_after_cudagraph_reinit_ + 1;
     current_reapted_times_ = 0;
 
     char host_name[50];
@@ -122,7 +143,9 @@ namespace HugeCTR {
       if (events_.size() <= 0) { return; }
       if(use_cuda_graph_) {
         if(current_reapted_times_ == 0) {
-          MESSAGE_(std::string("Profiler re-instantiate cuda graph for ") +
+          MESSAGE_(std::string("Iteration: ") + std::to_string(current_iteration_) +
+                   std::string(". Profiler re-instantiate cuda graph for ") +
+                   std::to_string(current_event_idx_) + " : " +
                    events_[current_event_idx_]->event_name + " " +
                    std::to_string(
                      static_cast<GPUEvent*>(events_[current_event_idx_].get())->met_times_within_this_stream
@@ -158,18 +181,19 @@ namespace HugeCTR {
           cudaStreamSynchronize(s_and_gt.first);
         }
         iter_end_check_ = std::chrono::steady_clock::now();
-        iter_time_ms_.push_back(
-          std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
-        );
-
-        for(auto& s_and_gt : map_stream_to_gpu_timer_) {
-          int event_idx = s_and_gt.second->event_idx_for_this_iter;
-          if (event_idx < 0) {
-            // no event is recorded on this stream
-            continue;
+        if (current_reapted_times_ >  warmup_after_cudagraph_reinit_) {
+          iter_time_ms_.push_back(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(iter_end_check_- iter_start_check_).count() / 1000000.0
+          );
+          for(auto& s_and_gt : map_stream_to_gpu_timer_) {
+            int event_idx = s_and_gt.second->event_idx_for_this_iter;
+            if (event_idx < 0) {
+              // no event is recorded on this stream
+              continue;
+            }
+            events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
+            events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
           }
-          events_[event_idx]->measured_times_ms.push_back(s_and_gt.second->get_measured_time_ms());
-          events_[event_idx]->iter_start_to_event_start_times_ms.push_back(s_and_gt.second->get_iter_start_to_event_start_ms());
         }
       }
       current_reapted_times_ += 1;
@@ -180,6 +204,10 @@ namespace HugeCTR {
     }
 
     if (current_event_idx_ >= int(events_.size())) {
+        int ret = std::system((std::string("mkdir -p ") + profiling_dir_).c_str());
+        if (ret != 0) {
+          MESSAGE_("Creating PROFILING_DIR failed?");
+        }
         std::string result_file = profiling_dir_ + '/' + host_name_ + ".prof.json";
         MESSAGE_(std::string("Profiling complete! Result file is writing to ") + result_file + ". Program exit.");
         write_result(result_file.c_str());
@@ -191,16 +219,15 @@ namespace HugeCTR {
   void Profiler::record_event(const char* event_label_char, cudaStream_t stream, int device_id) {
     try {
       // auto t_start = std::chrono::steady_clock::now();
-        std::string event_label = std::string(event_label_char);
-        int dot_pos = event_label.find_last_of(std::string("."));
-        std::string event_type = event_label.substr(dot_pos + 1);
-        if (event_type != "start" && event_type != "stop") {
-          throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
-          std::string("Invalid event name. Should end with .start or .stop"));
-        }
-        std::string event_name = event_label.substr(0, dot_pos);
-        // above string operation cost 0.000xxx ms on DGXA100. x usually is 1 - 2.
-
+      std::string event_label = std::string(event_label_char);
+      int dot_pos = event_label.find_last_of(std::string("."));
+      std::string event_type = event_label.substr(dot_pos + 1);
+      if (event_type != "start" && event_type != "stop") {
+        throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
+        std::string("Invalid event name. Should end with .start or .stop"));
+      }
+      std::string event_name = event_label.substr(0, dot_pos);
+      // above string operation cost 0.000xxx ms on DGXA100. x usually is 1 - 2.
       if (current_iteration_ <= warmup_iterations_) {
         mtx_.lock();
         thread_local int current_device_id;
@@ -276,7 +303,7 @@ namespace HugeCTR {
       }
       else {
         int met_times_within_this_stream = map_internal_[stream]->at(event_name);
-        if (events_[current_event_idx_]->event_name != events_[current_event_idx_ - 1]->event_name ||
+        if (events_[current_event_idx_]->event_name != event_name ||
             static_cast<GPUEvent*>(events_[current_event_idx_].get())->stream != stream ||
             static_cast<GPUEvent*>(events_[current_event_idx_].get())->met_times_within_this_stream != met_times_within_this_stream) {
               if (event_type == "stop") {

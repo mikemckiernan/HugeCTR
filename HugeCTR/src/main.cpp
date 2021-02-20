@@ -171,6 +171,8 @@ void train(std::string config_file) {
       session_instance->train();
 #ifdef ENABLE_PROFILING
       HugeCTR::global_profiler.iter_end();
+      i = 0;
+      continue;
 #endif
       if (i % solver_config.display == 0 && i != 0) {
         timer_train.stop();

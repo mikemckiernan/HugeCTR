@@ -79,6 +79,7 @@ class Profiler {
   std::string profiling_dir_;
   int repeat_times_;
   int current_reapted_times_;
+  int warmup_after_cudagraph_reinit_;
   std::string host_name_;
   std::vector<float> iter_time_ms_;
   std::chrono::time_point<std::chrono::steady_clock> iter_start_check_;

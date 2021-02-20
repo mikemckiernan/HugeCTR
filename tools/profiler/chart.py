@@ -24,13 +24,13 @@ def timeline_chart(result):
     y_ticks = []
 
     for host in result:
-        for device_id, streams in host["timeline"].items():
+        for device_id, streams in host["events"].items():
             stream_num += len(streams)
-            for stream_name, timeline in streams.items():
+            for stream_name, events in streams.items():
                 max_height_stream_bar = 0
                 color_idx = 0
                 overlapped_check = []
-                for event in timeline:
+                for event in events:
                     occupied_h = []
                     for idx, (end, h) in enumerate(overlapped_check):
                         if end > event["avg_iter_start_to_event_start_time_ms"]:
@@ -140,9 +140,9 @@ def scaling_chart(results, names):
         max_h = max(iter_times, max_h)
         labels = {}
         for host in result:
-            for device in host["timeline"].keys():
-                for stream in host["timeline"][device].keys():
-                    for event in host["timeline"][device][stream]:
+            for device in host["events"].keys():
+                for stream in host["events"][device].keys():
+                    for event in host["events"][device][stream]:
                         if event['label'] not in labels.keys():
                             labels[event['label']] = []
                         labels[event['label']].append(event['avg_measured_time_ms'])
