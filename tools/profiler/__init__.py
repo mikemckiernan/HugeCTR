@@ -85,8 +85,6 @@ def sum_result(profiling_dir):
             for e in events:
                 e['avg_iter_start_to_event_start_time_ms'] = sum(e['iter_start_to_event_start_times_ms']) / len(e['iter_start_to_event_start_times_ms'])
                 e['avg_measured_time_ms'] = sum(e['measured_times_ms']) / len(e['measured_times_ms'])
-                e.pop('iter_start_to_event_start_times_ms', None)
-                e.pop('measured_times_ms', None)
             result = {
                 'host_name': prof['host_name'],
                 'avg_iter_time_ms': sum(prof['iter_time_ms']) / len(prof['iter_time_ms']),
@@ -154,6 +152,8 @@ def split_by_device_stream_layer_label(events, interested_events):
         new_event["label"] = layer_name + '.' + event['event_name']
         #new_event["start_index"] = event["start_index"]
         #new_event["end_index"] = event["end_index"]
+        new_event["measured_times_ms"] = event["measured_times_ms"]
+        new_event["iter_start_to_event_start_times_ms"] = event["iter_start_to_event_start_times_ms"]
         new_event["avg_measured_time_ms"] = event["avg_measured_time_ms"]
         new_event["avg_iter_start_to_event_start_time_ms"] = event["avg_iter_start_to_event_start_time_ms"]
         result[device_id][stream_id].append(new_event)
