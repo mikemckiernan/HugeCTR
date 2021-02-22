@@ -53,6 +53,7 @@ unit_tests:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -82,6 +83,7 @@ criteo:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -102,6 +104,7 @@ dcn:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -121,6 +124,7 @@ wdl_deepfm:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -143,6 +147,7 @@ mlperf_ci_test_a100:
     - build
   script:
     - srun --ntasks=1
+      -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
       --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
       --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
       --ntasks-per-node 1
@@ -160,6 +165,7 @@ dlrm1:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -177,6 +183,7 @@ dlrm1:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -193,6 +200,7 @@ dlrm3:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -210,6 +218,7 @@ dlrm3:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -227,6 +236,7 @@ criteo_multinode:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -244,6 +254,7 @@ dcn_multinode:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -261,6 +272,7 @@ dlrm_multinode_fp16:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -277,6 +289,7 @@ dlrm_multinode_fp32:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -295,6 +308,7 @@ criteo_multinode_gossip:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -314,6 +328,7 @@ python_interface_single_node:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -332,6 +347,7 @@ python_interface_single_node_model_prefetch:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -351,6 +367,7 @@ python_interface_multi_node_nccl:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -370,6 +387,7 @@ python_interface_multi_node_gossip:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
