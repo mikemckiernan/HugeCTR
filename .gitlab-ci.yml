@@ -8,7 +8,7 @@ stages:
   - test
 
 variables:
-  IMAGE: "gitlab-master.nvidia.com:5005/dl/hugectr/hugectr:devel_mlperf"
+  IMAGE: "gitlab-master.nvidia.com:5005/dl/hugectr/hugectr:mlperf_multi-node_ib.latest.ci"
   DATASET: /lustre/fsw/devtech/hpc-hugectr/criteo_kaggle
   DATASET_MOUNT: /dataset/criteo_kaggle
   WORK_DIR: /hugectr_ci_workdir
@@ -40,6 +40,8 @@ build:
                    -f "${JOB_DOCKERFILE}"
                    ${PWD}
     - docker push "${DEST_FW_IMAGE_VERSIONED}"
+  only:
+    - pushes
 
 ### Stage: test
 # unit test
@@ -51,12 +53,12 @@ unit_tests:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd ${WORK_DIR}/build/build_single/bin;
         ./layers_test &&
-        ./embedding_test &&
         ./checker_test &&
         ./data_reader_test &&
         ./device_map_test &&
@@ -67,7 +69,10 @@ unit_tests:
         ./model_oversubscriber_test &&
         ./parser_test &&
         ./session_test &&
-        ./auc_test"
+        ./auc_test &&
+        ./embedding_test"
+  only:
+    - pushes
 
 # single node
 criteo:
@@ -78,6 +83,7 @@ criteo:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -87,6 +93,8 @@ criteo:
         cd /dataset/criteo_kaggle/criteo_multi_slots;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_multi_slots_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_multi_slots_8gpu.json"
+  only:
+    - pushes
 
 dcn:
   extends: .selene_job
@@ -96,6 +104,7 @@ dcn:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -104,6 +113,8 @@ dcn:
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_8gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_localized_embedding_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_localized_embedding_8gpu.json"
+  only:
+    - pushes
 
 wdl_deepfm:
   extends: .selene_job
@@ -113,6 +124,7 @@ wdl_deepfm:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -124,6 +136,26 @@ wdl_deepfm:
         cd /dataset/criteo_kaggle/deepfm;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/deepfm_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/deepfm_8gpu.json"
+  only:
+    - pushes
+
+mlperf_ci_test_a100:
+  extends: .selene_job
+  allow_failure: false
+  stage: test
+  dependencies: 
+    - build
+  script:
+    - srun --ntasks=1
+      -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
+      --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
+      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
+      --ntasks-per-node 1
+      bash -cx "
+      cd ${CI_PROJECT_DIR};
+      ${WORK_DIR}/build/build_single/bin/huge_ctr --train mlperf/configs/55296_8gpus.json"
+  only:
+    - pushes
 
 dlrm1:
   extends: .selene_job
@@ -133,11 +165,16 @@ dlrm1:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_1gpu.json;"
+  only:
+    - pushes
+
+
 .dlrm2:
   extends: .selene_job
   allow_failure: false
@@ -146,11 +183,15 @@ dlrm1:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_8gpu.json;"
+  only:
+    - pushes
+
 dlrm3:
   extends: .selene_job
   allow_failure: false
@@ -159,11 +200,16 @@ dlrm3:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_1gpu.json;"
+  only:
+    - pushes
+
+
 .dlrm4:
   extends: .selene_job
   allow_failure: false
@@ -172,11 +218,14 @@ dlrm3:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_8gpu.json"
+  only:
+    - pushes
 
 # multinode with nccl
 criteo_multinode:
@@ -187,12 +236,15 @@ criteo_multinode:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
         bash -cx "
         cd /dataset/criteo_kaggle/criteo;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
+  only:
+    - pushes
 
 dcn_multinode:
   extends: .selene_job
@@ -202,12 +254,15 @@ dcn_multinode:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_4node_2gpu.json"
+  only:
+    - pushes
 
 dlrm_multinode_fp16:
   extends: .selene_job
@@ -217,13 +272,15 @@ dlrm_multinode_fp16:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_4node_2gpu.json"
-    
+  only:
+    - pushes
 dlrm_multinode_fp32:
   extends: .selene_job
   allow_failure: false
@@ -232,13 +289,16 @@ dlrm_multinode_fp32:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp32_4node_2gpu.json"
-    
+  only:
+    - pushes
+
 # multinode with gossip
 criteo_multinode_gossip:
   extends: .selene_job
@@ -248,13 +308,17 @@ criteo_multinode_gossip:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
         bash -cx "
         cd /dataset/criteo_kaggle/criteo;
         ${WORK_DIR}/build/build_multi_gossip/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
-    
+  only:
+    - pushes
+
+
 # python interface single node
 python_interface_single_node:
   extends: .selene_job
@@ -264,13 +328,16 @@ python_interface_single_node:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
         cd /dataset/criteo_kaggle/wdl;
         cp ${WORK_DIR}/build/build_single/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/single_node_wdl_fp16_8gpu.py ${WORK_DIR}/test/scripts/wdl_fp16_8gpu.json;"
-    
+  only:
+    - pushes
+
 # python interface single node + model prefetch
 python_interface_single_node_model_prefetch:
   extends: .selene_job
@@ -280,6 +347,7 @@ python_interface_single_node_model_prefetch:
     - build
   script:
     - srun --ntasks=1
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         bash -cx "
@@ -287,7 +355,9 @@ python_interface_single_node_model_prefetch:
         cp ${WORK_DIR}/build/build_single/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         mkdir ${TMP_DIR}/temp_embedding;
         python3 ${WORK_DIR}/test/pybind_test/model_prefetch_wdl_1gpu.py /dataset/criteo_kaggle/wdl_data_keyset/wdl.json ${TMP_DIR}/temp_embedding"
-    
+  only:
+    - pushes
+
 # python interface multi node + nccl
 python_interface_multi_node_nccl:
   extends: .selene_job
@@ -297,6 +367,7 @@ python_interface_multi_node_nccl:
     - build
   script:
     - srun --ntasks=4
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -304,6 +375,8 @@ python_interface_multi_node_nccl:
         cd /dataset/criteo_kaggle/dcn;
         cp ${WORK_DIR}/build/build_multi_nccl/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/multi_node_dcn_4node_2gpu.py ${WORK_DIR}/test/scripts/dcn_4node_2gpu.json"
+  only:
+    - pushes
 
 # python interface multi node + gossip
 python_interface_multi_node_gossip:
@@ -314,6 +387,7 @@ python_interface_multi_node_gossip:
     - build
   script:
     - srun --ntasks=2
+        -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
         --ntasks-per-node 1
@@ -321,13 +395,14 @@ python_interface_multi_node_gossip:
         cd /dataset/criteo_kaggle/criteo;
         cp ${WORK_DIR}/build/build_multi_gossip/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/multi_node_criteo_2node_4gpu.py ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
+  only:
+    - pushes
 
 mlperf_converge_build:
   tags:
     - 1GPU
   stage: build
   script:
-    - git submodule update --init --recursive
     - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}"
     - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest"
     - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
@@ -338,6 +413,47 @@ mlperf_converge_build:
     - docker push "${MLPERF_IMAGE_VERSIONED}"
     - docker tag ${MLPERF_IMAGE_VERSIONED} ${MLPERF_IMAGE_LATEST}
     - docker push ${MLPERF_IMAGE_LATEST}
+  only:
+    variables:
+      - $NIGHTLY == "1"
+
+mlperf_ci_build:
+  tags:
+    - 1GPU
+  stage: build
+  script:
+    - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}.ci"
+    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
+    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
+    - docker build --pull
+        -t "${MLPERF_IMAGE_VERSIONED}"
+        -f ./mlperf/ci.Dockerfile
+        ${PWD}
+    - docker push "${MLPERF_IMAGE_VERSIONED}"
+    - docker tag ${MLPERF_IMAGE_VERSIONED} ${MLPERF_IMAGE_LATEST}
+    - docker push ${MLPERF_IMAGE_LATEST}
+  only:
+    variables:
+      - $NIGHTLY == "1"
+
+
+
+.mlperf_ci_test_dgx2:
+  extends: .circe_job
+  allow_failure: false
+  stage: test
+  dependencies: 
+    - mlperf_ci_build
+  script:
+    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
+    - export MLPERF_IMAGE_LATEST_CORRECT=$(echo ${MLPERF_IMAGE_LATEST} | sed 's/:5005//g')
+    - srun --ntasks=1
+      --container-image ${MLPERF_IMAGE_LATEST_CORRECT}
+      --container-mounts $(pwd):$(pwd),/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
+      --ntasks-per-node 1
+      bash -cx "
+      cd $(pwd);
+      huge_ctr --train mlperf/configs/55296_16gpus.json"
   only:
     variables:
       - $NIGHTLY == "1"
