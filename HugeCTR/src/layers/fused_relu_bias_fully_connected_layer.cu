@@ -109,8 +109,18 @@ __global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
 __global__ void get_mask_from_top(const __half* top, __half* mask, int n)
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  const __half zero = TypeFunc<__half>::zero();
   if (idx < n) {
     mask[idx] = top[idx] > __float2half(0.0f) ? __float2half(1.0f) : __float2half(0.0f);
+  }
+}
+
+__global__ void get_mask_from_top_bool(const __half* top, bool* mask, int n)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  const __half zero = TypeFunc<__half>::zero();
+  if (idx < n) {
+    mask[idx] = __hgt(top[idx], zero);
   }
 }
 
@@ -254,8 +264,49 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   if (returned_res == 0) {
     CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
   }
+
+  // initialize_bprop();
 }
 
+void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
+
+  // TODO: We need different bottom desc based on is_train or not
+  const auto& bottom_tensor_dim = get_bottom_tensor_fprop(true).get_dimensions();
+  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
+
+  size_t m = bottom_tensor_dim[0];
+  size_t n = top_tensor_dim[1];
+  size_t k = bottom_tensor_dim[1];
+
+  CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_bprop_, CUBLAS_COMPUTE_16F, CUDA_R_16F));
+
+  cublasOperation_t transA  = CUBLAS_OP_T;
+  cublasOperation_t transB  = CUBLAS_OP_N;
+  CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSA, &transA, sizeof(transA)));
+  CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSB, &transB, sizeof(transB)));
+  cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_DEFAULT;
+  CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
+
+  CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_dRelu_top_desc_, CUDA_R_16F, n, m, n));
+  CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_dRelu_bottom_desc_, CUDA_R_16F, k, m, k));
+
+  CK_CUBLAS_THROW_(cublasLtMatmulPreferenceCreate(&cublas_preference_dRelu_));
+
+  cublaslt_workspace_size_ = 1024*1024*8; // Set it to 8MB for now
+  CK_CUDA_THROW_(cudaMalloc(&cublaslt_workspace_dRelu_, cublaslt_workspace_size_));
+  CK_CUBLAS_THROW_(cublasLtMatmulPreferenceSetAttribute(cublas_preference_dRelu_, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &cublaslt_workspace_size_, sizeof(cublaslt_workspace_size_)));
+
+  // By default set algo to best estimated heurstic
+  cublasLtMatmulHeuristicResult_t heuristic_result;
+  int returned_res = 0;
+  CK_CUBLAS_THROW_(cublasLtMatmulAlgoGetHeuristic(get_gpu().get_cublaslt_handle(), cublas_op_desc_bprop_, cublas_kernel_desc_, cublas_dRelu_top_desc_, cublas_dRelu_bottom_desc_, cublas_dRelu_bottom_desc_, cublas_preference_dRelu_ ,1, &heuristic_result, &returned_res));
+
+  memcpy(&balgo_dRelu_, &heuristic_result.algo, sizeof(balgo_dRelu_));
+
+  if (returned_res == 0) {
+    CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
+  }
+}
 void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   CudaDeviceContext context(get_device_id());
 
@@ -356,6 +407,22 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
   if(pos_ == FcPosition_t::Head) {
+    // CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
+    //           cublas_op_desc_bprop_,
+    //           &alpha,
+    //           kernel,
+    //           cublas_kernel_desc_,
+    //           dRelu_top,
+    //           cublas_dRelu_top_desc_,
+    //           &beta_x,
+    //           bottom_bprop,
+    //           cublas_dRelu_bottom_desc_,
+    //           bottom_bprop,
+    //           cublas_dRelu_bottom_desc_,
+    //           &balgo_dRelu_,
+    //           cublaslt_workspace_dRelu_,
+    //           cublaslt_workspace_size_,
+    //           get_gpu().get_stream()));    
 	  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
                                 &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
                                 bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
