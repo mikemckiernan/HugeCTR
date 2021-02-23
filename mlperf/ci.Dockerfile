@@ -5,7 +5,7 @@ ENV NCCL_PKG_VERSION ${NCCL_VERSION}-1+cuda11.2
 RUN apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         vim gdb git wget tar python-dev python3-dev \
-        zlib1g-dev lsb-release ca-certificates clang-format libboost-all-dev && \
+        zlib1g-dev lsb-release ca-certificates clang-format libboost-all-dev numactl libnuma-dev libaio-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /var/tmp && wget -q -nc --no-check-certificate -P /var/tmp http://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh && \
     bash /var/tmp/Miniconda3-4.7.12-Linux-x86_64.sh -b -p /opt/conda && \
@@ -25,8 +25,8 @@ RUN conda update -n base -c defaults conda && \
     rm -rf /opt/conda/include/nccl.h /opt/conda/lib/libnccl.so /opt/conda/include/google
 ENV OMPI_MCA_plm_rsh_agent=sh \
     OMPI_MCA_opal_cuda_support=true
-RUN echo alias python='/usr/bin/python3' >> /etc/bash.bashrc && \
-    pip3 install numpy pandas sklearn ortools jupyter tensorflow==2.4.0
+RUN pip3 install numpy pandas sklearn ortools jupyter tensorflow==2.4.0
+RUN pip3 install --no-cache-dir https://github.com/mlperf/logging/archive/9ea0afa.zip
 RUN mkdir -p /var/tmp && cd /var/tmp && git clone --depth=1 --branch branch-0.17 https://github.com/rapidsai/rmm.git rmm && cd - && \
     cd /var/tmp/rmm && \
     mkdir -p build && cd build && \
@@ -53,3 +53,5 @@ RUN cd HugeCTR && \
     rm -rf HugeCTR
 
 ENV PATH=/usr/local/hugectr/bin:$PATH
+WORKDIR /workspace/dlrm
+COPY . .
