@@ -110,7 +110,7 @@ namespace HugeCTR {
     } else {
       warmup_iterations_ = std::atoi(warmup_iterations_str) + 1;
     }
-    MESSAGE_(std::string("Profiler using WARMUP_ITERS: ") + std::to_string(warmup_iterations_));
+    MESSAGE_(std::string("Profiler using WARMUP_ITERS: ") + std::to_string(warmup_iterations_ - 1));
 
     char* repeat_times_str = std::getenv("PROFILING_REPEAT_TIMES_PER_EVENT");
     if (repeat_times_str == NULL) {
@@ -145,9 +145,19 @@ namespace HugeCTR {
 
   void Profiler::iter_check() {
     auto end = std::chrono::steady_clock::now();
+    for(auto& x : map_internal_) {
+      for(auto it = x.second->begin(); it != x.second->end(); it++) {
+        it->second = 0;
+      }
+    }
     if (current_iteration_ <= warmup_iterations_ - 1) {
         current_iteration_ += 1;
         return;
+    } else {
+      if (events_.size() == 0) {
+        MESSAGE_("No profiling labels found int code or they are not in prof.events. Please have a check. Program exit.");
+        std::exit(0);
+      }
     }
     if (current_iteration_ == warmup_iterations_) {
       // first iteration
@@ -155,7 +165,6 @@ namespace HugeCTR {
       prepare_iter_start();
     } else {
       // not first iteration
-
       // whether to record result logic block
       if(!init_cuda_graph_this_iter) {
         if (!use_cuda_graph_ || (use_cuda_graph_ && current_reapted_times_ > warmup_after_cudagraph_reinit_)) {
@@ -204,14 +213,19 @@ namespace HugeCTR {
         init_cuda_graph_this_iter = false;
       }
     } else {
+      if(current_reapted_times_ == 0) {
+        MESSAGE_(std::string("Iteration: ") + std::to_string(current_iteration_) +
+                 ". " + std::to_string(current_event_idx_) + " : " +
+                 events_[current_event_idx_]->event_name + " " +
+                std::to_string(
+                  static_cast<GPUEvent*>(events_[current_event_idx_].get())->met_times_within_this_stream
+                ) + " on " +
+                stream_str(static_cast<GPUEvent*>(events_[current_event_idx_].get())->stream)
+        );
+      }
       init_cuda_graph_this_iter = false;
     }
 
-    for(auto& x : map_internal_) {
-      for(auto it = x.second->begin(); it != x.second->end(); it++) {
-        it->second = 0;
-      }
-    }
     for(auto& s_and_gt : map_stream_to_gpu_timer_) {
       s_and_gt.second->iter_start(s_and_gt.first, false);
     }
@@ -264,7 +278,6 @@ namespace HugeCTR {
             return;
           }
         }
-
         std::string event_key = gen_event_key(event_name, stream, met_times_within_this_stream);
         int event_idx = find_event(event_key);
 

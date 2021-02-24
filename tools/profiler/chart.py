@@ -122,7 +122,7 @@ def timeline_chart(result):
     plt.show()
 
 
-def scaling_chart(results, names):
+def scaling_chart(results, names, show_iter_time=True):
     bar_width = 0.2
     space_between_result = 0.1
     x_label_font_size = 8
@@ -135,9 +135,8 @@ def scaling_chart(results, names):
     current_start_x = space_between_result
     max_h = 0.0
     for i, result in enumerate(results):
-        iter_times = [host["avg_iter_time_ms"] for host in result]
-        iter_times = max(iter_times)
-        max_h = max(iter_times, max_h)
+        if not results:
+            continue
         labels = {}
         for host in result:
             for device in host["events"].keys():
@@ -146,18 +145,22 @@ def scaling_chart(results, names):
                         if event['label'] not in labels.keys():
                             labels[event['label']] = []
                         labels[event['label']].append(event['avg_measured_time_ms'])
-
-        ax.add_patch(
-            patches.Rectangle(
-                xy=(current_start_x, 0),  # point of origin.
-                width=bar_width,
-                height=iter_times,
-                color='steelblue',
-                fill=True,
-                alpha=0.9,
-                label="Whole Iter: {}".format(iter_times)
+        if (show_iter_time):
+            iter_times = [host["avg_iter_time_ms"] for host in result]
+            iter_times = max(iter_times)
+            max_h = max(iter_times, max_h)
+            ax.add_patch(
+                patches.Rectangle(
+                    xy=(current_start_x, 0),  # point of origin.
+                    width=bar_width,
+                    height=iter_times,
+                    color='steelblue',
+                    fill=True,
+                    alpha=0.9,
+                    label="{}\nWhole Iter: {}".format(names[i], iter_times)
+                )
             )
-        )
+
         color_idx = 0
         current_height_avg = 0.0
         current_height_max = 0.0
@@ -172,7 +175,7 @@ def scaling_chart(results, names):
                     color=color_options[color_idx % len(color_options)],
                     fill=True,
                     alpha=0.6,
-                    label="{}\n{} ms".format(label, avg_time)
+                    label="{}\n{}\n{} ms".format(names[i], label, avg_time)
                 )
             )
             ax.add_patch(
@@ -183,7 +186,7 @@ def scaling_chart(results, names):
                     color=color_options[color_idx % len(color_options)],
                     fill=True,
                     alpha=0.6,
-                    label="{}\n{} ms".format(label, max_time)
+                    label="{}\n{}\n{} ms".format(names[i], label, max_time)
                 )
             )
 

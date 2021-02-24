@@ -68,9 +68,9 @@ def gen_prof_config(profiling_dir, interested_events=None):
             for _, events in interested_events[layer].items():
                 for e in events:
                     final_events[e] = True
-    final_events = final_events.keys()
-    with open(os.path.join(profiling_dir, 'prof.events'), 'w') as f:
-        f.write("\n".join(final_events))
+        final_events = final_events.keys()
+        with open(os.path.join(profiling_dir, 'prof.events'), 'w') as f:
+            f.write("\n".join(final_events))
 
 
 def sum_result(profiling_dir):
