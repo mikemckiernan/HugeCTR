@@ -75,6 +75,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   Tensor2<__half> mask_in_tensor_;
   Tensor2<__half> dRelu_in_tensor_;
   Tensor2<__half> db_in_tensor_;
+  Tensor2<int> mask_in_tensor_temp_;
 
   /*
    * stores the references to the top tensors of this layer.
