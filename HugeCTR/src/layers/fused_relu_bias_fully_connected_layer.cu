@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// #include <__clang_cuda_builtin_vars.h>
+#include <cstdio>
 #include <layers/fused_relu_bias_fully_connected_layer.hpp>
 #include <utils.cuh>
 #include <utils.hpp>
@@ -115,12 +117,13 @@ __global__ void get_mask_from_top(const __half* top, __half* mask, int n)
   }
 }
 
-__global__ void get_mask_from_top_bool(const __half* top, bool* mask, int n)
+__global__ void get_mask_from_bit(const int* bit, const __half* top, __half* mask, int n)
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   const __half zero = TypeFunc<__half>::zero();
+  int val = bit[blockIdx.x];
   if (idx < n) {
-    mask[idx] = __hgt(top[idx], zero);
+    mask[idx] = (val >> threadIdx.x)&1 ? __float2half(1.0f) : __float2half(0.0f);
   }
 }
 
@@ -218,6 +221,9 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   db_out_tensor_     = db_out_tensor;
   blobs_buff->reserve(kernel_dim, &bias_grad_tensor_);
 
+  std::vector<size_t> mask_dim = {m/32, n};
+  blobs_buff->reserve(mask_dim, &mask_in_tensor_temp_);
+
 }
 
 void FusedReluBiasFullyConnectedLayer::initialize() {
@@ -240,7 +246,12 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
   const __half* bias = weights_half_[1].get_ptr();
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias, sizeof(bias)));
-
+  if (act_ != Activation_t::None) {
+    int* reluMask = mask_in_tensor_temp_.get_ptr();
+    cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &reluMask, sizeof(reluMask));
+    int reluMaskLd = n;
+    cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &reluMaskLd, sizeof(reluMaskLd));    
+  }
 
   CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_kernel_desc_, CUDA_R_16F, n, k, n));
   CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_bottom_desc_, CUDA_R_16F, k, m, k));
@@ -265,7 +276,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
     CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
   }
 
-  // initialize_bprop();
+  initialize_bprop();
 }
 
 void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
@@ -278,14 +289,26 @@ void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
   size_t n = top_tensor_dim[1];
   size_t k = bottom_tensor_dim[1];
 
-  CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_bprop_, CUBLAS_COMPUTE_16F, CUDA_R_16F));
+  CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_bprop_, CUBLAS_COMPUTE_32F, CUDA_R_32F));
 
   cublasOperation_t transA  = CUBLAS_OP_T;
   cublasOperation_t transB  = CUBLAS_OP_N;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSA, &transA, sizeof(transA)));
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSB, &transB, sizeof(transB)));
-  cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_DEFAULT;
-  CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
+  if(pos_ == FcPosition_t::Head) {
+    cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_DEFAULT;
+    CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
+  } else if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
+    // cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_DRELU_BGRAD;
+    // cublasLtMatmulDescSetAttribute(
+    //     cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi));
+    // __half* bias = weights_half_[1].get_ptr();
+    // cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias, sizeof(bias));
+    // int* reluMask = mask_in_tensor_temp_.get_ptr();
+    // cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &reluMask, sizeof(reluMask));
+    // int reluMaskLd = n;
+    // cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &reluMaskLd, sizeof(reluMaskLd));
+  }
 
   CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_dRelu_top_desc_, CUDA_R_16F, n, m, n));
   CK_CUBLAS_THROW_(cublasLtMatrixLayoutCreate(&cublas_dRelu_bottom_desc_, CUDA_R_16F, k, m, k));
@@ -343,8 +366,11 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
               cublaslt_workspace_size_,
               get_gpu().get_stream()));
 
-    int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
-    get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
+    // int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
+    // get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
+    int nBlock = (train_out_tensor_.get_num_elements() - 1 + 32) / 32;
+    int* reluMask = mask_in_tensor_temp_.get_ptr();
+    get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, top_fprop, top_bprop, train_out_tensor_.get_num_elements());
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
@@ -407,25 +433,32 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
   if(pos_ == FcPosition_t::Head) {
-    // CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
-    //           cublas_op_desc_bprop_,
-    //           &alpha,
-    //           kernel,
-    //           cublas_kernel_desc_,
-    //           dRelu_top,
-    //           cublas_dRelu_top_desc_,
-    //           &beta_x,
-    //           bottom_bprop,
-    //           cublas_dRelu_bottom_desc_,
-    //           bottom_bprop,
-    //           cublas_dRelu_bottom_desc_,
-    //           &balgo_dRelu_,
-    //           cublaslt_workspace_dRelu_,
-    //           cublaslt_workspace_size_,
-    //           get_gpu().get_stream()));    
-	  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
-                                &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
-                                bottom_bprop, CUDA_R_16F, k, CUDA_R_32F, balgo_x_));
+    CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
+              cublas_op_desc_bprop_,
+              &alpha,
+              kernel,
+              cublas_kernel_desc_,
+              dRelu_top,
+              cublas_dRelu_top_desc_,
+              &beta_x,
+              bottom_bprop,
+              cublas_dRelu_bottom_desc_,
+              bottom_bprop,
+              cublas_dRelu_bottom_desc_,
+              &balgo_dRelu_,
+              cublaslt_workspace_dRelu_,
+              cublaslt_workspace_size_,
+              get_gpu().get_stream()));    
+	  // CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
+    //                             &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
+    //                             bottom_bprop, CUDA_R_16kF, k, CUDA_R_32F, balgo_x_));
+    // __half* dgrad_host = new __half[m*k];
+    // cudaMemcpyAsync(dgrad_host, bottom_bprop, m*k*sizeof(__half), cudaMemcpyDeviceToHost, get_gpu().get_stream());
+    // cudaDeviceSynchronize();
+    // for(int i=0;i<k*m;i++)
+    // {
+    //   printf("%d, %f\n", i, (float)dgrad_host[i]);
+    // }
   }
   if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
     __half* db_bottom    = db_in_tensor_.get_ptr();    
