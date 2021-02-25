@@ -259,7 +259,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   const __half* bias = weights_half_[1].get_ptr();
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias, sizeof(bias)));
   if (act_ != Activation_t::None) {
-    int* reluMask = mask_in_tensor_temp_.get_ptr();
+    __half* reluMask = mask_out_tensor_.get_ptr();
     cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &reluMask, sizeof(reluMask));
     long reluMaskLd = n;
     cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &reluMaskLd, sizeof(reluMaskLd));    
@@ -316,9 +316,9 @@ void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
         cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi));
     __half* bgrad = db_in_tensor_.get_ptr();
     cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bgrad, sizeof(bgrad));
-    int* reluMask = mask_in_tensor_temp_.get_ptr();
+    __half* reluMask = mask_in_tensor_.get_ptr();
     cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &reluMask, sizeof(reluMask));
-    long reluMaskLd = n;
+    long reluMaskLd = k;
     cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &reluMaskLd, sizeof(reluMaskLd));
   }
 
@@ -380,9 +380,14 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
 
     // int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
     // get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
-    int nBlock = (train_out_tensor_.get_num_elements() - 1 + 32) / 32;
-    int* reluMask = mask_in_tensor_temp_.get_ptr();
-    get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, top_bprop, train_out_tensor_.get_num_elements());
+//    int nblock = (train_out_tensor_.get_num_elements() - 1 + 32) / 32;
+//    int* relumask = mask_in_tensor_temp_.get_ptr();
+//    get_mask_from_bit<<<nblock, 32, 0, get_gpu().get_stream()>>>(relumask, top_bprop, train_out_tensor_.get_num_elements());
+    if(pos_ == FcPosition_t::Tail) {
+        size_t len = train_out_tensor_.get_num_elements();
+        CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
+            len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
+    }
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
@@ -394,7 +399,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();
-  const __half* mask_in = mask_in_tensor_.get_ptr();
+  __half* mask_in = mask_in_tensor_.get_ptr();
   const __half* train_out = train_out_tensor_.get_ptr();
   __half* mask_out = mask_out_tensor_.get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
@@ -426,10 +431,10 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     } else {
   	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
                                                                             0.0f);
-      // int nBlock = (mask_out_tensor_.get_num_elements() - 1 + 32) / 32;
-      // int* reluMask = (int*)mask_out_tensor_.get_ptr();
-      // __half* maskTemp = (__half*)mask_in_tensor_temp_.get_ptr();
-      // get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, maskTemp, mask_out_tensor_.get_num_elements());
+       //int nBlock = (mask_out_tensor_.get_num_elements() - 1 + 32) / 32;
+       //int* reluMask = (int*)mask_out_tensor_.get_ptr();
+       //__half* maskTemp = (__half*)mask_in_tensor_temp_.get_ptr();
+       //get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, maskTemp, mask_out_tensor_.get_num_elements());
 
 	    dim3 blocks(n / 64, m / 32);
 	    reverse_add_bias_and_re_kernel<32>
@@ -480,29 +485,30 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     // int nBlock = (mask_in_tensor_.get_num_elements() - 1 + 32) / 32;
     // int* reluMask = mask_in_tensor_temp_.get_ptr();
     // get_mask_from_fp16<<<nBlock, 1, 0, get_gpu().get_stream()>>>(reluMask, mask_in, mask_in_tensor_.get_num_elements());
+    //get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, mask_in, mask_in_tensor_.get_num_elements());
 
-    // __half* dRelu_bottom    = dRelu_in_tensor_.get_ptr();    
-    // CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
-    //           cublas_op_desc_bprop_,
-    //           &alpha,
-    //           kernel,
-    //           cublas_kernel_desc_,
-    //           dRelu_top,
-    //           cublas_dRelu_top_desc_,
-    //           &beta_x,
-    //           dRelu_bottom,
-    //           cublas_dRelu_bottom_desc_,
-    //           dRelu_bottom,
-    //           cublas_dRelu_bottom_desc_,
-    //           &balgo_dRelu_,
-    //           cublaslt_workspace_dRelu_,
-    //           cublaslt_workspace_size_,
-    //           get_gpu().get_stream())); 
+     __half* dRelu_bottom    = dRelu_in_tensor_.get_ptr();    
+     CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
+               cublas_op_desc_bprop_,
+               &alpha,
+               kernel,
+               cublas_kernel_desc_,
+               dRelu_top,
+               cublas_dRelu_top_desc_,
+               &beta_x,
+               dRelu_bottom,
+               cublas_dRelu_bottom_desc_,
+               dRelu_bottom,
+               cublas_dRelu_bottom_desc_,
+               &balgo_dRelu_,
+               cublaslt_workspace_dRelu_,
+               cublaslt_workspace_size_,
+               get_gpu().get_stream())); 
 
-    __half* db_bottom    = db_in_tensor_.get_ptr();    
-    gemm_dRelu_bgrad_run();
-    int nTile = (m - 1 + 128) / 128;
-    reduceK<<<(k - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, db_bottom, nTile, k);    
+    //__half* db_bottom    = db_in_tensor_.get_ptr();    
+    //gemm_dRelu_bgrad_run();
+    //int nTile = (m - 1 + 128) / 128;
+    //reduceK<<<(k - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, db_bottom, nTile, k);    
   }
 
 #ifndef NDEBUG
