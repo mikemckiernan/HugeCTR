@@ -21,7 +21,7 @@ ENV CPATH=/opt/conda/include:$CPATH \
     NCCL_LAUNCH_MODE=PARALLEL
 RUN conda update -n base -c defaults conda && \
     conda install -c anaconda cmake=3.18.2 pip && \
-    conda install -c conda-forge ucx libhwloc=2.4.0 openmpi=4.1.0 openmpi-mpicc=4.1.0 mpi4py=3.0.3 && \
+    conda install -c conda-forge ucx libhwloc=2.4.0 openmpi=4.0.5 openmpi-mpicc=4.0.5 mpi4py=3.0.3 && \
     rm -rf /opt/conda/include/nccl.h /opt/conda/lib/libnccl.so /opt/conda/include/google
 ENV OMPI_MCA_plm_rsh_agent=sh \
     OMPI_MCA_opal_cuda_support=true
