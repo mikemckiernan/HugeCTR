@@ -7,7 +7,7 @@ import json
 project_root = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..')
 sys.path.append(project_root)
 
-from tools.profiler import prepare_prof_dir, parse_result
+from tools.profiler import gen_prof_config, parse_result
 
 '''
 Should you have any question, please contact Randy Wang(ruotongw@nvidia.com).

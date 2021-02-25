@@ -145,7 +145,7 @@ def scaling_chart(results, names, show_iter_time=True):
                         if event['label'] not in labels.keys():
                             labels[event['label']] = []
                         labels[event['label']].append(event['avg_measured_time_ms'])
-        if (show_iter_time):
+        if show_iter_time:
             iter_times = [host["avg_iter_time_ms"] for host in result]
             iter_times = max(iter_times)
             max_h = max(iter_times, max_h)
@@ -189,18 +189,24 @@ def scaling_chart(results, names, show_iter_time=True):
                     label="{}\n{}\n{} ms".format(names[i], label, max_time)
                 )
             )
-
-            max_h = max([current_height_avg, current_height_max, max_h])
             current_height_avg += avg_time
             current_height_max += max_time
+            max_h = max([current_height_avg, current_height_max, max_h])
             color_idx += 1
 
         ax.annotate(names[i], xy=(current_start_x + 3 * bar_width / 2, 0), xytext=(0, -10),
                     textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
         current_start_x += 3 * bar_width + space_between_result
 
-    ax.annotate("Left bar: Whole iter time\nMid bar: Avg time\nRight bar: Max time",
-                 xy=(current_start_x / 2, 0), xytext=(0, -40),
+    ant_str  = "Bar from left to right in each group:\n"
+    if show_iter_time:
+        ant_str += "Whole iter time, Avg time, Max time\n"
+    else:
+        ant_str += "Avg time, Max time\n"
+
+    ant_str += "Avg time represent average time from all devices and all streams.\nMax time represent the max time in all devices and streams"
+
+    ax.annotate(ant_str, xy=(current_start_x / 2, 0), xytext=(0, -40),
             textcoords="offset points", fontsize=names_font_size, ha='center', va='center')
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels, fontdict={ 'fontsize' : x_label_font_size })
@@ -233,4 +239,4 @@ def scaling_chart(results, names, show_iter_time=True):
     ax.set_ylim(0, max_h)
     ax.grid(True)
     fig.set_size_inches(10, 10)
-    plt.show()
+    plt.show())
