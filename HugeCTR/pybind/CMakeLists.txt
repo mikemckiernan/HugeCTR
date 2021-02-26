@@ -114,6 +114,11 @@ else()
   target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn cutlass nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
 endif()
 
+if(NOT DISABLE_CUDF)
+  target_link_libraries(huge_ctr_shared PUBLIC cudf)
+endif()
+
+
 #target_link_libraries(huge_ctr_shared PRIVATE nlohmann_json::nlohmann_json)
 
 target_compile_features(huge_ctr_shared PUBLIC cxx_std_14)
