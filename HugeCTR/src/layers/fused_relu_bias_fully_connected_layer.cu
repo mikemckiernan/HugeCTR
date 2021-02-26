@@ -645,7 +645,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
 
   cublasLtMatmulHeuristicResult_t heuristic_result[max_algo_count] = {0};
   int algo_count = 0;
-  CK_CUBLAS_THROW_(cublasLtMatmulAlgoGetHeuristic(get_gpu().get_cublaslt_handle(), cublas_op_desc_, cublas_kernel_desc_, cublas_bottom_desc_, cublas_top_desc_, cublas_top_desc_, cublas_preference_, 1, heuristic_result, &algo_count));
+  CK_CUBLAS_THROW_(cublasLtMatmulAlgoGetHeuristic(get_gpu().get_cublaslt_handle(), cublas_op_desc_, cublas_kernel_desc_, cublas_bottom_desc_, cublas_top_desc_, cublas_top_desc_, cublas_preference_, max_algo_count, heuristic_result, &algo_count));
 
   if (algo_count == 0) {
       CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
@@ -655,7 +655,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
     cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
 
     const float alpha = 1.0f;
-    const float beta = 1.0f;
+    const float beta = 0.0f;
     CK_CUDA_THROW_(cudaEventRecord(start, get_gpu().get_stream()));
     for (size_t i = 0; i < repeat_num && status == CUBLAS_STATUS_SUCCESS; ++i) {
         status = cublasLtMatmul(get_gpu().get_cublaslt_handle(),
@@ -693,6 +693,59 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
     }
   }
 
+  // dRelu in backward pass
+  // Reset shortestTime
+  shortestTime = std::numeric_limits<float>::max();
+  cublasLtMatmulHeuristicResult_t heuristic_result_dRelu[max_algo_count] = {0};
+  int algo_count_dRelu = 0;
+  CK_CUBLAS_THROW_(cublasLtMatmulAlgoGetHeuristic(get_gpu().get_cublaslt_handle(), cublas_op_desc_bprop_, cublas_kernel_desc_, cublas_dRelu_top_desc_, cublas_dRelu_bottom_desc_, cublas_dRelu_bottom_desc_, cublas_preference_dRelu_ ,max_algo_count, heuristic_result_dRelu, &algo_count_dRelu));
+
+  if (algo_count_dRelu == 0) {
+      CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
+  }
+
+  for (int algoIdx = 0; algoIdx < algo_count_dRelu; algoIdx++) {
+    cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
+
+    const float alpha = 1.0f;
+    const float beta = 0.0f;
+    CK_CUDA_THROW_(cudaEventRecord(start, get_gpu().get_stream()));
+    for (size_t i = 0; i < repeat_num && status == CUBLAS_STATUS_SUCCESS; ++i) {
+        status = cublasLtMatmul(get_gpu().get_cublaslt_handle(),
+               cublas_op_desc_bprop_,
+               &alpha,
+               kernel,
+               cublas_kernel_desc_,
+               top,
+               cublas_dRelu_top_desc_,
+               &beta,
+               bottom,
+               cublas_dRelu_bottom_desc_,
+               bottom,
+               cublas_dRelu_bottom_desc_,
+               &heuristic_result_dRelu[algoIdx].algo,
+               cublaslt_workspace_dRelu_,
+               cublaslt_workspace_size_,
+               get_gpu().get_stream());       
+    }
+    CK_CUDA_THROW_(cudaEventRecord(stop, get_gpu().get_stream()));
+    CK_CUDA_THROW_(cudaEventSynchronize(stop));
+    CK_CUDA_THROW_(cudaEventElapsedTime(&time, start, stop));
+
+    // Avg Time(ms) for this alorithm for fprop GEMM
+    time = time / repeat_num;
+    // Skip if the algorithm is supported for fprop configuration
+    if (status != CUBLAS_STATUS_SUCCESS) {
+      //      printf("The algorithms %d is not supported for fprop, skipped.\n", testAlgo);
+      continue;
+    }
+    // Record the optimal time and algorithm
+    if (time < shortestTime) {
+      shortestTime = time;
+      memcpy(&balgo_dRelu_, &heuristic_result_dRelu[algoIdx].algo, sizeof(balgo_dRelu_));
+    }
+  }
+  
   // Reset shortestTime
   shortestTime = std::numeric_limits<float>::max();
 
@@ -827,3 +880,4 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_default_ini
 
 }  // namespace HugeCTR
   
+
