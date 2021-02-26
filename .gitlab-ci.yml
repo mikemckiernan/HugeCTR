@@ -73,6 +73,8 @@ unit_tests:
         ./embedding_test"
   only:
     - pushes
+  timeout: 2 hours
+
 
 # single node
 criteo:
