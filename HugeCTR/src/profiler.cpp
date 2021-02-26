@@ -17,6 +17,13 @@
 #include <profiler.hpp>
 #include <common.hpp>
 #include <nlohmann/json.hpp>
+
+#if CUDA_VERSION < 11010
+#define CUDA_EVENT_RECORD_GRAPH(...) cudaEventRecord(__VA_ARGS__)
+#else
+#define CUDA_EVENT_RECORD_GRAPH(...) cudaEventRecordWithFlags(__VA_ARGS__, cudaEventRecordExternal)
+#endif
+
 using nlohmann::json;
 
 namespace HugeCTR {
@@ -35,7 +42,7 @@ namespace HugeCTR {
 
   void Profiler::GPUTimer::iter_start(cudaStream_t stream, bool use_cuda_graph) {
     if (use_cuda_graph) {
-      cudaError_t retval = cudaEventRecordWithFlags(iter_start_, stream, cudaEventRecordExternal);
+      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(iter_start_, stream);
       if (retval != cudaSuccess) {
         // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
         CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
@@ -47,7 +54,7 @@ namespace HugeCTR {
 
   void Profiler::GPUTimer::event_start(cudaStream_t stream, bool use_cuda_graph) {
     if (use_cuda_graph) {
-      cudaError_t retval = cudaEventRecordWithFlags(start_, stream, cudaEventRecordExternal);
+      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(start_, stream);
       if (retval != cudaSuccess) {
         // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
         CK_CUDA_THROW_(cudaEventRecord(start_, stream));
@@ -59,7 +66,7 @@ namespace HugeCTR {
 
   void Profiler::GPUTimer::event_stop(cudaStream_t stream, bool use_cuda_graph) {
     if (use_cuda_graph) {
-      cudaError_t retval = cudaEventRecordWithFlags(stop_, stream, cudaEventRecordExternal);
+      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(stop_, stream);
       if (retval != cudaSuccess) {
         // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
         CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
@@ -136,6 +143,13 @@ namespace HugeCTR {
     gethostname(host_name, 50);
     host_name_ = std::string(host_name);
     use_cuda_graph_ = use_cuda_graph;
+    if (CUDA_VERSION < 11010 && use_cuda_graph_) {
+      MESSAGE_(std::string("CUDA version is ") + std::to_string(CUDA_VERSION) +
+               ". Profiler do not support use_cuda_graph = true and CUDA version < 11.1 at the same time." +
+               " Consider use higher CUDA version or use_cuda_graph = false. Program exit.");
+      std::exit(0);
+    }
+
     MESSAGE_(std::string("Profiler using cuda graph: ") + std::to_string(use_cuda_graph_));
     current_iteration_ = 0;
     current_event_idx_ = 0;
