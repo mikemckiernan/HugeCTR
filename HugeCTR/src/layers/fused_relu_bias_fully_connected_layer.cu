@@ -226,10 +226,13 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   // TODO: We need different bottom desc based on is_train or not
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(true).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
+  __half* identity = identity_tensor_.get_ptr();
 
   int m = bottom_tensor_dim[0];
   int n = top_tensor_dim[1];
   int k = bottom_tensor_dim[1];
+
+  initialize_array<<<(m-1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(identity, m, __float2half(1.0f));
 
   CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_, CUBLAS_COMPUTE_32F, CUDA_R_32F));
 
@@ -425,19 +428,15 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     }
   }
 
-  if(act_ == Activation_t::None) {
-    CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
-                                &alpha, train_out, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
-                                kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));  
-  } else {
-    CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
+  if (act_ == Activation_t::None) {
+    dRelu_top = train_out_tensor_.get_ptr();
+  } 
+  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
-  }
 
-  __half* top = get_bottom_tensor_bprop(true).get_ptr();
   if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
-    top = dRelu_in_tensor_.get_ptr();
+    bottom_bprop = dRelu_in_tensor_.get_ptr();
   }
   CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
             cublas_op_desc_bprop_,
@@ -447,9 +446,9 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
             dRelu_top,
             cublas_dRelu_top_desc_,
             &beta_x,
-            top,
+            bottom_bprop,
             cublas_dRelu_bottom_desc_,
-            top,
+            bottom_bprop,
             cublas_dRelu_bottom_desc_,
             &balgo_dRelu_,
             cublaslt_workspace_dRelu_,
@@ -477,6 +476,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
   __half* bias = weights_half_[1].get_ptr();
   __half* kernel_grad = weights_grad_[0].get_ptr();
   __half* bias_grad = weights_grad_[1].get_ptr();
+  __half* identity = identity_tensor_.get_ptr();
 
   // Tensor dim
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(true).get_dimensions();
@@ -641,6 +641,39 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
     }
   }
 
+  // Reset shortestTime
+  shortestTime = std::numeric_limits<float>::max();
+
+  // Search all the algorithm for balgo_b_
+  for (int testAlgo = startAlgo; testAlgo <= endAlgo; testAlgo++) {
+    cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
+
+    const float alpha = 1.0f;
+    const float beta = 0.0f;
+
+    // Record start event
+    CK_CUDA_THROW_(cudaEventRecord(start, get_gpu().get_stream()));
+    for (size_t i = 0; i < repeat_num && status == CUBLAS_STATUS_SUCCESS; ++i) {
+      status = cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, 1, m,
+                            &alpha, top, CUDA_R_16F, n, identity, CUDA_R_16F, m, &beta, bias_grad,
+                            CUDA_R_16F, n, CUDA_R_32F, static_cast<cublasGemmAlgo_t>(testAlgo));
+    }
+    CK_CUDA_THROW_(cudaEventRecord(stop, get_gpu().get_stream()));
+    CK_CUDA_THROW_(cudaEventSynchronize(stop));
+    CK_CUDA_THROW_(cudaEventElapsedTime(&time, start, stop));
+    // Avg Time(ms) for this alorithm for fprop GEMM
+    time = time / repeat_num;
+    // Skip if the algorithm is supported for fprop configuration
+    if (status != CUBLAS_STATUS_SUCCESS) {
+      // printf("The algorithms %d is not supported for bprop_W, skipped.\n", testAlgo);
+      continue;
+    }
+    // Record the optimal time and algorithm
+    if (time < shortestTime) {
+      shortestTime = time;
+      balgo_b_ = static_cast<cublasGemmAlgo_t>(testAlgo);
+    }
+  }  
   // Reset shortestTime
   shortestTime = std::numeric_limits<float>::max();
 

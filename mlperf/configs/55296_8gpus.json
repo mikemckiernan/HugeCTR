@@ -147,9 +147,9 @@
     {
       "name": "fc7",
       "type": "FusedInnerProduct",
-      "position": "Tail",
+      "position": "Body",
       "bottom": ["fc61","fc62", "fc63", "fc64"],
-      "top": "fc7",
+      "top": ["fc71","fc72","fc73","fc74"],
       "fc_param": {
         "num_output": 256
       }
@@ -157,8 +157,10 @@
 
     {
       "name": "fc8",
-      "type": "InnerProduct",
-      "bottom": "fc7",
+      "type": "FusedInnerProduct",
+      "position": "Tail",
+      "activation": "None",
+      "bottom": ["fc71","fc72","fc73","fc74"],
       "top": "fc8",
       "fc_param": {
         "num_output": 1
