@@ -21,24 +21,6 @@
 #include <linalg/reduce.cuh>
 
 #include "common.hpp"
-#include "cutlass/cutlass.h"
-#include "cutlass/functional.h"
-
-#include "cutlass/gemm/kernel/default_gemm_with_reduction.h"
-#include "cutlass/gemm/device/gemm_universal_adapter.h"
-
-#include "cutlass/epilogue/thread/linear_combination_drelu.h"
-#include "cutlass/epilogue/thread/linear_combination_dgelu.h"
-
-// // #include "../../common/cutlass_unit_test.h"
-
-#include "cutlass/util/host_tensor.h"
-#include "cutlass/util/tensor_view_io.h"
-#include "cutlass/util/reference/host/tensor_fill.h"
-#include "cutlass/util/reference/host/tensor_copy.h"
-#include "cutlass/util/reference/host/tensor_compare.h"
-#include "cutlass/util/reference/host/gemm.h"
-#include "layers/gemm_with_reduction.hpp"
 namespace HugeCTR {
 
 namespace {
@@ -283,8 +265,6 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
 
   memcpy(&falgo_k_, &heuristic_result.algo, sizeof(falgo_k_));
 
-  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) gemm_dRelu_bgrad_init();
-
   if (returned_res == 0) {
     CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
   }
@@ -454,164 +434,32 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
-  if(pos_ == FcPosition_t::Head) {
-    CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
-              cublas_op_desc_bprop_,
-              &alpha,
-              kernel,
-              cublas_kernel_desc_,
-              dRelu_top,
-              cublas_dRelu_top_desc_,
-              &beta_x,
-              bottom_bprop,
-              cublas_dRelu_bottom_desc_,
-              bottom_bprop,
-              cublas_dRelu_bottom_desc_,
-              &balgo_dRelu_,
-              cublaslt_workspace_dRelu_,
-              cublaslt_workspace_size_,
-              get_gpu().get_stream()));    
-	  // CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, k, m, n,
-    //                             &alpha, kernel, CUDA_R_16F, n, dRelu_top, CUDA_R_16F, n, &beta_x,
-    //                             bottom_bprop, CUDA_R_16kF, k, CUDA_R_32F, balgo_x_));
-    // __half* dgrad_host = new __half[m*k];
-    // cudaMemcpyAsync(dgrad_host, bottom_bprop, m*k*sizeof(__half), cudaMemcpyDeviceToHost, get_gpu().get_stream());
-    // cudaDeviceSynchronize();
-    // for(int i=0;i<k*m;i++)
-    // {
-    //   printf("%d, %f\n", i, (float)dgrad_host[i]);
-    // }
+  __half* top = get_bottom_tensor_bprop(true).get_ptr();
+  if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
+    top = dRelu_in_tensor_.get_ptr();
   }
-  if(pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
-    // int nBlock = (mask_in_tensor_.get_num_elements() - 1 + 32) / 32;
-    // int* reluMask = mask_in_tensor_temp_.get_ptr();
-    // get_mask_from_fp16<<<nBlock, 1, 0, get_gpu().get_stream()>>>(reluMask, mask_in, mask_in_tensor_.get_num_elements());
-    //get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, mask_in, mask_in_tensor_.get_num_elements());
-
-     __half* dRelu_bottom    = dRelu_in_tensor_.get_ptr();    
-     CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
-               cublas_op_desc_bprop_,
-               &alpha,
-               kernel,
-               cublas_kernel_desc_,
-               dRelu_top,
-               cublas_dRelu_top_desc_,
-               &beta_x,
-               dRelu_bottom,
-               cublas_dRelu_bottom_desc_,
-               dRelu_bottom,
-               cublas_dRelu_bottom_desc_,
-               &balgo_dRelu_,
-               cublaslt_workspace_dRelu_,
-               cublaslt_workspace_size_,
-               get_gpu().get_stream())); 
-
-    //__half* db_bottom    = db_in_tensor_.get_ptr();    
-    //gemm_dRelu_bgrad_run();
-    //int nTile = (m - 1 + 128) / 128;
-    //reduceK<<<(k - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, db_bottom, nTile, k);    
-  }
+  CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
+            cublas_op_desc_bprop_,
+            &alpha,
+            kernel,
+            cublas_kernel_desc_,
+            dRelu_top,
+            cublas_dRelu_top_desc_,
+            &beta_x,
+            top,
+            cublas_dRelu_bottom_desc_,
+            top,
+            cublas_dRelu_bottom_desc_,
+            &balgo_dRelu_,
+            cublaslt_workspace_dRelu_,
+            cublaslt_workspace_size_,
+            get_gpu().get_stream()));    
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
 
-}
-
-void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_init()
-{
-  const __half* kernel = weights_half_[0].get_ptr();
-  const __half* mask_in = mask_in_tensor_.get_ptr();
-  float* bias_grad_float = bias_grad_tensor_.get_ptr();
-  __half* dRelu_bottom = dRelu_in_tensor_.get_ptr();
-  __half* dRelu_top = dRelu_out_tensor_.get_ptr();
-
-  const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
-  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
-
-  int m = bottom_tensor_dim[0];
-  int n = top_tensor_dim[1];
-  int k = bottom_tensor_dim[1];
-
-  using EpilogueOutputOp = cutlass::epilogue::thread::LinearCombinationDRelu<
-    float,
-    float,
-    cutlass::half_t,
-    cutlass::half_t,
-    8
-  >;
-
-  using GemmKernel = 
-    typename cutlass::gemm::kernel::DefaultGemmWithReduction<
-      cutlass::half_t, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone, 8,    // transposed B operand
-      cutlass::half_t, cutlass::layout::ColumnMajor, cutlass::ComplexTransform::kNone, 8,    // transposed A operand
-      cutlass::half_t, cutlass::layout::RowMajor,
-      float,
-      cutlass::arch::OpClassTensorOp,
-      cutlass::arch::Sm75,
-      cutlass::gemm::GemmShape<128, 128, 32>,
-      cutlass::gemm::GemmShape<64, 64, 32>,
-      cutlass::gemm::GemmShape<16, 8, 8>,
-      EpilogueOutputOp,
-      cutlass::plus<float>,
-      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>,
-      2,
-      cutlass::arch::OpMultiplyAdd
-  >::GemmKernel;
-
-  using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
-
-  bprop_fusion_ = new TestbedGemmWithReduction<Gemm>(); 
-  reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->initialize(
-    kernel, dRelu_top, dRelu_bottom, bias_grad_float, mask_in,
-    cutlass::gemm::GemmUniversalMode::kGemm,
-    {k, m, n},
-    1,
-    float(1),
-    float(0),
-    get_gpu().get_stream());  
-}
-
-void FusedReluBiasFullyConnectedLayer::gemm_dRelu_bgrad_run()
-{
-  const auto& bottom_tensor_dim = get_bottom_tensor_bprop(true).get_dimensions();
-  const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
-
-  int m = bottom_tensor_dim[0];
-  int n = top_tensor_dim[1];
-  int k = bottom_tensor_dim[1];
-
-  using EpilogueOutputOp = cutlass::epilogue::thread::LinearCombinationDRelu<
-    float,
-    float,
-    cutlass::half_t,
-    cutlass::half_t,
-    8
-  >;
-
-  using GemmKernel = 
-    typename cutlass::gemm::kernel::DefaultGemmWithReduction<
-      cutlass::half_t, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone, 8,    // transposed B operand
-      cutlass::half_t, cutlass::layout::ColumnMajor, cutlass::ComplexTransform::kNone, 8,    // transposed A operand
-      cutlass::half_t, cutlass::layout::RowMajor,
-      float,
-      cutlass::arch::OpClassTensorOp,
-      cutlass::arch::Sm75,
-      cutlass::gemm::GemmShape<128, 128, 32>,
-      cutlass::gemm::GemmShape<64, 64, 32>,
-      cutlass::gemm::GemmShape<16, 8, 8>,
-      EpilogueOutputOp,
-      cutlass::plus<float>,
-      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>,
-      2,
-      cutlass::arch::OpMultiplyAdd
-  >::GemmKernel;
-
-  using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
-  reinterpret_cast<TestbedGemmWithReduction<Gemm>*>(bprop_fusion_)->run(
-    get_gpu().get_stream()
-  );
 }
 
 void FusedReluBiasFullyConnectedLayer::search_algorithm() {
@@ -652,7 +500,7 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
       CK_CUBLAS_THROW_(CUBLAS_STATUS_NOT_SUPPORTED);
   }
 
-  if(get_device_id()==0) printf("M: %d, N: %d, K: %d\n", m, n, k);
+  // if(get_device_id()==0) printf("M: %d, N: %d, K: %d\n", m, n, k);
   for (int algoIdx = 0; algoIdx < algo_count; algoIdx++) {
     cublasStatus_t status = CUBLAS_STATUS_SUCCESS;
 
@@ -689,15 +537,15 @@ void FusedReluBiasFullyConnectedLayer::search_algorithm() {
       continue;
     }
 
-    if(get_device_id()==0) printf("Algo: %d, wavesCount: %f, time: %f\n",
-              (int)heuristic_result[algoIdx].algo,
-              heuristic_result[algoIdx].wavesCount,
-              time);
+    // if(get_device_id()==0) printf("Algo: %d, wavesCount: %f, time: %f\n",
+    //           (int)heuristic_result[algoIdx].algo,
+    //           heuristic_result[algoIdx].wavesCount,
+    //           time);
     // Record the optimal time and algorithm
     if (time < shortestTime) {
       shortestTime = time;
       memcpy(&falgo_k_, &heuristic_result[algoIdx].algo, sizeof(falgo_k_));
-      if(get_device_id()==0) printf("Picked algorithm: %d", heuristic_result[algoIdx].algo);
+      // if(get_device_id()==0) printf("Picked algorithm: %d", heuristic_result[algoIdx].algo);
     }
   }
 

@@ -137,11 +137,6 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   void initialize() final;
   void initialize_bprop();
 
-  /*
-   * initialization for cutlass
-   */
-  void gemm_dRelu_bgrad_init();
-  void gemm_dRelu_bgrad_run();
   /**
    * This is the constructor of the FullyConnectedLayer.
    * It will check whether the format combination of all tensors is supported or not.

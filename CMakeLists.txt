@@ -57,7 +57,6 @@ endif()
 
 find_package(CUDA REQUIRED)
 find_package(CUDNN REQUIRED)
-find_package(CUTLASS REQUIRED)
 find_package(NCCL REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Threads)
@@ -142,7 +141,6 @@ configure_file(${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp.in ${PROJECT_SOU
 
 # building
 include_directories(
-  ${CUTLASS_INC_PATHS}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/test
   ${PROJECT_SOURCE_DIR}/HugeCTR/include
@@ -154,6 +152,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/HugeCTR/include
   ${PROJECT_SOURCE_DIR}/third_party
   ${PROJECT_SOURCE_DIR}/third_party/cub
+  ${PROJECT_SOURCE_DIR}/third_party/cutlass
   ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
   ${PROJECT_SOURCE_DIR}/third_party/json/single_include
 

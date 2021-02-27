@@ -103,10 +103,10 @@ add_library(huge_ctr_static STATIC ${huge_ctr_src})
 
 
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn cutlass nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
+  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cutlass cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
+  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
 endif()
 
 if(NOT DISABLE_CUDF)

@@ -108,10 +108,10 @@ set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_shared SHARED ${huge_ctr_src})
 
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn cutlass nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn cutlass nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
 endif()
 
 if(NOT DISABLE_CUDF)
