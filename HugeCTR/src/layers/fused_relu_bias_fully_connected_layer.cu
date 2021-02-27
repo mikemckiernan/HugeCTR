@@ -330,7 +330,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   const __half* bias = weights_half_[1].get_ptr();
   const __half* bottom = get_bottom_tensor_fprop(is_train).get_ptr();
   __half* top_fprop = train_out_tensor_.get_ptr();
-  __half* top_bprop = mask_out_tensor_.get_ptr();
+  __half* mask_out = mask_out_tensor_.get_ptr();
 
   const auto& bottom_tensor_dim = get_bottom_tensor_fprop(is_train).get_dimensions();
   const auto& top_tensor_dim = train_out_tensor_.get_dimensions();
@@ -364,9 +364,9 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
 //    int nblock = (train_out_tensor_.get_num_elements() - 1 + 32) / 32;
 //    int* relumask = mask_in_tensor_temp_.get_ptr();
 //    get_mask_from_bit<<<nblock, 32, 0, get_gpu().get_stream()>>>(relumask, top_bprop, train_out_tensor_.get_num_elements());
-    if(pos_ == FcPosition_t::Tail) {
+    if(pos_ == FcPosition_t::Tail && act_ != Activation_t::None) {
         size_t len = train_out_tensor_.get_num_elements();
-        CK_CUDA_THROW_(cudaMemcpyAsync(top_bprop, top_fprop,
+        CK_CUDA_THROW_(cudaMemcpyAsync(mask_out, top_fprop,
             len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
     }
 
@@ -426,13 +426,14 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   }
 
   if(act_ == Activation_t::None) {
-    cudaMemcpyAsync(dRelu_top, train_out, train_out_tensor_.get_num_elements()*sizeof(__half),
-        cudaMemcpyDeviceToDevice, get_gpu().get_stream());    
-  }
-
-  CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
+    CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
+                                &alpha, train_out, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
+                                kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));  
+  } else {
+    CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
+  }
 
   __half* top = get_bottom_tensor_bprop(true).get_ptr();
   if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
