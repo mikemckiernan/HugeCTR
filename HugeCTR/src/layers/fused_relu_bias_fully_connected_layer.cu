@@ -888,3 +888,4 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_default_ini
 
 }  // namespace HugeCTR
   
+
