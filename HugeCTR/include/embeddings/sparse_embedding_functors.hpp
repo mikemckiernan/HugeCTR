@@ -327,6 +327,7 @@ class SparseEmbeddingFunctors {
   void update_params(size_t embedding_vec_size, const OptParams<TypeEmbeddingComp> &opt_params,
                      size_t nnz, const Tensor2<size_t> &hash_value_index,
                      const Tensor2<TypeEmbeddingComp> &wgrad, Tensor2<float> &hash_table_value,
+                     Tensor2<size_t> &top_categories, size_t &size_top_categories,
                      size_t sm_count, cudaStream_t stream);
 
   /**

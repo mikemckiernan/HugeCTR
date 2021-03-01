@@ -54,6 +54,9 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
   Tensor2<TypeEmbeddingComp *> evaluate_embedding_features_;
   Tensors2<TypeEmbeddingComp> wgrad_tensors_; /**< the input tensor of the backward(). */
 
+  Tensors2<size_t> top_categories_;
+  std::vector<size_t> size_top_categories_;
+
   // vars related to hierarchical A2A
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
   std::shared_ptr<InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>> inter_node_hier_a2a;
@@ -379,6 +382,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       functors_.update_params(
           Base::get_embedding_vec_size(), Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
+          top_categories_[id], size_top_categories_[id],
           Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream());
     }
 
