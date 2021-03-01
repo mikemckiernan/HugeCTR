@@ -880,13 +880,15 @@ template void SparseEmbeddingFunctors::update_params<long long, __half>(
 template void SparseEmbeddingFunctors::update_params<float>(
     size_t embedding_vec_size, const OptParams<float> &opt_params, size_t nnz,
     const Tensor2<size_t> &hash_value_index, const Tensor2<float> &wgrad,
+    Tensor2<float> &hash_table_value,
     Tensor2<size_t> &top_categories, size_t &size_top_categories,
-    Tensor2<float> &hash_table_value, size_t sm_count, cudaStream_t stream);
+    size_t sm_count, cudaStream_t stream);
 
 template void SparseEmbeddingFunctors::update_params<__half>(
     size_t embedding_vec_size, const OptParams<__half> &opt_params, size_t nnz,
     const Tensor2<size_t> &hash_value_index, const Tensor2<__half> &wgrad,
+    Tensor2<float> &hash_table_value,
     Tensor2<size_t> &top_categories, size_t &size_top_categories,
-    Tensor2<float> &hash_table_value, size_t sm_count, cudaStream_t stream);
+    size_t sm_count, cudaStream_t stream);
 
 }  // namespace HugeCTR
