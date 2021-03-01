@@ -109,7 +109,7 @@ enum class LrPolicy_t { fixed };
 
 enum class Optimizer_t { Adam, MomentumSGD, Nesterov, SGD };
 
-enum class Update_t { Local, Global, LazyGlobal };
+enum class Update_t { Local, Global, LazyGlobal, Atomic, AtomicCached };
 
 enum class Regularizer_t { L1, L2 };
 
