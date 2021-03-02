@@ -24,11 +24,11 @@ DRLM_EVENTS = {
         'same_name_events_occured_order_in_code_forward': 2,
         'same_name_events_occured_order_in_code_backward': 4,
     },
-    'sparse_embedding1': {
+    'Embedding': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 0,
     },
-    'interaction1': {
+    'Interaction': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 0,
     },
@@ -153,7 +153,10 @@ def split_by_device_stream_layer_label(events, interested_events):
         layer_name = find_layer_name(event, interested_events)
         if not layer_name:
             continue
-        new_event["label"] = layer_name + '.' + event['event_name']
+        if layer_name == 'High_Level':
+            new_event["label"] = event['event_name']
+        else:
+            new_event["label"] = layer_name + '.' + event['event_name']
         #new_event["start_index"] = event["start_index"]
         #new_event["end_index"] = event["end_index"]
         new_event["measured_times_ms"] = event["measured_times_ms"]

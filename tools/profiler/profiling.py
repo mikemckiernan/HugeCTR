@@ -79,7 +79,7 @@ dlrm_interesed_events = {
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
-    'sparse_embedding1': {
+    'Embedding': {
         'forward_events': [
             'localized_slot_sparse_embedding_one_hot.forward',
 #            'all2all_forward',
@@ -92,7 +92,7 @@ dlrm_interesed_events = {
             'localized_slot_sparse_embedding_one_hot.update_params'
         ]
     },
-    'interaction1': {
+    'Interaction': {
         'forward_events': [
             'interaction.fprop'
         ],
@@ -158,12 +158,12 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc8': {
         'forward_events': [
-            'fully_connected_layer_half.fprop',
+#            'fully_connected_layer_half.fprop',
 #            'fully_connected_layer_half.fprop.cublasGemmEx_1',
 #            'fully_connected_layer_half.fprop.cublasGemmEx_2'
         ],
         'backward_events': [
-            'fully_connected_layer_half.bprop',
+#            'fully_connected_layer_half.bprop',
 #            'fully_connected_layer_half.bprop.cublasGemmEx_1',
 #            'fully_connected_layer_half.bprop.cublasGemmEx_2',
 #            'fully_connected_layer_half.bprop.cublasGemmEx_3'
@@ -171,17 +171,17 @@ dlrm_interesed_events = {
     },
     'Loss': {
         'forward_events': [
-            'compute'
+#            'compute'
         ]
     },
     'AllReduce_wgrads': {
         'forward_events': [
-            'exchange_wgrad'
+#            'exchange_wgrad'
         ]
     },
     'Update_Params': {
         'forward_events': [
-            'update'
+#            'update'
         ]
     }
 }
