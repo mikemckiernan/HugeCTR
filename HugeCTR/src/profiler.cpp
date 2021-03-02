@@ -381,6 +381,14 @@ namespace HugeCTR {
     }
   }
 
+  int Profiler::event_met_times_within_stream(const char* event_name, cudaStream_t stream) {
+    int met_times = 0;
+    try {
+      met_times = map_internal_[stream]->at(std::string(event_name));
+    } catch (const std::out_of_range& e) {}
+    return met_times;
+  }
+
   int Profiler::find_event(std::string& event_key) {
     int idx = -1;
     try {

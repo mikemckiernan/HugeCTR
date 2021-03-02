@@ -13,20 +13,12 @@ So, we come up with this inline profiler, it:
 2. Let user define what they are interested and try to provide a more clear vision on how things are optimized.
 3. Introduce zero overhead for the code in the formal release version.
 
-## Current limitation
-
-1. Not support CUDA Graph yet. Automatically turn it off in code when complied with `DENABLE_PROFILING=ON`.
-2.`PROFILE_RECORD(xxx)` inserted in an `if` or `for` statement probably will not work properly. Each `PROFILE_RECORD(xxx)`
-has to be executed once and only once in each layer, within a iteration.
-
 ## Overhead
 On Selene single node DGXA100. With `55926_8gpus.json` as config:
 
 With cudaGraph, 2.21ms per iter
 
-Without cudaGraph 2.29ms per iter
-
-With profiler(cudagraph off) 2.32ms (so nearly 0.03 ms overhead)
+With profiler(cudagraph on) 2.23ms (so nearly 0.02 ms overhead)
 
 ## Usage
 

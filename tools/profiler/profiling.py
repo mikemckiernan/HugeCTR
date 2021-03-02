@@ -25,13 +25,25 @@ b. Add `-DENABLE_PROFILING=ON` when pass args to Cmake. And then do the normal `
 
 dlrm_interesed_events = {
     # interested event name
+    'High_Level': {
+        'forward_events': [
+            'BottomMLP.fprop',
+            'TopMLP.fprop',
+            'Bottom&TopMLP.fprop'
+        ],
+        'backward_events': [
+            'BottomMLP.bprop',
+            'TopMLP.bprop',
+            'Bottom&TopMLP.bprop'
+        ]
+    },
     'BottomMLP.fc1': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -41,11 +53,11 @@ dlrm_interesed_events = {
     },
     'BottomMLP.fc2': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -55,11 +67,11 @@ dlrm_interesed_events = {
     },
     'BottomMLP.fc3': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -70,13 +82,13 @@ dlrm_interesed_events = {
     'sparse_embedding1': {
         'forward_events': [
             'localized_slot_sparse_embedding_one_hot.forward',
-            'all2all_forward',
-            'inter_node_hier_a2a.fprop'
+#            'all2all_forward',
+#            'inter_node_hier_a2a.fprop'
         ],
         'backward_events': [
             'localized_slot_sparse_embedding_one_hot.backward',
-            'all2all_backward',
-            'inter_node_hier_a2a.bprop',
+#            'all2all_backward',
+#            'inter_node_hier_a2a.bprop',
             'localized_slot_sparse_embedding_one_hot.update_params'
         ]
     },
@@ -90,11 +102,11 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc4': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -104,11 +116,11 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc5': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -118,11 +130,11 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc6': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',
@@ -132,11 +144,11 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc7': {
         'forward_events': [
-            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.initialize_array',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
 #            'fused_relu_bias_fully_connected.bprop.convert_array',

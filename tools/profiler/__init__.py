@@ -8,6 +8,10 @@ from collections import OrderedDict
 
 DRLM_EVENTS = {
     # interested event name
+    'High_Level': {
+        'same_name_events_occured_order_in_code_forward': 0,
+        'same_name_events_occured_order_in_code_backward': 0,
+    },
     'BottomMLP.fc1': {
         'same_name_events_occured_order_in_code_forward': 0,
         'same_name_events_occured_order_in_code_backward': 6,

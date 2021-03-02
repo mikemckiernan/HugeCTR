@@ -119,6 +119,9 @@ void FullyConnectedLayerHalf::fprop(bool is_train) {
 
   PROFILE_RECORD("fully_connected_layer_half.fprop.stop", get_gpu().get_stream(), get_device_id());
 
+  PROFILE_RECORD("TopMLP.fprop.stop", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("Bottom&TopMLP.fprop.stop", get_gpu().get_stream(), get_device_id());
+
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
@@ -127,6 +130,8 @@ void FullyConnectedLayerHalf::fprop(bool is_train) {
 
 void FullyConnectedLayerHalf::bprop() {
   CudaDeviceContext context(get_device_id());
+  PROFILE_RECORD("Bottom&TopMLP.bprop.start", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("TopMLP.bprop.start", get_gpu().get_stream(), get_device_id());
   PROFILE_RECORD("fully_connected_layer_half.bprop.start", get_gpu().get_stream(), get_device_id());
 
   const __half* kernel = weights_half_[0].get_ptr();

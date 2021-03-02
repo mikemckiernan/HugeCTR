@@ -33,3 +33,4 @@ prof.*
 prof_report.*
 __pycache__/
 *.ipynb_checkpoints
+*log

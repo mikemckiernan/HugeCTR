@@ -104,6 +104,7 @@ class Profiler {
   void record_event(const char* event_label_char, cudaStream_t stream, int device_id);
   void iter_check();
   void prepare_iter_start();
+  int event_met_times_within_stream(const char* event_name, cudaStream_t stream);
   int find_event(std::string& event_key);
   void write_result();
 

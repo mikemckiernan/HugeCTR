@@ -204,6 +204,16 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
 void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   CudaDeviceContext context(get_device_id());
 
+#ifdef ENABLE_PROFILING
+  int met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.fprop", get_gpu().get_stream());
+  if (met_times == 0) {
+    PROFILE_RECORD("Bottom&TopMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+    PROFILE_RECORD("BottomMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+  } else if (met_times == 3) {
+    PROFILE_RECORD("TopMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+  }
+#endif
+
   PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.start", get_gpu().get_stream(), get_device_id());
   const __half* kernel = weights_half_[0].get_ptr();
   const __half* bias = weights_half_[1].get_ptr();
@@ -253,10 +263,24 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
+
+#ifdef ENABLE_PROFILING
+  met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.fprop", get_gpu().get_stream());
+  if (met_times == 3) {
+    PROFILE_RECORD("BottomMLP.fprop.stop", get_gpu().get_stream(), get_device_id());
+  }
+#endif
 }
 
 void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
+
+#ifdef ENABLE_PROFILING
+  int met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.bprop", get_gpu().get_stream());
+  if (met_times == 4) {
+    PROFILE_RECORD("BottomMLP.bprop.start", get_gpu().get_stream(), get_device_id());
+  }
+#endif
 
   PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.start", get_gpu().get_stream(), get_device_id());
   const __half* kernel = weights_half_[0].get_ptr();
@@ -309,6 +333,17 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.cublasGemmEx_2.stop", get_gpu().get_stream(), get_device_id());
 
   PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.stop", get_gpu().get_stream(), get_device_id());
+
+#ifdef ENABLE_PROFILING
+  met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.bprop", get_gpu().get_stream());
+  if (met_times == 4) {
+    PROFILE_RECORD("TopMLP.bprop.stop", get_gpu().get_stream(), get_device_id());
+  } else if (met_times == 7) {
+    PROFILE_RECORD("BottomMLP.bprop.stop", get_gpu().get_stream(), get_device_id());
+    PROFILE_RECORD("Bottom&TopMLP.bprop.stop", get_gpu().get_stream(), get_device_id());
+  }
+#endif
+
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
