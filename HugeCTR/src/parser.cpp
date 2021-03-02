@@ -46,6 +46,7 @@
 #include <regularizers/l1_regularizer.hpp>
 #include <regularizers/l2_regularizer.hpp>
 #include <regularizers/no_regularizer.hpp>
+#include "common.hpp"
 
 #ifdef ENABLE_MPI
 #include <mpi.h>
@@ -486,9 +487,9 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
             CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
         } else
         {
-          if (input_size!=1 || output_size!=1)
-            CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
-          pos_type = FcPosition_t::Isolated;
+          // if (input_size!=1 || output_size!=1)
+            CK_THROW_(Error_t::WrongInput, "The position must be declared for: "+ layer_type_name);
+          // pos_type = FcPosition_t::Isolated;
         }
         // check the activation functino of this layer
         Activation_t act_type = Activation_t::Relu;
@@ -497,6 +498,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           if (!find_item_in_map(act_type, act_name, ACTIVATION_TYPE_MAP)) {
             CK_THROW_(Error_t::WrongInput, "No such activation: "+ act_name);
           }
+          if (act_type == Activation_t::None && pos_type != FcPosition_t::Tail)
         }
         // establish out tensor
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
