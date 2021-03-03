@@ -197,9 +197,11 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
 
+
     if (global_gpu_count == local_gpu_count) {
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         // for forward_fuse method
         functors_.forward_mapping_per_gpu(
             Base::get_batch_size(is_train), slot_num_per_gpu_[i],
@@ -208,6 +210,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_local_gpu(i).get_stream());
 
         // fuse forward+all2all+reorder into one kernel
+        PROFILE_RECORD("all2all_forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         functors_.forward_fuse_per_gpu(
             i, Base::get_resource_manager().get_local_gpu_count(), Base::get_batch_size(is_train),
             Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(), slot_num_per_gpu_[i],
@@ -215,6 +218,8 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_row_offsets_tensors(is_train)[i], hash_value_index_tensors_[i],
             hash_table_value_tensors_[i], get_embedding_features(is_train),
             Base::get_local_gpu(i).get_sm_count(), Base::get_local_gpu(i).get_stream());
+        PROFILE_RECORD("all2all_forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
       }
       functors_.sync_all_gpus(Base::get_resource_manager());
     }
@@ -224,6 +229,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       if (device_layout == DeviceMap::LOCAL_FIRST) {
         for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
           functors_.forward_mapping_per_gpu(
               Base::get_batch_size(is_train), slot_num_per_gpu_[i],
               Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
@@ -236,7 +242,6 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
               Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
               hash_table_value_tensors_[i], hash_value_index_tensors_[i], embedding_feature_tensors_[i],
               Base::get_local_gpu(i).get_stream());
-
         }
 
         functors_.all2all_forward(Base::get_batch_size_per_gpu(is_train), Base::get_slot_num(),
@@ -247,14 +252,17 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_embedding_vec_size(), all2all_tensors_,
             Base::get_output_tensors(is_train), Base::get_resource_manager());
 
+        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        }
+
         functors_.sync_all_gpus(Base::get_resource_manager());
         CK_MPI_THROW_(MPI_Barrier(MPI_COMM_WORLD)); // MS TODO: This is expensive, not sure if this is needed.
-
       }
       else if (device_layout == DeviceMap::NODE_FIRST) {
-
         for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           context.set_device(Base::get_local_gpu(i).get_device_id());
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
           functors_.forward_mapping_per_gpu(
               Base::get_batch_size(is_train), slot_num_per_gpu_[i],
               Base::get_value_tensors(is_train)[i], *Base::get_nnz_array(is_train)[i],
@@ -273,16 +281,20 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
         }
 
         functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: See if we can remove this or move it into the kernel
-        
+
         inter_node_hier_a2a->fprop(is_train,
             is_train ? train_intra_a2a_output_vec_ : evaluate_intra_a2a_output_vec_,
             all2all_tensors_);
 
-        functors_.forward_reorder(Base::get_batch_size_per_gpu(is_train), 
-            Base::get_slot_num(), Base::get_embedding_vec_size(), 
+        functors_.forward_reorder(Base::get_batch_size_per_gpu(is_train),
+            Base::get_slot_num(), Base::get_embedding_vec_size(),
             Base::get_resource_manager().get_num_process(),
             all2all_tensors_,
             Base::get_output_tensors(is_train), Base::get_resource_manager());
+
+        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        }
       }
 
       #else
@@ -307,19 +319,23 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       functors_.sync_all_gpus(Base::get_resource_manager());
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());
-
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         functors_.backward_fuse_per_gpu(
             i, Base::get_resource_manager().get_local_gpu_count(), Base::get_batch_size(true),
             Base::get_batch_size_per_gpu(true), Base::get_slot_num(), slot_num_per_gpu_[i],
             Base::get_embedding_vec_size(), Base::get_combiner(), get_embedding_features(true),
             wgrad_tensors_[i], Base::get_local_gpu(i).get_sm_count(),
             Base::get_local_gpu(i).get_stream());
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
       }
     }
     else {
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
       auto device_layout = Base::get_resource_manager().get_device_layout();
       if (device_layout == DeviceMap::LOCAL_FIRST) {
+        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        }
         functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
             Base::get_embedding_vec_size(), Base::get_output_tensors(true),
             all2all_tensors_, Base::get_resource_manager());
@@ -332,15 +348,20 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_embedding_vec_size(), Base::get_combiner(),
             Base::get_row_offsets_tensors(true), embedding_feature_tensors_,
             wgrad_tensors_, Base::get_resource_manager());
+        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        }
       }
       else if (device_layout == DeviceMap::NODE_FIRST) {
-
+        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+        }
         functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
             Base::get_embedding_vec_size(), Base::get_resource_manager().get_num_process(),
             Base::get_output_tensors(true), all2all_tensors_, Base::get_resource_manager());
 
         inter_node_hier_a2a->bprop(all2all_tensors_, train_intra_a2a_output_vec_);
-      
+
         functors_.sync_all_gpus(Base::get_resource_manager()); // MS TODO: Eliminate this sync
 
         for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
@@ -352,6 +373,8 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
               Base::get_embedding_vec_size(), Base::get_combiner(), 
               get_intra_a2a_output(true), wgrad_tensors_[i], 
               Base::get_local_gpu(i).get_sm_count(), Base::get_local_gpu(i).get_stream());
+
+          PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
       }
 #else
@@ -372,6 +395,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       size_t id = omp_get_thread_num();
       CudaDeviceContext context(Base::get_local_gpu(id).get_device_id());
 
+      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.start", Base::get_local_gpu(id).get_stream(), Base::get_local_gpu(id).get_device_id());
       // accumulate times for adam optimizer
       Base::get_opt_params(id).hyperparams.adam.times++;
 
@@ -380,6 +404,8 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
           Base::get_embedding_vec_size(), Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
           Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream());
+
+      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.stop", Base::get_local_gpu(id).get_stream(), Base::get_local_gpu(id).get_device_id());
     }
 
     return;

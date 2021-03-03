@@ -94,6 +94,7 @@ file(GLOB huge_ctr_src
   model_oversubscriber/parameter_server.cpp
   model_oversubscriber/parameter_server_manager.cpp
   diagnose.cu
+  profiler.cpp
 )
 
 set(CMAKE_CXX_STANDARD 14)
