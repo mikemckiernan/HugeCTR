@@ -252,7 +252,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_embedding_vec_size(), all2all_tensors_,
             Base::get_output_tensors(is_train), Base::get_resource_manager());
 
-        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+        for(size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
 
@@ -292,7 +292,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             all2all_tensors_,
             Base::get_output_tensors(is_train), Base::get_resource_manager());
 
-        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+        for(size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
       }
@@ -333,7 +333,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
       auto device_layout = Base::get_resource_manager().get_device_layout();
       if (device_layout == DeviceMap::LOCAL_FIRST) {
-        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+        for(size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
         functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
@@ -348,12 +348,12 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_embedding_vec_size(), Base::get_combiner(),
             Base::get_row_offsets_tensors(true), embedding_feature_tensors_,
             wgrad_tensors_, Base::get_resource_manager());
-        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+        for(size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
       }
       else if (device_layout == DeviceMap::NODE_FIRST) {
-        for(size_t i = 0; Base::get_resource_manager().get_local_gpu_count(); i++) {
+        for(size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
           PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         }
         functors_.backward_reorder(Base::get_batch_size_per_gpu(true), Base::get_slot_num(),
