@@ -229,6 +229,9 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
     buffs.push_back(GeneralBuffer2<CudaAllocator>::create());
   }
 
+  size_t dense_dim_align8 = (dense_dim_ + 7) / 8 * 8;
+  // size_t dense_dim_align8 = dense_dim_;
+
   // create label and dense tensor
   size_t batch_size_per_device = batchsize_ / total_gpu_count;
   for (size_t i = 0; i < local_gpu_count; i++) {
@@ -239,11 +242,20 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
     }
     if (use_mixed_precision_) {
       Tensor2<__half> tensor;
-      buffs[i]->reserve({batch_size_per_device, dense_dim_}, &tensor);
+      buffs[i]->reserve({batch_size_per_device, dense_dim_align8}, &tensor);
+      // printf("%d, %d\n", (int)dense_dim_, (int)tensor.get_num_elements());
+      // __half* tmp = tensor.get_ptr();
+      // for (size_t j = 0; j<tensor.get_num_elements(); j++) {
+      //   tmp[j] = __float2half(0.0f);
+      // }
       dense_tensors_.push_back(tensor.shrink());
     } else {
       Tensor2<float> tensor;
-      buffs[i]->reserve({batch_size_per_device, dense_dim_}, &tensor);
+      buffs[i]->reserve({batch_size_per_device, dense_dim_align8}, &tensor);
+      // float* tmp = tensor.get_ptr();
+      // for (size_t j = 0; j<tensor.get_num_elements(); j++) {
+      //   tmp[j] = 0.0f;
+      // }      
       dense_tensors_.push_back(tensor.shrink());
     }
   }

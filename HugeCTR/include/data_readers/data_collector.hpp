@@ -57,7 +57,8 @@ struct ToMpiType<float> {
 
 template <typename TypeComp>
 void split(Tensor2<float>& label_tensor, Tensor2<TypeComp>& dense_tensor,
-           const Tensor2<float>& label_dense_buffer, cudaStream_t stream);
+           const Tensor2<float>& label_dense_buffer, const int label_dense_dim,
+           cudaStream_t stream);
 
 /**
  * @brief A helper class of data reader.
@@ -88,6 +89,7 @@ class DataCollector {
   bool use_mixed_precision_;
   const bool one_hot_;
   const size_t cache_size_;
+  int label_dense_dim_;
 
   Tensors2<float> label_dense_buffers_internal_;
   Tensors2<TypeKey> csr_buffers_internal_;
@@ -331,6 +333,8 @@ void DataCollector<TypeKey>::collect_() {
   const auto& csr_cpu_buffers = chunk_tmp->get_csr_buffers();
   const auto& label_dense_buffers = chunk_tmp->get_label_buffers();
 
+  label_dense_dim_ = label_dense_buffers[0].get_num_elements() / chunk_tmp->get_current_batchsize();
+
   const int num_params =
       chunk_tmp->get_num_params();  // equal to the num of output of data reader in json
   if (num_params_ != num_params) {
@@ -425,11 +429,11 @@ long long DataCollector<TypeKey>::read_a_batch_to_device() {
     if (use_mixed_precision_) {
       Tensor2<__half> tensor = Tensor2<__half>::stretch_from(dense_tensors_[i]);
       split(label_tensors_[i], tensor, internal_buffer->label_dense_buffers_internal[i],
-            local_gpu->get_stream());
+            label_dense_dim_, local_gpu->get_stream());
     } else {
       Tensor2<float> tensor = Tensor2<float>::stretch_from(dense_tensors_[i]);
       split(label_tensors_[i], tensor, internal_buffer->label_dense_buffers_internal[i],
-            local_gpu->get_stream());
+            label_dense_dim_, local_gpu->get_stream());
     }
   }
   counter_++;
