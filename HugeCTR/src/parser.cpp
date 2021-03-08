@@ -499,6 +499,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
             CK_THROW_(Error_t::WrongInput, "No such activation: "+ act_name);
           }
           if (act_type == Activation_t::None && pos_type != FcPosition_t::Tail)
+            CK_THROW_(Error_t::WrongInput, "The layer without activation function must be the last layer in MLP");
         }
         // establish out tensor
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
