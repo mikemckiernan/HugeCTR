@@ -69,6 +69,7 @@ file(GLOB huge_ctr_src
   ../src/data_readers/data_collector.cu
   ../src/data_readers/parquet_data_converter.cu
   ../src/hashtable/nv_hashtable.cu
+  ../src/gpu_barrier.cu
   ../src/embeddings/sync_all_gpus_functor.cu
   ../src/embeddings/init_embedding_functor.cu
   ../src/embeddings/forward_per_gpu_functor.cu
