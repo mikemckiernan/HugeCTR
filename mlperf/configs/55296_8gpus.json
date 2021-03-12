@@ -46,6 +46,7 @@
           },
           "dense": {
               "top": "dense",
+	      "aligned": "Auto",
               "dense_dim": 13
           },
           "sparse": [
