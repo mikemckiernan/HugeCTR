@@ -108,6 +108,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
    */
   Activation_t act_;
 
+  /*
+   * skip the computation of dgrad or not
+   */
+  bool skip_dgrad_;
+
   std::unique_ptr<DataSimulator> get_uniform_initializer(const int index) override;
   std::unique_ptr<DataSimulator> get_xavier_uniform_initializer(const int index) override;
   std::unique_ptr<DataSimulator> get_xavier_norm_initializer(const int index) override;
@@ -167,6 +172,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const std::shared_ptr<GPUResource>& gpu_resource,
       const FcPosition_t& pos,
       const Activation_t& act,
+      const bool& skip_dgrad,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());
   FusedReluBiasFullyConnectedLayer(const FusedReluBiasFullyConnectedLayer&) = delete;
   FusedReluBiasFullyConnectedLayer& operator=(const FusedReluBiasFullyConnectedLayer&);

@@ -140,13 +140,15 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
     const std::shared_ptr<GPUResource>& gpu_resource,
     const FcPosition_t& pos,
     const Activation_t& act,
+    const bool& skip_dgrad,
     std::vector<Initializer_t> initializer_types)
     : Layer(gpu_resource, initializer_types),
       balgo_k_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_x_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       balgo_b_(CUBLAS_GEMM_DEFAULT_TENSOR_OP),
       pos_(pos),
-      act_(act) {
+      act_(act),
+      skip_dgrad_(skip_dgrad) {
   const auto& bottom_tensor_dim = train_in_tensor.get_dimensions();
   const auto& top_tensor_dim = train_out_tensor.get_dimensions();
 
@@ -435,6 +437,8 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
 
+  if(skip_dgrad_) return;
+  
   if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
     bottom_bprop = dRelu_in_tensor_.get_ptr();
   }
