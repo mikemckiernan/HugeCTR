@@ -262,9 +262,11 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
                    float scaler, bool& enable_cuda_graph,
                    std::vector<std::unique_ptr<Layer>>& layers, std::unique_ptr<ILoss>& loss,
                    metrics::RawMetricMap* raw_metrics) {
+  bool skip_dgrad = true;
   for (unsigned int i = 1; i < j_array.size(); i++) {
     const nlohmann::json& j = j_array[i];
     const auto layer_type_name = get_value_from_json<std::string>(j, "type");
+
     Layer_t layer_type;
 
     const auto& layer_map = use_mixed_precision ? LAYER_TYPE_MAP_MP : LAYER_TYPE_MAP;
@@ -499,7 +501,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
             CK_THROW_(Error_t::WrongInput, "No such activation: "+ act_name);
           }
           if (act_type == Activation_t::None && pos_type != FcPosition_t::Tail)
-            CK_THROW_(Error_t::WrongInput, "The layer without activation function must be the last layer in MLP");
+            CK_THROW_(Error_t::WrongInput, "The layer without activation function must be the last layer in MLP.");
         }
         // establish out tensor
         auto output = get_value_from_json<size_t>(j_fc_param, "num_output");
@@ -523,7 +525,8 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
               weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff,
               train_in_tensor, mask_in_tensor, dRelu_in_tensor, db_in_tensor,
               train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
-              gpu_resource, pos_type, act_type, initializer_types));      
+              gpu_resource, pos_type, act_type, skip_dgrad, initializer_types));   
+          skip_dgrad = false;   
 
           if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated)
             output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
@@ -1266,6 +1269,13 @@ static void create_pipeline_internal(std::shared_ptr<IDataReader>& train_data_re
         auto j_dense = get_json(j, "dense");
         auto top_strs_dense = get_value_from_json<std::string>(j_dense, "top");
         auto dense_dim = get_value_from_json<int>(j_dense, "dense_dim");
+        Alignment_t aligned_type = Alignment_t::None;
+        if(has_key_(j_dense, "aligned")) {
+          auto aligned_str = get_value_from_json<std::string>(j_dense, "aligned");
+          if (!find_item_in_map(aligned_type, aligned_str, ALIGNED_TYPE_MAP)) {
+            CK_THROW_(Error_t::WrongInput, "Not supported aligned type: " + aligned_str);
+          }        
+        }
 
         const std::map<std::string, Check_t> CHECK_TYPE_MAP = {{"Sum", Check_t::Sum},
                                                                {"None", Check_t::None}};
@@ -1318,11 +1328,11 @@ static void create_pipeline_internal(std::shared_ptr<IDataReader>& train_data_re
 
         DataReader<TypeKey>* data_reader_tk = new DataReader<TypeKey>(
             batch_size, label_dim, dense_dim, data_reader_sparse_param_array, resource_manager,
-            parser.repeat_dataset_, NUM_THREADS, use_mixed_precision, false);
+            parser.repeat_dataset_, NUM_THREADS, use_mixed_precision, false, aligned_type);
         train_data_reader.reset(data_reader_tk);
         DataReader<TypeKey>* data_reader_eval_tk = new DataReader<TypeKey>(
             batch_size_eval, label_dim, dense_dim, data_reader_sparse_param_array, resource_manager,
-            parser.repeat_dataset_, NUM_THREADS, use_mixed_precision, cache_eval_data);
+            parser.repeat_dataset_, NUM_THREADS, use_mixed_precision, cache_eval_data, aligned_type);
         evaluate_data_reader.reset(data_reader_eval_tk);
 
         auto f = [&j]() -> std::vector<long long> {
@@ -1409,7 +1419,6 @@ static void create_pipeline_internal(std::shared_ptr<IDataReader>& train_data_re
           sparse_input->second.evaluate_nnz = data_reader_eval_tk->get_nnz_array(i);
         }
       }
-
       // Create Embedding
       {
         for (unsigned int i = 1; i < j_layers_array.size(); i++) {

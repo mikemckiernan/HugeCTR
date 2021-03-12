@@ -218,6 +218,11 @@ static const std::map<std::string, Activation_t> ACTIVATION_TYPE_MAP = {
     {"None", Activation_t::None},
 };
 
+static const std::map<std::string, Alignment_t> ALIGNED_TYPE_MAP = {
+    {"Auto", Alignment_t::Auto},
+    {"None", Alignment_t::None},
+};
+
 inline bool has_key_(const nlohmann::json& j_in, const std::string& key_in) {
   if (j_in.find(key_in) == j_in.end()) {
     return false;
