@@ -333,7 +333,7 @@ void DataCollector<TypeKey>::collect_() {
   const auto& csr_cpu_buffers = chunk_tmp->get_csr_buffers();
   const auto& label_dense_buffers = chunk_tmp->get_label_buffers();
 
-  label_dense_dim_ = label_dense_buffers[0].get_num_elements() / chunk_tmp->get_current_batchsize();
+  label_dense_dim_ = label_dense_buffers[0].get_num_elements() / label_tensors_[0].get_dimensions()[0];;
 
   const int num_params =
       chunk_tmp->get_num_params();  // equal to the num of output of data reader in json

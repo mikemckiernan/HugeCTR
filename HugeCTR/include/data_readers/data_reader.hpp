@@ -110,7 +110,7 @@ class DataReader : public IDataReader {
   DataReader(int batchsize, size_t label_dim, int dense_dim,
              std::vector<DataReaderSparseParam>& params,
              const std::shared_ptr<ResourceManager>& resource_manager, bool repeat,
-             int num_chunk_threads = 31, bool use_mixed_precision = false, int cache_num_iters = 0);
+             int num_chunk_threads = 31, bool use_mixed_precision = false, int cache_num_iters = 0, Alignment_t aligned = Alignment_t::None);
 
   const Tensors2<float>& get_label_tensors() const { return label_tensors_; }
   const std::vector<TensorBag2>& get_dense_tensors() const { return dense_tensors_; }
@@ -199,7 +199,7 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
                                 std::vector<DataReaderSparseParam>& params,
                                 const std::shared_ptr<ResourceManager>& resource_manager,
                                 bool repeat, int num_chunk_threads, bool use_mixed_precision,
-                                int cache_num_iters)
+                                int cache_num_iters, Alignment_t aligned)
     : params_(params),
       resource_manager_(resource_manager),
       use_mixed_precision_(use_mixed_precision),
@@ -229,8 +229,9 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
     buffs.push_back(GeneralBuffer2<CudaAllocator>::create());
   }
 
-  size_t dense_dim_align8 = (dense_dim_ + 7) / 8 * 8;
-  // size_t dense_dim_align8 = dense_dim_;
+  size_t dense_dim_align8 = dense_dim_;
+  if (aligned == Alignment_t::Auto)
+    dense_dim_align8 = (dense_dim_ + 7) / 8 * 8;
 
   // create label and dense tensor
   size_t batch_size_per_device = batchsize_ / total_gpu_count;
@@ -243,19 +244,10 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
     if (use_mixed_precision_) {
       Tensor2<__half> tensor;
       buffs[i]->reserve({batch_size_per_device, dense_dim_align8}, &tensor);
-      // printf("%d, %d\n", (int)dense_dim_, (int)tensor.get_num_elements());
-      // __half* tmp = tensor.get_ptr();
-      // for (size_t j = 0; j<tensor.get_num_elements(); j++) {
-      //   tmp[j] = __float2half(0.0f);
-      // }
       dense_tensors_.push_back(tensor.shrink());
     } else {
       Tensor2<float> tensor;
       buffs[i]->reserve({batch_size_per_device, dense_dim_align8}, &tensor);
-      // float* tmp = tensor.get_ptr();
-      // for (size_t j = 0; j<tensor.get_num_elements(); j++) {
-      //   tmp[j] = 0.0f;
-      // }      
       dense_tensors_.push_back(tensor.shrink());
     }
   }
@@ -318,6 +310,17 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
     CudaDeviceContext context(resource_manager_->get_local_gpu(i)->get_device_id());
     buffs[i]->allocate();
   }
+
+  // zero-initialization
+  for (size_t i = 0; i < local_gpu_count; i++) {
+    if (use_mixed_precision_) {
+      Tensor2<__half> tensor = Tensor2<__half>::stretch_from(dense_tensors_[i]);
+      CK_CUDA_THROW_(cudaMemset(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(__half)));
+    } else {
+      Tensor2<float> tensor = Tensor2<float>::stretch_from(dense_tensors_[i]);
+      CK_CUDA_THROW_(cudaMemset(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(float)));
+    }
+  }  
 
   core_offset_ += 64;
 
