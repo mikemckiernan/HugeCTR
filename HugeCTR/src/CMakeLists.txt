@@ -62,6 +62,7 @@ file(GLOB huge_ctr_src
   data_readers/data_collector.cu
   data_readers/parquet_data_converter.cu
   hashtable/nv_hashtable.cu
+  gpu_barrier.cu
   embeddings/sync_all_gpus_functor.cu
   embeddings/init_embedding_functor.cu
   embeddings/forward_per_gpu_functor.cu
@@ -94,6 +95,7 @@ file(GLOB huge_ctr_src
   model_oversubscriber/parameter_server.cpp
   model_oversubscriber/parameter_server_manager.cpp
   diagnose.cu
+  profiler.cpp
 )
 
 #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DENABLE_MPI")

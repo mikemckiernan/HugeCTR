@@ -331,6 +331,17 @@ void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
 void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   CudaDeviceContext context(get_device_id());
 
+// #ifdef ENABLE_PROFILING
+//   int met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.fprop", get_gpu().get_stream());
+//   if (met_times == 0) {
+//     PROFILE_RECORD("Bottom&TopMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+//     PROFILE_RECORD("BottomMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+//   } else if (met_times == 3) {
+//     PROFILE_RECORD("TopMLP.fprop.start", get_gpu().get_stream(), get_device_id());
+//   }
+// #endif
+
+  PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.start", get_gpu().get_stream(), get_device_id());
   const __half* kernel = weights_half_[0].get_ptr();
   const __half* bias = weights_half_[1].get_ptr();
   const __half* bottom = get_bottom_tensor_fprop(is_train).get_ptr();
@@ -347,6 +358,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   const float alpha = 1.0f;
   const float beta = 0.0f;
 
+  PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.cublasLtMatmul.start", get_gpu().get_stream(), get_device_id());
   CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
               cublas_op_desc_,
               &alpha,
@@ -364,26 +376,37 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
               cublaslt_workspace_size_,
               get_gpu().get_stream()));
 
-    // int nBlock = (train_out_tensor_.get_num_elements() - 1 + 1024) / 1024;
-    // get_mask_from_top<<<nBlock, 1024, 0, get_gpu().get_stream()>>>(top_fprop, top_bprop, train_out_tensor_.get_num_elements());
-//    int nblock = (train_out_tensor_.get_num_elements() - 1 + 32) / 32;
-//    int* relumask = mask_in_tensor_temp_.get_ptr();
-//    get_mask_from_bit<<<nblock, 32, 0, get_gpu().get_stream()>>>(relumask, top_bprop, train_out_tensor_.get_num_elements());
+  PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.cublasLtMatmul.stop", get_gpu().get_stream(), get_device_id());
     if(pos_ == FcPosition_t::Tail && act_ != Activation_t::None) {
         size_t len = train_out_tensor_.get_num_elements();
         CK_CUDA_THROW_(cudaMemcpyAsync(mask_out, top_fprop,
             len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
     }
-
+  PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.stop", get_gpu().get_stream(), get_device_id());
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
+
+// #ifdef ENABLE_PROFILING
+//   met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.fprop", get_gpu().get_stream());
+//   if (met_times == 3) {
+//     PROFILE_RECORD("BottomMLP.fprop.stop", get_gpu().get_stream(), get_device_id());
+//   }
+// #endif
 }
 
 void FusedReluBiasFullyConnectedLayer::bprop() {
   CudaDeviceContext context(get_device_id());
 
+// #ifdef ENABLE_PROFILING
+//   int met_times = global_profiler.event_met_times_within_stream("fused_relu_bias_fully_connected.bprop", get_gpu().get_stream());
+//   if (met_times == 4) {
+//     PROFILE_RECORD("BottomMLP.bprop.start", get_gpu().get_stream(), get_device_id());
+//   }
+// #endif
+
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.start", get_gpu().get_stream(), get_device_id());
   const __half* kernel = weights_half_[0].get_ptr();
   __half* mask_in = mask_in_tensor_.get_ptr();
   const __half* train_out = train_out_tensor_.get_ptr();
@@ -408,6 +431,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float beta_x = 0.0f;
   const float beta_b = 0.0f;
 
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel.start", get_gpu().get_stream(), get_device_id());
   if(pos_ == FcPosition_t::Tail) {
     if(act_ == Activation_t::None) {
       CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, 1, m,
@@ -417,11 +441,6 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
     } else {
   	  initialize_array<<<(n - 1) / 1024 + 1, 1024, 0, get_gpu().get_stream()>>>(bias_grad_float, n,
                                                                             0.0f);
-       //int nBlock = (mask_out_tensor_.get_num_elements() - 1 + 32) / 32;
-       //int* reluMask = (int*)mask_out_tensor_.get_ptr();
-       //__half* maskTemp = (__half*)mask_in_tensor_temp_.get_ptr();
-       //get_mask_from_bit<<<nBlock, 32, 0, get_gpu().get_stream()>>>(reluMask, maskTemp, mask_out_tensor_.get_num_elements());
-
 	    dim3 blocks(n / 64, m / 32);
 	    reverse_add_bias_and_re_kernel<32>
 	        <<<blocks, 512, 0, get_gpu().get_stream()>>>(bias_grad_float, dRelu_top, mask_out, train_out, n / 2);
@@ -429,19 +448,24 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
                                                                          n);
     }
   }
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel.stop", get_gpu().get_stream(), get_device_id());
 
   if (act_ == Activation_t::None) {
     dRelu_top = train_out_tensor_.get_ptr();
   } 
+
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.cublasGemmEx_1.start", get_gpu().get_stream(), get_device_id());
   CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, n, k, m,
                                 &alpha, dRelu_top, CUDA_R_16F, n, bottom, CUDA_R_16F, k, &beta_k,
                                 kernel_grad, CUDA_R_16F, n, CUDA_R_32F, balgo_k_));
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.cublasGemmEx_1.stop", get_gpu().get_stream(), get_device_id());
 
   if(skip_dgrad_) return;
   
   if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
     bottom_bprop = dRelu_in_tensor_.get_ptr();
   }
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.cublasGemmEx_2.start", get_gpu().get_stream(), get_device_id());
   CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
             cublas_op_desc_bprop_,
             &alpha,
@@ -458,6 +482,10 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
             cublaslt_workspace_dRelu_,
             cublaslt_workspace_size_,
             get_gpu().get_stream()));    
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.cublasGemmEx_2.stop", get_gpu().get_stream(), get_device_id());
+
+  PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.stop", get_gpu().get_stream(), get_device_id());
+
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();

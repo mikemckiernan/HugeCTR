@@ -215,6 +215,9 @@ bool Session::train() {
       return false;
     }
     train_data_reader_->ready_to_collect();
+#ifdef ENABLE_PROFILING
+    global_profiler.iter_check();
+#endif
     for (const auto& one_embedding : embeddings_) {
       one_embedding->forward(true);
     }
@@ -249,6 +252,7 @@ bool Session::train() {
 #else
     data_reader_->read_a_batch_to_device();
 #endif
+
   } catch (const internal_runtime_error& err) {
     std::cerr << err.what() << std::endl;
     throw err;
@@ -445,3 +449,4 @@ void Session::copy_weights_for_evaluation() {
 }
 
 }  // namespace HugeCTR
+

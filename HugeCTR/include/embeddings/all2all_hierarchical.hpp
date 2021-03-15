@@ -212,18 +212,19 @@ namespace HugeCTR {
       CK_CUDA_THROW_(cudaSetDevice(device_id));
       CK_NCCL_THROW_(ncclGroupStart());
       for (int p = 0; p < num_procs_; p++) {
+        PROFILE_RECORD("inter_node_hier_a2a.fprop.start", resource_manager_->get_local_gpu(g)->get_stream(), device_id);
         CK_NCCL_THROW_(ncclSend(
               input[g].get_ptr() + vars.inter_send_offsets_[p],
               vars.inter_send_counts_[p],
-              nccl_dtype_, p, inter_comms_[g], 
+              nccl_dtype_, p, inter_comms_[g],
               resource_manager_->get_local_gpu(g)->get_stream()));
-        
+
         CK_NCCL_THROW_(ncclRecv(
               output[g].get_ptr() + vars.inter_recv_offsets_[p],
               vars.inter_recv_counts_[p],
               nccl_dtype_, p, inter_comms_[g],
               resource_manager_->get_local_gpu(g)->get_stream()));
-
+        PROFILE_RECORD("inter_node_hier_a2a.fprop.stop", resource_manager_->get_local_gpu(g)->get_stream(), device_id);
       }
       CK_NCCL_THROW_(ncclGroupEnd());
     }
@@ -241,7 +242,7 @@ namespace HugeCTR {
       CK_CUDA_THROW_(cudaSetDevice(device_id));
       CK_NCCL_THROW_(ncclGroupStart());
       for (int p = 0; p < num_procs_; p++) {
-        
+        PROFILE_RECORD("inter_node_hier_a2a.bprop.start", resource_manager_->get_local_gpu(g)->get_stream(), device_id);
         // send/recv offsets will be reverse for bprop
         CK_NCCL_THROW_(ncclSend(
               bprop_input[g].get_ptr() + vars.inter_recv_offsets_[p],
@@ -254,6 +255,7 @@ namespace HugeCTR {
               vars.inter_send_counts_[p],
               nccl_dtype_, p, inter_comms_[g],
               resource_manager_->get_local_gpu(g)->get_stream()));
+        PROFILE_RECORD("inter_node_hier_a2a.bprop.stop", resource_manager_->get_local_gpu(g)->get_stream(), device_id);
       }
       CK_NCCL_THROW_(ncclGroupEnd());
     }

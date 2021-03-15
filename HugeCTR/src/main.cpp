@@ -147,6 +147,10 @@ void train(std::string config_file) {
   timer_data_reading.start();
 #endif
 
+#ifdef ENABLE_PROFILING
+  HugeCTR::global_profiler.initialize(solver_config.use_cuda_graph);
+#endif
+
   // train
   if (pid == 0) {
     std::cout << "HugeCTR training start:" << std::endl;
@@ -156,10 +160,15 @@ void train(std::string config_file) {
 
   if (solver_config.max_iter > 0) {
     for (int i = 0; i < solver_config.max_iter; i++) {
+
       float lr = lr_sch->get_next();
       session_instance->set_learning_rate(lr);
 
       session_instance->train();
+#ifdef ENABLE_PROFILING
+      i = 0;
+      continue;
+#endif
       if (i % solver_config.display == 0 && i != 0) {
         timer_train.stop();
         // display
@@ -176,6 +185,7 @@ void train(std::string config_file) {
         }
         timer_train.start();
       }
+
       if (i % solver_config.snapshot == 0 && i != 0) {
         // snapshot
         session_instance->download_params_to_files(solver_config.snapshot_prefix, i);
