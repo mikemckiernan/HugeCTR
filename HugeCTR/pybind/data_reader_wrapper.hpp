@@ -19,7 +19,10 @@
 #include <HugeCTR/include/data_readers/data_reader_worker.hpp>
 #include <HugeCTR/include/data_readers/data_reader_worker_interface.hpp>
 #include <HugeCTR/include/data_readers/data_reader_worker_raw.hpp>
-#include <HugeCTR/include/data_readers/parquet_data_reader_worker.hpp>
+
+#ifndef DISABLE_CUDF
+  #include <HugeCTR/include/data_readers/parquet_data_reader_worker.hpp>
+#endif
 
 namespace HugeCTR {
 
@@ -27,6 +30,8 @@ namespace python_lib {
 
 void DataReaderPybind(pybind11::module& m) {
   pybind11::class_<HugeCTR::IDataReaderWorker>(m, "IDataReaderWorker");
+
+#ifndef DISABLE_CUDF
   pybind11::class_<HugeCTR::ParquetDataReaderWorker<long long>, HugeCTR::IDataReaderWorker>(
       m, "ParquetDataReaderWorker64")
       .def(pybind11::init<unsigned int, unsigned int,
@@ -39,6 +44,8 @@ void DataReaderPybind(pybind11::module& m) {
            pybind11::arg("slot_offset"), pybind11::arg("device_id"), pybind11::arg("resource_manager"))
       .def("read_a_batch", &HugeCTR::ParquetDataReaderWorker<long long>::read_a_batch)
       .def("skip_read", &HugeCTR::ParquetDataReaderWorker<long long>::skip_read);
+#endif
+
   pybind11::class_<HugeCTR::DataReaderWorkerRaw<long long>, HugeCTR::IDataReaderWorker>(
       m, "DataReaderWorkerRaw64")
       .def(pybind11::init<unsigned int, unsigned int, std::shared_ptr<RawOffsetList>&,
@@ -78,9 +85,11 @@ void DataReaderPybind(pybind11::module& m) {
            pybind11::arg("file_name"), pybind11::arg("num_samples"), pybind11::arg("slot_offset"),
            pybind11::arg("float_label_dense"), pybind11::arg("data_shuffle") = false,
            pybind11::arg("start_reading_from_beginning") = true)
+#ifndef DISABLE_CUDF
       .def("create_drwg_parquet", &HugeCTR::DataReader<long long>::create_drwg_parquet,
            pybind11::arg("file_list"), pybind11::arg("slot_offset"),
            pybind11::arg("start_reading_from_beginning") = true)
+#endif
       .def("set_file_list_source", &HugeCTR::DataReader<long long>::set_file_list_source,
 	   pybind11::arg("file_list") = std::string())
       .def("read_a_batch_to_device", &HugeCTR::DataReader<long long>::read_a_batch_to_device)
@@ -119,9 +128,11 @@ void DataReaderPybind(pybind11::module& m) {
            pybind11::arg("file_name"), pybind11::arg("num_samples"), pybind11::arg("slot_offset"),
            pybind11::arg("float_label_dense"), pybind11::arg("data_shuffle") = false,
            pybind11::arg("start_reading_from_beginning") = true)
+#ifndef DISABLE_CUDF
       .def("create_drwg_parquet", &HugeCTR::DataReader<unsigned int>::create_drwg_parquet,
            pybind11::arg("file_list"), pybind11::arg("slot_offset"),
            pybind11::arg("start_reading_from_beginning") = true)
+#endif
       .def("set_file_list_source", &HugeCTR::DataReader<unsigned int>::set_file_list_source,
 	   pybind11::arg("file_list") = std::string())
       .def("read_a_batch_to_device", &HugeCTR::DataReader<unsigned int>::read_a_batch_to_device)

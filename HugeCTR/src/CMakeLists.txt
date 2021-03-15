@@ -62,6 +62,7 @@ file(GLOB huge_ctr_src
   data_readers/data_collector.cu
   data_readers/parquet_data_converter.cu
   hashtable/nv_hashtable.cu
+  gpu_barrier.cu
   embeddings/sync_all_gpus_functor.cu
   embeddings/init_embedding_functor.cu
   embeddings/forward_per_gpu_functor.cu
@@ -94,16 +95,22 @@ file(GLOB huge_ctr_src
   model_oversubscriber/parameter_server.cpp
   model_oversubscriber/parameter_server_manager.cpp
   diagnose.cu
+  profiler.cpp
 )
 
 set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_static STATIC ${huge_ctr_src})
 
+
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
+  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct numa)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
+  target_link_libraries(huge_ctr_static PUBLIC cublas cublasLt curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} numa)
+endif()
+
+if(NOT DISABLE_CUDF)
+  target_link_libraries(huge_ctr_static PUBLIC cudf)
 endif()
 
 target_link_libraries(huge_ctr_static PRIVATE nlohmann_json::nlohmann_json)

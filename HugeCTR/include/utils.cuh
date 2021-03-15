@@ -76,6 +76,11 @@ struct TypeConvertFunc<float, unsigned int> {
   }
 };
 
+template <typename IntType>
+constexpr __host__ __device__ __inline__ IntType ceildiv(IntType a, IntType b) {
+  return (a + b - 1) / b;
+}
+
 template <typename T>
 __inline__ __device__ T warpReduceSum(T val) {
   const unsigned int FULL_MASK = 0xffffffff;

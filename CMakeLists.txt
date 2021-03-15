@@ -40,11 +40,19 @@ endif()
 
 
 option(NCCL_A2A "NCCL all2all mode: use NCCL for all2all communication" ON)
-if (NCCL_A2A) 
+if (NCCL_A2A)
   message(STATUS "-- NCCL_A2A is ON")
   set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DNCCL_A2A")
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DNCCL_A2A")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DNCCL_A2A")
+endif()
+
+option(DISABLE_CUDF "Disable cudf: disable parquet format related features" OFF)
+if (DISABLE_CUDF) 
+  message(STATUS "-- DISABLE_CUDF is ON")
+  set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DDISABLE_CUDF")
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DDISABLE_CUDF")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DDISABLE_CUDF")
 endif()
 
 find_package(CUDA REQUIRED)
@@ -61,7 +69,7 @@ find_package(UCX)
 find_package(HWLOC)
 endif()
 
-set(CUDA_SEPARABLE_COMPILATION ON) 
+set(CUDA_SEPARABLE_COMPILATION ON)
 
 if (OPENMP_FOUND)
 message(STATUS "OPENMP FOUND")
@@ -73,7 +81,7 @@ endif()
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
 option(VAL_MODE "Validation mode: set determined mode for data reader and csv format for loss print" OFF)
-if (VAL_MODE) 
+if (VAL_MODE)
   set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DVAL")
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DVAL")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DVAL")
@@ -81,10 +89,10 @@ endif()
 
 # setting compiler flags
 foreach(arch_name ${SM})
-    if (arch_name STREQUAL 80 OR 
-        arch_name STREQUAL 75 OR 
-        arch_name STREQUAL 70 OR 
-        arch_name STREQUAL 61 OR 
+    if (arch_name STREQUAL 80 OR
+        arch_name STREQUAL 75 OR
+        arch_name STREQUAL 70 OR
+        arch_name STREQUAL 61 OR
         arch_name STREQUAL 60)
         list(APPEND cuda_arch_list ${arch_name})
         message(STATUS "-- Assign GPU architecture (sm=${arch_name})")
@@ -125,6 +133,15 @@ if(ENABLE_MULTINODES)
   include_directories(${MPI_INCLUDE_PATH})
   include_directories(${HWLOC_INC_PATHS})
   include_directories(${UCX_INC_PATHS})
+endif()
+
+option(ENABLE_PROFILING "Profiling mode: whether to turn on inline profiling" OFF)
+if(ENABLE_PROFILING)
+  message("STATUS" "-- PROFILING is ON")
+  set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DENABLE_PROFILING")
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DENABLE_PROFILING")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DENABLE_PROFILING")
+  link_libraries(cuda)
 endif()
 
 configure_file(${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp.in ${PROJECT_SOURCE_DIR}/HugeCTR/include/config.hpp)

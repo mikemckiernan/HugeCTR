@@ -24,7 +24,11 @@
 #include <data_readers/data_collector.hpp>
 #include <data_readers/data_reader_worker_group.hpp>
 #include <data_readers/data_reader_worker_group_norm.hpp>
-#include <data_readers/data_reader_worker_group_parquet.hpp>
+
+#ifndef DISABLE_CUDF
+  #include <data_readers/data_reader_worker_group_parquet.hpp>
+#endif
+
 #include <data_readers/data_reader_worker_group_raw.hpp>
 #include <data_readers/file_list.hpp>
 #include <fstream>
@@ -151,6 +155,7 @@ class DataReader : public IDataReader {
         float_label_dense, data_shuffle, start_reading_from_beginning));
   }
 
+#ifndef DISABLE_CUDF
   void create_drwg_parquet(std::string file_list, const std::vector<long long> slot_offset,
                            bool start_reading_from_beginning = true) override {
     // worker_group_.empty
@@ -158,6 +163,7 @@ class DataReader : public IDataReader {
                                                                   slot_offset, resource_manager_,
                                                                   start_reading_from_beginning));
   }
+#endif
 
   void set_file_list_source(std::string file_list = std::string()) override {
     // TODO: if the underlying workers are for Parquet, throw the exception

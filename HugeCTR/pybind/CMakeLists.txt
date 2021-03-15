@@ -69,6 +69,7 @@ file(GLOB huge_ctr_src
   ../src/data_readers/data_collector.cu
   ../src/data_readers/parquet_data_converter.cu
   ../src/hashtable/nv_hashtable.cu
+  ../src/gpu_barrier.cu
   ../src/embeddings/sync_all_gpus_functor.cu
   ../src/embeddings/init_embedding_functor.cu
   ../src/embeddings/forward_per_gpu_functor.cu
@@ -108,11 +109,16 @@ set(CMAKE_CXX_STANDARD 14)
 add_library(huge_ctr_shared SHARED ${huge_ctr_src})
 
 if(MPI_FOUND)
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct cudf numa)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} ${MPI_CXX_LIBRARIES} hwloc ucp ucs ucm uct numa)
   message(STATUS "${MPI_CXX_LIBRARIES}")
 else()
-  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} cudf numa)
+  target_link_libraries(huge_ctr_shared PUBLIC cublas curand cudnn nccl nvToolsExt ${CMAKE_THREAD_LIBS_INIT} numa)
 endif()
+
+if(NOT DISABLE_CUDF)
+  target_link_libraries(huge_ctr_shared PUBLIC cudf)
+endif()
+
 
 #target_link_libraries(huge_ctr_shared PRIVATE nlohmann_json::nlohmann_json)
 
