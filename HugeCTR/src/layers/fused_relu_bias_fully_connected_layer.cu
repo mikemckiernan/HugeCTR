@@ -168,7 +168,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   size_t n = top_tensor_dim[1];
   size_t k = bottom_tensor_dim[1];
 
-  CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_, CUBLAS_COMPUTE_16F, CUDA_R_16F));
+  CK_CUBLAS_THROW_(cublasLtMatmulDescCreate(&cublas_op_desc_, CUBLAS_COMPUTE_32F, CUDA_R_32F));
 
   cublasOperation_t trans  = CUBLAS_OP_N;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_TRANSA, &trans, sizeof(trans)));
@@ -228,8 +228,8 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
   size_t n = top_tensor_dim[1];
   size_t k = bottom_tensor_dim[1];
 
-  const __half alpha = 1.0f;
-  const __half beta = 0.0f;
+  const float alpha = 1.0f;
+  const float beta = 0.0f;
 
   PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.cublasLtMatmul.start", get_gpu().get_stream(), get_device_id());
   CK_CUBLAS_THROW_(cublasLtMatmul(get_gpu().get_cublaslt_handle(),
