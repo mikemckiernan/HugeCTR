@@ -39,44 +39,38 @@ dlrm_interesed_events = {
     },
     'BottomMLP.fc1': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'BottomMLP.fc2': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'BottomMLP.fc3': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'Embedding': {
@@ -102,71 +96,62 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc4': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc5': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc6': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc7': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
-#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
-#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
-#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc8': {
         'forward_events': [
-#            'fully_connected_layer_half.fprop',
-#            'fully_connected_layer_half.fprop.cublasGemmEx_1',
-#            'fully_connected_layer_half.fprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fully_connected_layer_half.bprop',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_1',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_2',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_3'
+            'fused_relu_bias_fully_connected.bprop',
+            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'Loss': {

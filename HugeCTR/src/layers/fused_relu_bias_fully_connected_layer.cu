@@ -76,52 +76,6 @@ __global__ void reverse_add_bias_and_re_kernel(float* bias, __half* dRelu, __hal
 }
 
 
-__global__ void reduceK(float* bias_grad_float, __half* bgrad, int m, int n) {
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  float temp = 0.0f;
-  if (idx < n ) {
-    for (int i = 0; i < m; i++)
-    {
-     temp += bias_grad_float[idx + i * n];
-    }
-    bgrad[idx] = __float2half(temp);
-    // bgrad[idx] = __float2half(bias_grad_float[idx]);
-  }
-  
-}
-
-__global__ void get_mask_from_top(const __half* top, __half* mask, int n)
-{
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  const __half zero = TypeFunc<__half>::zero();
-  if (idx < n) {
-    mask[idx] = top[idx] > __float2half(0.0f) ? __float2half(1.0f) : __float2half(0.0f);
-  }
-}
-
-__global__ void get_mask_from_bit(const int* bit, __half* mask, int n)
-{
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  const __half zero = TypeFunc<__half>::zero();
-  int val = bit[blockIdx.x];
-  if (idx < n) {
-    mask[idx] = (val >> threadIdx.x)&1 ? __float2half(1.0f) : __float2half(0.0f);
-  }
-}
-
-__global__ void get_mask_from_fp16(int* bit, const __half* mask, int n)
-{
-  int idx;
-  const __half zero = TypeFunc<__half>::zero();
-  int val = 0;
-  for (idx=0;idx<32;idx++) {
-    if(blockIdx.x * 32 + idx >= n) break;
-    if(mask[blockIdx.x * 32 + idx] > zero)
-      val = (val << 1) + 1;
-  }
-  bit[blockIdx.x] = val;
-}
-
 }  // namespace
 
 FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
@@ -241,7 +195,7 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   cublasOperation_t trans  = CUBLAS_OP_N;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_TRANSA, &trans, sizeof(trans)));
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_TRANSB, &trans, sizeof(trans)));
-  cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_RELU_BIAS;
+  cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
   if(act_ == Activation_t::None) epi = CUBLASLT_EPILOGUE_BIAS;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
   const __half* bias = weights_half_[1].get_ptr();
