@@ -39,7 +39,7 @@
           "eval_num_samples": 89137319,
       "eval_source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/test_data.bin",
           "check": "None",
-      "cache_eval_data": 1613,
+      "cache_eval_data": 681,
           "label": {
               "top": "label",
               "label_dim": 1
