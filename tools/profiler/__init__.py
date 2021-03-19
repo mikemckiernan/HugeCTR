@@ -14,15 +14,15 @@ DRLM_EVENTS = {
     },
     'BottomMLP.fc1': {
         'same_name_events_occured_order_in_code_forward': 0,
-        'same_name_events_occured_order_in_code_backward': 6,
+        'same_name_events_occured_order_in_code_backward': 7,
     },
     'BottomMLP.fc2': {
         'same_name_events_occured_order_in_code_forward': 1,
-        'same_name_events_occured_order_in_code_backward': 5,
+        'same_name_events_occured_order_in_code_backward': 6,
     },
     'BottomMLP.fc3': {
         'same_name_events_occured_order_in_code_forward': 2,
-        'same_name_events_occured_order_in_code_backward': 4,
+        'same_name_events_occured_order_in_code_backward': 5,
     },
     'Embedding': {
         'same_name_events_occured_order_in_code_forward': 0,
@@ -34,22 +34,22 @@ DRLM_EVENTS = {
     },
     'TopMLP.fc4': {
         'same_name_events_occured_order_in_code_forward': 3,
-        'same_name_events_occured_order_in_code_backward': 3,
+        'same_name_events_occured_order_in_code_backward': 4,
     },
     'TopMLP.fc5': {
         'same_name_events_occured_order_in_code_forward': 4,
-        'same_name_events_occured_order_in_code_backward': 2,
+        'same_name_events_occured_order_in_code_backward': 3,
     },
     'TopMLP.fc6': {
         'same_name_events_occured_order_in_code_forward': 5,
-        'same_name_events_occured_order_in_code_backward': 1,
+        'same_name_events_occured_order_in_code_backward': 2,
     },
     'TopMLP.fc7': {
         'same_name_events_occured_order_in_code_forward': 6,
-        'same_name_events_occured_order_in_code_backward': 0,
+        'same_name_events_occured_order_in_code_backward': 1,
     },
     'TopMLP.fc8': {
-        'same_name_events_occured_order_in_code_forward': 0,
+        'same_name_events_occured_order_in_code_forward': 7,
         'same_name_events_occured_order_in_code_backward': 0,
     },
     'Loss' : {
