@@ -217,6 +217,10 @@ void FusedReluBiasFullyConnectedLayer::initialize() {
   CK_CUDA_THROW_(cudaMalloc(&cublaslt_workspace_, cublaslt_workspace_size_));
   CK_CUBLAS_THROW_(cublasLtMatmulPreferenceSetAttribute(cublas_preference_, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &cublaslt_workspace_size_, sizeof(cublaslt_workspace_size_)));
 
+  uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
+  CK_CUBLAS_THROW_(cublasLtMatmulPreferenceSetAttribute(cublas_preference_, CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK, &pointer_mode, sizeof(pointer_mode)));
+
+
   // By default set algo to best estimated heurstic
   cublasLtMatmulHeuristicResult_t heuristic_result;
   int returned_res = 0;
@@ -270,6 +274,10 @@ void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
   cublaslt_workspace_size_ = 1024*1024*8; // Set it to 8MB for now
   CK_CUDA_THROW_(cudaMalloc(&cublaslt_workspace_dRelu_, cublaslt_workspace_size_));
   CK_CUBLAS_THROW_(cublasLtMatmulPreferenceSetAttribute(cublas_preference_dRelu_, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &cublaslt_workspace_size_, sizeof(cublaslt_workspace_size_)));
+
+  uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
+  CK_CUBLAS_THROW_(cublasLtMatmulPreferenceSetAttribute(cublas_preference_, CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK, &pointer_mode, sizeof(pointer_mode)));
+
 
   // By default set algo to best estimated heurstic
   cublasLtMatmulHeuristicResult_t heuristic_result;
