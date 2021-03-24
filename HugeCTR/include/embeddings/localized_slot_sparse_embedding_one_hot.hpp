@@ -212,8 +212,11 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     CudaDeviceContext context;
     size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
-
+#ifdef ENABLE_PROFILING
+    if (is_train && is_train_fprop_graph_captured_ && !global_profiler.init_cuda_graph_this_iter) {
+#else
     if (is_train && is_train_fprop_graph_captured_) {
+#endif
       // #pragma omp parallel num_threads(Base::get_resource_manager().get_local_gpu_count())
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++)
       {
@@ -237,8 +240,11 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
 
         context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
-        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
+#ifdef ENABLE_PROFILING
+        if (use_cuda_graph_ && is_train && (!is_train_fprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
+#else
         if (use_cuda_graph_ && is_train && !is_train_fprop_graph_captured_) {
+#endif
           CK_CUDA_THROW_(cudaStreamBeginCapture(Base::get_local_gpu(i).get_stream(), cudaStreamCaptureModeRelaxed));
         }
 
@@ -246,6 +252,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
           CK_CUDA_THROW_(cudaStreamBeginCapture(Base::get_local_gpu(i).get_stream(), cudaStreamCaptureModeRelaxed));
         }
 
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         // for forward_fuse method
         functors_.forward_mapping_per_gpu(
             Base::get_batch_size(is_train), slot_num_per_gpu_[i],
@@ -262,13 +269,17 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             Base::get_row_offsets_tensors(is_train)[i], hash_value_index_tensors_[i],
             hash_table_value_tensors_[i], get_embedding_features(is_train),
             Base::get_local_gpu(i).get_sm_count(), Base::get_local_gpu(i).get_stream());
-        
+
         PROFILE_RECORD("all2all_forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.forward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
-        
+
         gpu_barrier_.sync_all_gpus(Base::get_local_gpu(i).get_stream(), i);
-        
+
+#ifdef ENABLE_PROFILING
+        if (use_cuda_graph_ && is_train && (!is_train_fprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
+#else
         if (use_cuda_graph_ && is_train && !is_train_fprop_graph_captured_) {
+#endif
           CK_CUDA_THROW_(cudaStreamEndCapture(Base::get_local_gpu(i).get_stream(),
                 &train_fprop_graph_[i]));
           CK_CUDA_THROW_(cudaGraphInstantiate(&train_fprop_instance_[i], 
@@ -386,7 +397,11 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     size_t local_gpu_count = Base::get_resource_manager().get_local_gpu_count();
     size_t global_gpu_count = Base::get_resource_manager().get_global_gpu_count();
 
+#ifdef ENABLE_PROFILING
+    if (is_train_bprop_graph_captured_ && !global_profiler.init_cuda_graph_this_iter) {
+#else
     if (is_train_bprop_graph_captured_) {
+#endif
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++)
       // #pragma omp parallel num_threads(Base::get_resource_manager().get_local_gpu_count())
       {
@@ -399,11 +414,15 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     else if (global_gpu_count == local_gpu_count) {
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());
-        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
 
+#ifdef ENABLE_PROFILING
+        if (use_cuda_graph_ && (!is_train_bprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
+#else
         if (use_cuda_graph_ && !is_train_bprop_graph_captured_) {
+#endif
           CK_CUDA_THROW_(cudaStreamBeginCapture(Base::get_local_gpu(i).get_stream(), cudaStreamCaptureModeRelaxed));
         }
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
         gpu_barrier_.sync_all_gpus(Base::get_local_gpu(i).get_stream(), i);
         functors_.backward_fuse_per_gpu(
             i, Base::get_resource_manager().get_local_gpu_count(), Base::get_batch_size(true),
@@ -412,14 +431,18 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
             wgrad_tensors_[i], Base::get_local_gpu(i).get_sm_count(),
             Base::get_local_gpu(i).get_stream());
         PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream(), Base::get_local_gpu(i).get_device_id());
-        
+
+#ifdef ENABLE_PROFILING
+        if (use_cuda_graph_ && (!is_train_bprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
+#else
         if (use_cuda_graph_ && !is_train_bprop_graph_captured_) {
+#endif
           CK_CUDA_THROW_(cudaStreamEndCapture(Base::get_local_gpu(i).get_stream(),
                 &train_bprop_graph_[i]));
-          CK_CUDA_THROW_(cudaGraphInstantiate(&train_bprop_instance_[i], 
+          CK_CUDA_THROW_(cudaGraphInstantiate(&train_bprop_instance_[i],
                 train_bprop_graph_[i],
                 NULL, NULL, 0));
-          CK_CUDA_THROW_(cudaGraphLaunch(train_bprop_instance_[i], 
+          CK_CUDA_THROW_(cudaGraphLaunch(train_bprop_instance_[i],
                 Base::get_local_gpu(i).get_stream()));
 
           if (i == Base::get_resource_manager().get_local_gpu_count() - 1) {
