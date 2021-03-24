@@ -26,7 +26,7 @@ RUN conda update -n base -c defaults conda && \
 ENV OMPI_MCA_plm_rsh_agent=sh \
     OMPI_MCA_opal_cuda_support=true
 RUN pip3 install numpy pandas sklearn ortools jupyter tensorflow==2.4.0
-RUN pip3 install --no-cache-dir https://github.com/mlperf/logging/archive/9ea0afa.zip
+
 RUN mkdir -p /var/tmp && cd /var/tmp && git clone --depth=1 --branch branch-0.17 https://github.com/rapidsai/rmm.git rmm && cd - && \
     cd /var/tmp/rmm && \
     mkdir -p build && cd build && \
