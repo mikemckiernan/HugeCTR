@@ -380,7 +380,8 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 
       // do update params operation: only support SGD
       functors_.update_params(
-          Base::get_embedding_vec_size(), Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
+          Base::get_embedding_vec_size(), max_vocabulary_size_,
+          Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
           top_categories_[id], size_top_categories_[id],
           Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream());

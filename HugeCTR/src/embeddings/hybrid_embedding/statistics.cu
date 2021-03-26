@@ -25,6 +25,7 @@
  
  namespace HugeCTR {
  namespace hybrid_embedding {
+ 
  ///
  /// Perform count of categories within the samples and sort the categories by count
  ///
@@ -111,6 +112,8 @@
  
  template class Statistics<uint32_t>;
  template class Statistics<long long>;
+ template class Statistics<size_t>;
+
  }  // namespace hybrid_embedding
  
  }  // namespace HugeCTR
