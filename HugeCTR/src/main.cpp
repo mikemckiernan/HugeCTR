@@ -173,15 +173,20 @@ void train(std::string config_file) {
 
   if (solver_config.max_iter > 0) {
     for (int i = 0; i < solver_config.max_iter; i++) {
-
+#ifdef ENABLE_PROFILING
+      // profiler may run very long, so prevent lr < 0
+      float lr = std::numeric_limits<float>::min();
+      session_instance->set_learning_rate(lr);
+#else
       float lr = lr_sch->get_next();
       session_instance->set_learning_rate(lr);
-
+#endif
       session_instance->train();
 #ifdef ENABLE_PROFILING
       i = 0;
       continue;
 #endif
+
       if (i % solver_config.display == 0 && i != 0) {
         timer_train.stop();
         // display
