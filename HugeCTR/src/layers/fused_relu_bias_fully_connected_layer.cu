@@ -114,7 +114,7 @@ FusedReluBiasFullyConnectedLayer::FusedReluBiasFullyConnectedLayer(
   size_t n = top_tensor_dim[1];
   size_t k = bottom_tensor_dim[1];
 
-  if(pos_ == FcPosition_t::Tail && act_ != Activation_t::None) {
+  if( (pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated) && act_ != Activation_t::None) {
     if (m % 32 != 0 || n % 64 != 0) {
       CK_THROW_(Error_t::WrongInput,
               "The first dimension of bottom tensor must be a multiple of 32, the second dimension "
@@ -251,7 +251,7 @@ void FusedReluBiasFullyConnectedLayer::initialize_bprop() {
   cublasOperation_t transB  = CUBLAS_OP_N;
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSA, &transA, sizeof(transA)));
   CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_TRANSB, &transB, sizeof(transB)));
-  if(pos_ == FcPosition_t::Head) {
+  if(pos_ == FcPosition_t::Head || pos_ == FcPosition_t::Isolated) {
     cublasLtEpilogue_t epi = CUBLASLT_EPILOGUE_DEFAULT;
     CK_CUBLAS_THROW_(cublasLtMatmulDescSetAttribute(cublas_op_desc_bprop_, CUBLASLT_MATMUL_DESC_EPILOGUE, &epi, sizeof(epi)));
   } else if (pos_ == FcPosition_t::Body || pos_ == FcPosition_t::Tail) {
@@ -339,7 +339,7 @@ void FusedReluBiasFullyConnectedLayer::fprop(bool is_train) {
               get_gpu().get_stream()));
 
   PROFILE_RECORD("fused_relu_bias_fully_connected.fprop.cublasLtMatmul.stop", get_gpu().get_stream(), get_device_id());
-    if(pos_ == FcPosition_t::Tail && act_ != Activation_t::None) {
+    if( (pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated) && act_ != Activation_t::None) {
         size_t len = train_out_tensor_.get_num_elements();
         CK_CUDA_THROW_(cudaMemcpyAsync(mask_out, top_fprop,
             len*sizeof(__half), cudaMemcpyDeviceToDevice, get_gpu().get_stream()));
@@ -394,7 +394,7 @@ void FusedReluBiasFullyConnectedLayer::bprop() {
   const float beta_b = 0.0f;
 
   PROFILE_RECORD("fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel.start", get_gpu().get_stream(), get_device_id());
-  if(pos_ == FcPosition_t::Tail) {
+  if(pos_ == FcPosition_t::Tail || pos_ == FcPosition_t::Isolated) {
     if(act_ == Activation_t::None) {
       CK_CUBLAS_THROW_(cublasGemmEx(get_gpu().get_cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_N, n, 1, m,
                                 &alpha, train_out, CUDA_R_16F, n, identity, CUDA_R_16F, m, &beta_b,
@@ -764,4 +764,5 @@ std::unique_ptr<DataSimulator> FusedReluBiasFullyConnectedLayer::get_default_ini
 
 }  // namespace HugeCTR
   
+
 

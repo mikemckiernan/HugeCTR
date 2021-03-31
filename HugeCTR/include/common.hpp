@@ -113,7 +113,7 @@ enum class Update_t { Local, Global, LazyGlobal };
 
 enum class Activation_t { Relu, None };
 
-enum class FcPosition_t { Head, Body, Tail, Isolated };
+enum class FcPosition_t { None, Head, Body, Tail, Isolated };
 
 enum class Regularizer_t { L1, L2 };
 

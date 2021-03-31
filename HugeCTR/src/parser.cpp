@@ -474,7 +474,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           }
         }
         // check the position of this layer
-        FcPosition_t pos_type;
+        FcPosition_t pos_type = FcPosition_t::None;
         int input_size = input_output_info.inputs.size();
         int output_size = input_output_info.output_names.size();
         if (has_key_(j, "position")) {
@@ -487,11 +487,6 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           else if (pos_type == FcPosition_t::Isolated && input_size==1 && output_size==1) {}
           else
             CK_THROW_(Error_t::WrongInput, "The position and dimension of bottom and top layer aren't compatible: "+ layer_type_name);
-        } else
-        {
-          // if (input_size!=1 || output_size!=1)
-            CK_THROW_(Error_t::WrongInput, "The position must be declared for: "+ layer_type_name);
-          // pos_type = FcPosition_t::Isolated;
         }
         // check the activation functino of this layer
         Activation_t act_type = Activation_t::Relu;
@@ -509,7 +504,7 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           Tensor2<__half> train_in_tensor =
               Tensor2<__half>::stretch_from(input_output_info.inputs[0]);
           Tensor2<__half> mask_in_tensor, dRelu_in_tensor, db_in_tensor;
-          if(pos_type != FcPosition_t::Head && pos_type != FcPosition_t::Isolated) {
+          if(pos_type == FcPosition_t::Body || pos_type == FcPosition_t::Tail) {
               mask_in_tensor  = Tensor2<__half>::stretch_from(input_output_info.inputs[1]);
               dRelu_in_tensor = Tensor2<__half>::stretch_from(input_output_info.inputs[2]);
               db_in_tensor    = Tensor2<__half>::stretch_from(input_output_info.inputs[3]);
@@ -521,14 +516,20 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
           // blobs_buff->reserve({(train_in_tensor.get_dimensions())[0], output}, &db_out_tensor);
 
           // establish layer
-          layers.emplace_back(new FusedReluBiasFullyConnectedLayer(
-              weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff,
-              train_in_tensor, mask_in_tensor, dRelu_in_tensor, db_in_tensor,
-              train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
-              gpu_resource, pos_type, act_type, skip_dgrad, initializer_types));   
+	  if(pos_type == FcPosition_t::None) {
+              layers.emplace_back(new FusedFullyConnectedLayer(
+                  weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff, train_in_tensor, train_out_tensor,
+                  gpu_resource, initializer_types));
+	  } else {
+              layers.emplace_back(new FusedReluBiasFullyConnectedLayer(
+                  weight_buff, weight_buff_half, wgrad_buff_half, blobs_buff,
+                  train_in_tensor, mask_in_tensor, dRelu_in_tensor, db_in_tensor,
+                  train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
+                  gpu_resource, pos_type, act_type, skip_dgrad, initializer_types));   
+	  }
           skip_dgrad = false;   
 
-          if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated)
+          if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated || pos_type ==FcPosition_t::None)
             output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
           else
           {
