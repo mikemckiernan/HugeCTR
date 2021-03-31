@@ -19,11 +19,15 @@
 #define PROFILE_RECORD(...) do                           \
 {                                                        \
   if (!global_profiler.unit_test_mode) {                 \
-    global_profiler.record_event(__VA_ARGS__);           \
+    if (!global_profiler.record_data_phase) {            \
+      global_profiler.record_event(__VA_ARGS__);         \
+    }                                                    \
   } else {                                               \
     global_profiler.record_event_unit_test(__VA_ARGS__); \
   }                                                      \
 } while(0)                                               \
+
+#define PROFILE_RECORD_DATA(...) global_profiler.record_data(__VA_ARGS__);
 
 #define PROFILE_UNIT_TEST_START(...) do                  \
 {                                                        \
@@ -37,6 +41,7 @@
 
 #else
 #define PROFILE_RECORD(...) do {} while (0)
+#define PROFILE_RECORD_DATA(...) do {} while (0)
 #define PROFILE_UNIT_TEST_START(...) do {} while (0)
 #define PROFILE_UNIT_TEST_STOP(...) do {} while (0)
 #endif
@@ -70,6 +75,13 @@ class Profiler {
 
   struct CPUEvent : Event { };
 
+  struct RuntimeData {
+    std::string data_name;
+    int device_id;
+    cudaStream_t stream;
+    std::vector<std::string> data;
+  };
+
   class GPUTimer {
    private:
     cudaEvent_t start_;
@@ -83,9 +95,9 @@ class Profiler {
     GPUTimer();
     ~GPUTimer();
     // stream is a pointer itself
-    void iter_start(cudaStream_t stream, bool use_cuda_graph = false);
-    void event_start(cudaStream_t stream, bool use_cuda_graph = false);
-    void event_stop(cudaStream_t stream, bool use_cuda_graph = false);
+    void iter_start(cudaStream_t stream);
+    void event_start(cudaStream_t stream, bool in_cuda_graph);
+    void event_stop(cudaStream_t stream, bool in_cuda_graph);
     float get_measured_time_ms();
     float get_iter_start_to_event_start_ms();
     void sync_stop();
@@ -105,6 +117,8 @@ class Profiler {
   std::chrono::time_point<std::chrono::steady_clock> iter_check_;
 
   int warmup_iterations_;
+  int data_collection_iterations_;
+  int current_data_collection_iteration_;
   int current_iteration_;
   int current_event_idx_;
   int events_num_;
@@ -112,6 +126,8 @@ class Profiler {
   std::vector<std::string> interested_events_;
   std::map<cudaStream_t, std::shared_ptr<GPUTimer>> map_stream_to_gpu_timer_;
   std::vector<std::shared_ptr<Event>> events_;
+  std::vector<std::shared_ptr<RuntimeData>> runtime_data_;
+
   std::map<std::string, int> map_event_key_to_event_idx_;
 
   std::map<cudaStream_t, std::shared_ptr<std::map<std::string, int>>> map_internal_;
@@ -130,18 +146,22 @@ class Profiler {
  public:
   std::string profiling_dir;
   bool init_cuda_graph_this_iter;
+  bool record_data_phase;
   bool unit_test_mode = false;
 
   void initialize(bool use_cuda_graph = false, bool exit_when_finished = true);
   void record_event(const char* event_label_char, cudaStream_t stream,
-                    int device_id = -1, const std::string& extra_info = std::string());
+                    bool could_be_in_cuda_graph = false, int device_id = -1,
+                    const std::string& extra_info = std::string());
+  bool record_data(const char* data_label_char, cudaStream_t stream,
+                    const std::string& data = std::string(), int device_id = -1);
   bool iter_check();
   void prepare_iter_start();
   int event_met_times_within_stream(const char* event_name, cudaStream_t stream);
   int find_event(std::string& event_key);
   void write_result(const char* file_path = nullptr);
 
-  void record_event_unit_test(const char* event_label_char, cudaStream_t stream,
+  void record_event_unit_test(const char* event_label_char, cudaStream_t stream, bool could_be_in_cuda_graph = false,
                               int device_id = -1, const std::string& extra_info = std::string());
   void unit_test_start(const char* test_name);
   void unit_test_end();
