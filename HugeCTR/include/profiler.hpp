@@ -151,7 +151,7 @@ class Profiler {
 
   void initialize(bool use_cuda_graph = false, bool exit_when_finished = true);
   void record_event(const char* event_label_char, cudaStream_t stream,
-                    bool could_be_in_cuda_graph = false, int device_id = -1,
+                    bool could_be_in_cuda_graph = true, int device_id = -1,
                     const std::string& extra_info = std::string());
   bool record_data(const char* data_label_char, cudaStream_t stream,
                     const std::string& data = std::string(), int device_id = -1);
