@@ -67,7 +67,8 @@ namespace HugeCTR
 
     for (size_t g = 0; g < num_gpus_; g++) {
       CK_CUDA_THROW_(cudaSetDevice(dev_list[g]));
-      CK_CUDA_THROW_(cudaMalloc(&d_barrier_flags_[g], sizeof(size_t)));
+      CK_CUDA_THROW_(cudaMalloc(&d_barrier_flags_[g], num_gpus_*sizeof(size_t)));
+      CK_CUDA_THROW_(cudaMemset(d_barrier_flags_[g], 0, num_gpus_*sizeof(size_t)));
     }
 
     for (size_t g = 0; g < num_gpus_; g++) {

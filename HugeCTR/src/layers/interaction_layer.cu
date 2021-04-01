@@ -981,7 +981,7 @@ void InteractionLayer<T>::fprop(bool is_train) {
 template <>
 void InteractionLayer<__half>::fprop(bool is_train) {
   CudaDeviceContext context(get_device_id());
-  PROFILE_RECORD("interaction.fprop.start", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.fprop.start", get_gpu().get_stream());
   __half *in_mlp = get_in_tensors(is_train)[0].get_ptr();
   __half *in_emb = get_in_tensors(is_train)[1].get_ptr();
   __half *output = out_tensors_[0].get_ptr();
@@ -992,7 +992,7 @@ void InteractionLayer<__half>::fprop(bool is_train) {
 
   dotBasedInteractFwd(in_mlp, in_emb, output, h, n_ins, in_w, get_gpu().get_stream());
 
-  PROFILE_RECORD("interaction.fprop.stop", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.fprop.stop", get_gpu().get_stream());
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
@@ -1003,7 +1003,7 @@ void InteractionLayer<__half>::fprop(bool is_train) {
 template <typename T>
 void InteractionLayer<T>::bprop() {
   CudaDeviceContext context(get_device_id());
-  PROFILE_RECORD("interaction.bprop.start", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.bprop.start", get_gpu().get_stream());
   // phase 0:
   T *gather = out_tensors_[0].get_ptr();
   T *in0 = get_in_tensors(true)[0].get_ptr();
@@ -1064,7 +1064,7 @@ void InteractionLayer<T>::bprop() {
   concat_kernel<<<grid0, block0, 0, get_gpu().get_stream()>>>(false, concat_tmp, in_mlp, in_emb, h,
                                                               out_w, in_w, n_emb);
 
-  PROFILE_RECORD("interaction.bprop.stop", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.bprop.stop", get_gpu().get_stream());
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
@@ -1075,7 +1075,7 @@ void InteractionLayer<T>::bprop() {
 template <>
 void InteractionLayer<__half>::bprop() {
   CudaDeviceContext context(get_device_id());
-  PROFILE_RECORD("interaction.bprop.start", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.bprop.start", get_gpu().get_stream());
   __half *up_grad = out_tensors_[0].get_ptr();
   __half *mlp_grad = get_in_tensors(true)[0].get_ptr();
   __half *emb_grad = get_in_tensors(true)[1].get_ptr();
@@ -1085,7 +1085,7 @@ void InteractionLayer<__half>::bprop() {
   const int in_w = get_in_tensors(true)[0].get_dimensions()[1];
 
   dotBasedInteractBwd(up_grad, mlp_grad, emb_grad, h, n_ins, in_w, get_gpu().get_stream());
-  PROFILE_RECORD("interaction.bprop.stop", get_gpu().get_stream(), get_device_id());
+  PROFILE_RECORD("interaction.bprop.stop", get_gpu().get_stream());
 #ifndef NDEBUG
   cudaDeviceSynchronize();
   CK_CUDA_THROW_(cudaGetLastError());

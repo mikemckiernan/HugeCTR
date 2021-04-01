@@ -75,15 +75,15 @@ dlrm_interesed_events = {
     },
     'Embedding': {
         'forward_events': [
-            'localized_slot_sparse_embedding_one_hot.forward',
+#            'localized_slot_sparse_embedding_one_hot.forward',
 #            'all2all_forward',
 #            'inter_node_hier_a2a.fprop'
         ],
         'backward_events': [
-            'localized_slot_sparse_embedding_one_hot.backward',
+#            'localized_slot_sparse_embedding_one_hot.backward',
 #            'all2all_backward',
 #            'inter_node_hier_a2a.bprop',
-            'localized_slot_sparse_embedding_one_hot.update_params'
+#            'localized_slot_sparse_embedding_one_hot.update_params'
         ]
     },
     'Interaction': {
@@ -248,8 +248,8 @@ if __name__ == '__main__':
     `${host_name}.prof.json`. If you use multiple nodes, there will be several jsons appear. The result json is not
     human readable, so please use function below to parse it.
     '''
-    #result = parse_result(os.path.join(project_root, profiling_dir), dlrm_interesed_events)
-    #with open(os.path.join(project_root, profiling_dir, 'test' + '.json'), 'w') as f:
-    #    json.dump(result, f, indent=2)
-    #print(json.dumps(result, indent=2))
+    result = parse_result(os.path.join(project_root, profiling_dir), dlrm_interesed_events)
+    with open(os.path.join(project_root, profiling_dir, 'test' + '.json'), 'w') as f:
+        json.dump(result, f, indent=2)
+    print(json.dumps(result, indent=2))
 
