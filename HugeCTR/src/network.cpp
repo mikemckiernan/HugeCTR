@@ -232,7 +232,7 @@ metrics::RawMetricMap Network::get_raw_metrics() const { return raw_metrics_; }
 void Network::exchange_wgrad() {
   if (gpu_resource_->support_nccl()) {
     CudaDeviceContext context(get_device_id());
-    PROFILE_RECORD("exchange_wgrad.start", gpu_resource_->get_stream(), get_device_id());
+    PROFILE_RECORD("exchange_wgrad.start", gpu_resource_->get_stream(), false);
     if (use_mixed_precision_) {
       CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_half_.get_ptr(),
                                    (void*)wgrad_tensor_half_.get_ptr(),
@@ -244,7 +244,7 @@ void Network::exchange_wgrad() {
                                    ncclFloat, ncclSum, gpu_resource_->get_nccl(),
                                    gpu_resource_->get_stream()));
     }
-    PROFILE_RECORD("exchange_wgrad.stop", gpu_resource_->get_stream(), get_device_id());
+    PROFILE_RECORD("exchange_wgrad.stop", gpu_resource_->get_stream(), false);
   } else {
     CK_THROW_(Error_t::IllegalCall, "cannot call exchange_wgrad with single GPU");
   }
