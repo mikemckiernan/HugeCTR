@@ -40,7 +40,7 @@ SGDOptimizer::SGDOptimizer(const Tensor2<float>& weight_main, const Tensor2<floa
 
 void SGDOptimizer::update() {
   CudaDeviceContext context(get_device_id());
-  PROFILE_RECORD("update.start", gpu_resource_->get_stream(), get_device_id());
+  PROFILE_RECORD("update.start", gpu_resource_->get_stream(), false);
   const size_t len = weight_main_.get_num_elements();
   constexpr size_t block_dim = 256;
   const size_t grid_dim = (len - 1) / block_dim + 1;
@@ -56,7 +56,7 @@ void SGDOptimizer::update() {
     sgd_update_kernel<<<grid_dim, block_dim, 0, gpu_resource_->get_stream()>>>(
         len, weight, fp32_wgrad, lr_, scaler_);
   }
-  PROFILE_RECORD("update.stop", gpu_resource_->get_stream(), get_device_id());
+  PROFILE_RECORD("update.stop", gpu_resource_->get_stream(), false);
 
 #ifndef NDEBUG
   cudaDeviceSynchronize();
