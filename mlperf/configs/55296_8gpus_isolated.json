@@ -84,6 +84,7 @@
     {
       "name": "fc2",
       "type": "FusedInnerProduct",
+      "position": "Isolated",
       "bottom": "fc1",
       "top": "fc2",
       "fc_param": {
