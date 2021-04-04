@@ -333,6 +333,29 @@ class SparseEmbeddingFunctors {
                      size_t sm_count, cudaStream_t stream);
 
   /**
+   * Atomic cached sgd update.  
+   * 
+   * @param num_samples number of samples for which to accumulate the gradient
+   * @param max_vocabulary_size maximum number of indices
+   * @param embedding_vec_size size of the embedding vector per category
+   * @param hash_value_index 
+   * @param lr 
+   * @param scaler 
+   * @param wgrad 
+   * @param hash_table_value 
+   * @param top_categories 
+   * @param size_top_categories 
+   * @param stream 
+   *
+   */
+  template <typename TypeEmbeddingComp>
+  void opt_sgd_atomic_cached(
+    size_t num_samples, size_t max_vocabulary_size, size_t embedding_vec_size, 
+    const size_t *hash_value_index, float lr, float scaler, 
+    const TypeEmbeddingComp *wgrad, float *hash_table_value, size_t *top_categories,
+    size_t &size_top_categories, cudaStream_t stream);
+
+  /**
    * collection communication: reduce_scatter f or DistributedSlotSparseEmbeddingHash
    * @param recv_count the count of elements will be received.
    * @param send_tensors the send tensors of multi GPUs.

@@ -19,6 +19,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "HugeCTR/include/common.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/data.hpp"
 #include "HugeCTR/include/general_buffer2.hpp"
 #include "HugeCTR/include/tensor2.hpp"
 
@@ -29,6 +30,12 @@ struct Statistics {
  public:
   Statistics() : num_samples(0), num_unique_categories(0) {}
   ~Statistics() {}
+  Statistics(const Data<dtype> &data) 
+    : num_samples(data.batch_size * data.num_iterations), num_unique_categories(0) {
+    std::shared_ptr<GeneralBuffer2<CudaAllocator>> buf = GeneralBuffer2<CudaAllocator>::create();
+    reserve(buf);
+    buf->allocate();
+  }
   Statistics(dtype num_samples_in) : num_samples(num_samples_in), num_unique_categories(0) {
     std::shared_ptr<GeneralBuffer2<CudaAllocator>> buf = GeneralBuffer2<CudaAllocator>::create();
     reserve(buf);
