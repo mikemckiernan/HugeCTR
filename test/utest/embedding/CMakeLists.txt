@@ -20,7 +20,7 @@ file(GLOB embedding_test_src
   hybrid_embedding/statistics_test.cu
   localized_slot_sparse_embedding_hash_test.cu 
   localized_slot_sparse_embedding_one_hot_test.cu 
-  localized_slot_sparse_embedding_ont_hot_update_test.cu
+  localized_slot_sparse_embedding_one_hot_update_test.cu
   all2all_hierarchical.cu
 )
 

@@ -26,12 +26,15 @@
 
 namespace HugeCTR {
 
+size_t get_max_size_top_categories() { return max_size_top_categories; }
+size_t get_num_samples_per_block() { return num_samples_per_block; }
+size_t get_embedding_block_size() { return embedding_block_size; }
+
 namespace {
 
 __global__ void value_count_kernel_2(int nnz, const uint32_t *new_hash_value_flag,
                                      const uint32_t *hash_value_flag_sumed,
                                      uint32_t *hash_value_index_index, uint32_t *counter)
-
 {
   for (int gid = blockIdx.x * blockDim.x + threadIdx.x; gid < nnz; gid += blockDim.x * gridDim.x) {
     uint32_t flag = new_hash_value_flag[gid];
@@ -766,11 +769,11 @@ void SparseEmbeddingFunctors::opt_sgd_atomic_cached<TypeEmbeddingComp>(
   size_t num_samples, size_t max_vocabulary_size, size_t embedding_vec_size, 
   const size_t *hash_value_index, float lr, float scaler, 
   const TypeEmbeddingComp *wgrad, float *hash_table_value, size_t *top_categories,
-  size_t &size_top_categories, cudaStream_t stream
+  size_t &size_top_categories, cudaStream_t stream, bool force_stats
 ) {
 
   static bool perform_stats = true;
-  if (perform_stats) {
+  if (perform_stats || force_stats) {
     uint32_t num_unique_categories;
     hybrid_embedding::Statistics<size_t> statistics(num_samples);
     statistics.sort_categories_by_count(hash_value_index, (uint32_t) num_samples, top_categories,
@@ -848,13 +851,13 @@ template void SparseEmbeddingFunctors::opt_sgd_atomic_cached<float>(
   size_t num_samples, size_t max_vocabulary_size, size_t embedding_vec_size, 
   const size_t *hash_value_index, float lr, float scaler, 
   const float *wgrad, float *hash_table_value, size_t *top_categories,
-  size_t &size_top_categories, cudaStream_t stream);
+  size_t &size_top_categories, cudaStream_t stream, bool force_stats);
 
 template void SparseEmbeddingFunctors::opt_sgd_atomic_cached<__half>(
   size_t num_samples, size_t max_vocabulary_size, size_t embedding_vec_size, 
   const size_t *hash_value_index, float lr, float scaler, 
   const __half *wgrad, float *hash_table_value, size_t *top_categories,
-  size_t &size_top_categories, cudaStream_t stream);
+  size_t &size_top_categories, cudaStream_t stream, bool force_stats);
 
 template void SparseEmbeddingFunctors::update_params<unsigned int, float>(
     size_t batch_size, size_t slot_num, size_t embedding_vec_size,

@@ -15,9 +15,9 @@
  */
 
 #include "HugeCTR/include/utils.hpp"
-#include "cub/cub/device/device_radix_sort.cuh"
-#include "cub/cub/device/device_scan.cuh"
-#include "HugeCTR/include/ft_topk/ft_topk.cuh"
+// #include "cub/cub/device/device_radix_sort.cuh"
+// #include "cub/cub/device/device_scan.cuh"
+// #include "HugeCTR/include/ft_topk/ft_topk.cuh"
 
 #include <cuda_profiler_api.h>
 #include <algorithm>
@@ -30,8 +30,7 @@
 #include <vector>
 #include "HugeCTR/include/embeddings/localized_slot_sparse_embedding_one_hot.hpp"
 #include "HugeCTR/include/embeddings/sparse_embedding_functors.hpp"
-#include "HugeCTR/include/embeddings/sparse_embedding_utils.hpp"
-#include "HugeCRT/include/embeddings/hybrid_embedding/statistics.hpp"
+#include "HugeCTR/include/embeddings/hybrid_embedding/statistics.hpp"
 #include "gtest/gtest.h"
 #include "nvToolsExt.h"
 #include "utest/embedding/embedding_test_utils.hpp"
@@ -55,7 +54,7 @@ public:
     GpuData() {}
     ~GpuData() {}
     GpuData(const std::vector<size_t> &h_value_index, const size_t max_vocabulary_size, const size_t embedding_vec_size) {
-        size_t num_samples = value_index.size();
+        size_t num_samples = h_value_index.size();
         init_data(num_samples, max_vocabulary_size, embedding_vec_size);
         CK_CUDA_THROW_(cudaMemcpy(value_index.get_ptr(), h_value_index.data(), 
                                   sizeof(size_t) * num_samples, 
@@ -67,10 +66,10 @@ public:
 
         buf->reserve({num_samples}, &value_index);
         buf->reserve({max_vocabulary_size*embedding_vec_size}, &weights);
-        buf->reserve({max_vocabulary_size*embedding_vec_size}, &wgrad);
+        buf->reserve({num_samples*embedding_vec_size}, &wgrad);
 
-        const size_t max_top_categories = get_max_top_categories();
-        buf->reserve({max_top_categories}, top_categories);
+        const size_t max_top_categories = get_max_size_top_categories();
+        buf->reserve({max_top_categories}, &top_categories);
         size_top_categories = 0;
 
         buf->allocate();
@@ -87,8 +86,8 @@ public:
         size_t num_samples,
         size_t max_vocabulary_size,
         size_t embedding_vec_size,
-        const std::vector<TypeEmbeddingComp> &wgrad) {
-            CK_CUDA_THROW_(cudaMemcpy(wgrad.get_ptr(), wgrad.data(),
+        const std::vector<TypeEmbeddingComp> &h_wgrad) {
+            CK_CUDA_THROW_(cudaMemcpy(wgrad.get_ptr(), h_wgrad.data(),
                                     sizeof(TypeEmbeddingComp)*num_samples*embedding_vec_size,
                                     cudaMemcpyHostToDevice));
             CK_CUDA_THROW_(cudaMemset(weights.get_ptr(), 0.f, 
@@ -106,10 +105,8 @@ void update_test(
     cudaStream_t stream = 0;
 
     // get number of sms
-    int num_sms = 144;
     cudaDeviceProp device_prop;
     cudaGetDeviceProperties(&device_prop, 0);
-    num_sms = device_prop.multiProcessorCount;
 
     // test sorting
     std::map<size_t, std::set<uint32_t> > ref_categorize;
@@ -122,7 +119,6 @@ void update_test(
     std::vector<size_t> value_index_sort;
     std::vector<uint32_t> sample_id_sort;
     std::vector<uint32_t> sorted_sample_offset_category;
-    bool input_is_sorted = false;
 
     GpuData<TypeEmbeddingComp> gpu_data(value_index, max_vocabulary_size, embedding_vec_size);
 
@@ -133,7 +129,7 @@ void update_test(
 
     // ref weight update :
     for (auto const& pair : ref_categorize) {
-        for (int j = 0; j < embedding_vec_size; ++j) {
+        for (size_t j = 0; j < embedding_vec_size; ++j) {
             float sum_j = 0.f;
             for (auto const& sample_index : pair.second) {
                 sum_j += (float)wgrad[sample_index*embedding_vec_size + j];
@@ -146,19 +142,13 @@ void update_test(
     // init wgrad and weights on gpu:
     gpu_data.init_weights(num_samples, max_vocabulary_size, embedding_vec_size, wgrad);
 
-    uint32_t num_unique_categories_partial = 0;
-    uint32_t num_samples_partial = 0;
-    uint32_t wgrad_partial_sample_size = 0;
-
-    bool test_pass = false;
-    int iteration = 0;
     std::cout << "performing atomic cached kernel..." << std::endl;
     SparseEmbeddingFunctors::opt_sgd_atomic_cached<TypeEmbeddingComp>(
         num_samples, max_vocabulary_size, embedding_vec_size, 
         gpu_data.value_index.get_ptr(), 1.0f, 1.0f,
         gpu_data.wgrad.get_ptr(), gpu_data.weights.get_ptr(), 
         gpu_data.top_categories.get_ptr(), gpu_data.size_top_categories,
-        stream);
+        stream, true);
 
     std::cout << "done performing kernel, testing results.." << std::endl;
     CK_CUDA_THROW_(cudaMemcpy(weights_test.data(), gpu_data.weights.get_ptr(),
@@ -174,7 +164,7 @@ void update_test(
     for (auto const& pair : ref_categorize) {
         const size_t& category = pair.first;
         bool category_equal = true;
-        for (int j=0; j < embedding_vec_size; ++j) {
+        for (size_t j=0; j < embedding_vec_size; ++j) {
             size_t index = category*embedding_vec_size + j;
             float diff = weights_ref[index] - weights_test[index];
             diff = (diff > 0.f ? diff : -diff);
@@ -216,7 +206,7 @@ void update_test(
     bool all_el_zero = true;
     for (size_t i = 0; i < max_vocabulary_size; ++i) {
         if (ref_categorize.find(i) == ref_categorize.end()) {
-            for (int j = 0; j < embedding_vec_size; ++j) {
+            for (size_t j = 0; j < embedding_vec_size; ++j) {
                 all_el_zero = all_el_zero && (weights_test[i*embedding_vec_size + j] == 0.f);
             }
         }
@@ -226,6 +216,7 @@ void update_test(
     std::cout << "Finished embedding update test SUCCESSFULLY!" << std::endl;
 }
 
+template <typename etype>
 void setup_and_run_randomized_test (
     const int N_test, 
     const int embedding_vec_size, 
@@ -240,7 +231,7 @@ void setup_and_run_randomized_test (
         max_vocabulary_size += category_size[i];
     }
 
-    std::vector<__half> wgrad(num_samples * embedding_vec_size, (__half)1.);
+    std::vector<etype> wgrad(num_samples * embedding_vec_size, (etype)1.);
 
     for (int n = 0; n < N_test; ++n) {
         // create test input
@@ -252,18 +243,34 @@ void setup_and_run_randomized_test (
         }
 
         // perform test
-        update_test<__half>(
+        update_test<etype>(
             value_index, max_vocabulary_size, embedding_vec_size, 
             wgrad);
     }
 }
 
 TEST(localized_one_hot_update_test, fp16_sgd_atomic_cached) {
-    const int N_test = 100;
+    const int N_test = 5;
     const int embedding_vec_size = 128;
     const int num_samples = 64*1024;
 
-    setup_and_run_randomized_test(
-        N_test, embedding_vec_size, num_samples
-    );
+    for (size_t multiplier = 1; multiplier < 32; multiplier *= 2)
+    {
+        setup_and_run_randomized_test<__half>(
+            N_test, embedding_vec_size, num_samples
+        );
+    }
+}
+
+TEST(localized_one_hot_update_test, fp32_sgd_atomic_cached) {
+    const int N_test = 5;
+    const int embedding_vec_size = 128;
+    const int num_samples = 64*1024;
+
+    for (size_t multiplier = 1; multiplier < 32; multiplier *= 2)
+    {
+        setup_and_run_randomized_test<float>(
+            N_test, embedding_vec_size, num_samples
+        );
+    }
 }
