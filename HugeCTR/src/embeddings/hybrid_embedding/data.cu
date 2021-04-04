@@ -31,7 +31,7 @@ namespace hybrid_embedding {
 
 template <typename dtype>
 size_t EmbeddingTableFunctors<dtype>::get_embedding_table_index(
-    const std::vector<size_t> &table_sizes, dtype category) {
+    const std::vector<size_t>& table_sizes, dtype category) {
   size_t embedding = 0;
   dtype next_offset = (dtype)table_sizes[embedding];
   for (embedding = 0; embedding < table_sizes.size() - 1 && category >= next_offset; ++embedding)
@@ -40,8 +40,8 @@ size_t EmbeddingTableFunctors<dtype>::get_embedding_table_index(
 }
 
 template <typename dtype>
-void EmbeddingTableFunctors<dtype>::get_embedding_offsets(std::vector<dtype> &embedding_offsets,
-                                                          const std::vector<size_t> &table_sizes) {
+void EmbeddingTableFunctors<dtype>::get_embedding_offsets(std::vector<dtype>& embedding_offsets,
+                                                          const std::vector<size_t>& table_sizes) {
   const size_t num_tables = table_sizes.size();
   embedding_offsets.resize(num_tables);
   dtype embedding_offset = (dtype)0;
@@ -52,22 +52,30 @@ void EmbeddingTableFunctors<dtype>::get_embedding_offsets(std::vector<dtype> &em
 }
 
 template <typename dtype>
-dtype EmbeddingTableFunctors<dtype>::get_num_categories(const std::vector<size_t> &table_sizes) {
+dtype EmbeddingTableFunctors<dtype>::get_num_categories(const std::vector<size_t>& table_sizes) {
   dtype num_categories = (dtype)0;
   for (size_t i = 0; i < table_sizes.size(); ++i) num_categories += table_sizes[i];
   return num_categories;
 }
 
 template <typename dtype>
-__global__ void data_to_unique_categories_kernel(const dtype* __restrict__ data, const dtype* __restrict__ embedding_offsets, int num_tables, int num_data, dtype* __restrict__ samples) {
-  for(int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < num_data; idx += blockDim.x * gridDim.x){
+__global__ void data_to_unique_categories_kernel(const dtype* __restrict__ data,
+                                                 const dtype* __restrict__ embedding_offsets,
+                                                 int num_tables, int num_data,
+                                                 dtype* __restrict__ samples) {
+  for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < num_data;
+       idx += blockDim.x * gridDim.x) {
     samples[idx] = data[idx] + embedding_offsets[idx % num_tables];
   }
 }
 
 template <typename dtype>
-__global__ void data_to_unique_categories_align2_kernel(dtype* __restrict__ data, dtype* __restrict__ embedding_offsets, int num_tables, int num_data, dtype* __restrict__ samples) {
-  for(int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < num_data; idx += blockDim.x * gridDim.x){
+__global__ void data_to_unique_categories_align2_kernel(dtype* __restrict__ data,
+                                                        dtype* __restrict__ embedding_offsets,
+                                                        int num_tables, int num_data,
+                                                        dtype* __restrict__ samples) {
+  for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < num_data;
+       idx += blockDim.x * gridDim.x) {
     uint2 load_data = reinterpret_cast<uint2*>(data)[idx];
     uint2 load_embedding_offsets = reinterpret_cast<uint2*>(embedding_offsets)[idx % num_tables];
 
@@ -76,7 +84,6 @@ __global__ void data_to_unique_categories_align2_kernel(dtype* __restrict__ data
     reinterpret_cast<uint2*>(samples)[idx] = load_data;
   }
 }
-
 
 /// data_to_unique_categories converts the argument 'data' and stores
 ///        the result in member variable 'samples'.
@@ -97,11 +104,17 @@ void Data<dtype>::data_to_unique_categories(Tensor2<dtype> data, cudaStream_t st
   //        Would be nice to have just before calculating indices, since
   //        those would be in L2 cache already.
   size_t block_size = 256;
-  size_t grid_size = std::min(static_cast<size_t>(4096), (table_sizes.size() * batch_size * num_iterations - 1) / block_size + 1);
-  if(table_sizes.size() % 2 == 0 && sizeof(dtype) == 4){
-    data_to_unique_categories_align2_kernel<<<grid_size, block_size, 0, stream>>>(data.get_ptr(), embedding_offsets.get_ptr(), table_sizes.size() / 2, table_sizes.size() * batch_size * num_iterations / 2, samples.get_ptr());
-  }else{
-    data_to_unique_categories_kernel<<<grid_size, block_size, 0, stream>>>(data.get_ptr(), embedding_offsets.get_ptr(), table_sizes.size(), table_sizes.size() * batch_size * num_iterations, samples.get_ptr());
+  size_t grid_size =
+      std::min(static_cast<size_t>(4096),
+               (table_sizes.size() * batch_size * num_iterations - 1) / block_size + 1);
+  if (table_sizes.size() % 2 == 0 && sizeof(dtype) == 4) {
+    data_to_unique_categories_align2_kernel<<<grid_size, block_size, 0, stream>>>(
+        data.get_ptr(), embedding_offsets.get_ptr(), table_sizes.size() / 2,
+        table_sizes.size() * batch_size * num_iterations / 2, samples.get_ptr());
+  } else {
+    data_to_unique_categories_kernel<<<grid_size, block_size, 0, stream>>>(
+        data.get_ptr(), embedding_offsets.get_ptr(), table_sizes.size(),
+        table_sizes.size() * batch_size * num_iterations, samples.get_ptr());
   }
 }
 

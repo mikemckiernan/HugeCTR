@@ -76,10 +76,6 @@ void generate_reference_stats(const std::vector<dtype> &data,
   std::vector<dtype> embedding_offsets;
   EmbeddingTableFunctors<dtype>::get_embedding_offsets(embedding_offsets, table_sizes);
 
-  for (size_t embedding = 0; embedding < num_embeddings; ++embedding) {
-    std::cout << "embedding " << embedding << " offset : " << embedding_offsets[embedding] << std::endl;
-  }
-
   samples.resize(data.size());
   for (size_t sample = 0; sample < batch_size; ++sample) {
     for (size_t embedding = 0; embedding < num_embeddings; ++embedding) {
@@ -91,8 +87,6 @@ void generate_reference_stats(const std::vector<dtype> &data,
   // create statistics
   std::set<dtype> category_set(samples.begin(), samples.end());
   const size_t num_unique_categories = category_set.size();
-
-  std::cout << "number of unique categories : " << num_unique_categories << std::endl;
 
   // helper structures
   std::map<dtype, size_t> category_index;
@@ -123,8 +117,6 @@ void generate_reference_stats(const std::vector<dtype> &data,
     if (indx > 0 && counts_stats[indx] > counts_stats[indx-1]) 
       std::cout << "incorrect counts order!" << std::endl;
   }
-
-  std::cout << "done generating reference stats and data!" << std::endl;
 }
 
 
@@ -169,37 +161,19 @@ void statistics_test(const size_t batch_size, const size_t num_tables) {
   HugeCTR::hybrid_embedding::generate_reference_stats<dtype>(
       raw_data, samples_ref, categories, counts, table_sizes, batch_size);
 
-  std::cout << "raw data: " << std::endl;
-  for (size_t sample = 0; sample < batch_size; ++sample) {
-    std::cout << sample  << " : ";
-    for (size_t embedding = 0; embedding < table_sizes.size(); ++embedding) {
-      std::cout << raw_data[sample*table_sizes.size() + embedding] << '\t';
-    }
-    std::cout << std::endl;
-  }
-
-  std::cout << std::endl;
-  std::cout << "samples : " << std::endl;
-  for (size_t sample = 0; sample < batch_size; ++sample) {
-    std::cout << sample  << " : ";
-    for (size_t embedding = 0; embedding < table_sizes.size(); ++embedding) {
-      std::cout << samples_ref[sample*table_sizes.size() + embedding] << '\t';
-    }
-    std::cout << std::endl;
-  }
-
   size_t tot_count = 0;
   for (size_t c = 0; c < categories.size(); ++c) {
     tot_count += counts[c];
   }
-  std::cout << "total counts reference = " << tot_count << std::endl;
+  EXPECT_EQ(tot_count, raw_data.size());
 
   // create the gpu tensor for the raw data
   std::cout << "placing raw data on gpu..." << std::endl;
   Tensor2<dtype> d_raw_data;
   std::shared_ptr<GeneralBuffer2<CudaAllocator>> buf = GeneralBuffer2<CudaAllocator>::create();
+  EXPECT_EQ(raw_data.size(), batch_size*num_tables);
   std::cout << "number of samples  : " << raw_data.size() << std::endl;
-  std::cout << "number of elements : " << batch_size * num_tables << std::endl;
+  std::cout << "number of unique categories : " << categories.size() << std::endl;
   buf->reserve({raw_data.size(), 1}, &d_raw_data);
   buf->allocate();
   upload_tensor(raw_data, d_raw_data, stream);
@@ -210,12 +184,13 @@ void statistics_test(const size_t batch_size, const size_t num_tables) {
   HugeCTR::hybrid_embedding::Statistics<dtype> statistics(data);
   statistics.sort_categories_by_count(data.samples, stream);
   CK_CUDA_THROW_(cudaStreamSynchronize(stream));
-
-  std::cout << "number of unique categories statistics = " << statistics.num_unique_categories << std::endl;
+  EXPECT_EQ(statistics.num_samples, raw_data.size());
+  EXPECT_EQ(categories.size(), statistics.num_unique_categories);
 
   // check that the samples are the same..
   std::vector<dtype> h_samples(samples_ref.size());
   download_tensor(h_samples, data.samples, stream);
+  EXPECT_EQ(h_samples.size(), samples_ref.size());
   for (size_t sample = 0; sample < samples_ref.size(); ++sample) {
     EXPECT_EQ(h_samples[sample], samples_ref[sample]);
   }
@@ -226,18 +201,13 @@ void statistics_test(const size_t batch_size, const size_t num_tables) {
   download_tensor(h_categories_sorted, statistics.categories_sorted, stream);
   download_tensor(h_counts_sorted, statistics.counts_sorted, stream);
 
-  tot_count = 0;
+  size_t tot_count_stats = 0;
   for (size_t c = 0; c < categories.size(); ++c) {
-    tot_count += h_counts_sorted[c];
+    tot_count_stats += h_counts_sorted[c];
   }
-  std::cout << "total counts stats = " << tot_count << std::endl;
+  EXPECT_EQ(tot_count_stats, raw_data.size());
 
-  for (size_t c = 0; c < h_categories_sorted.size(); ++c) {
-    std::cout << "categories : " << h_categories_sorted[c] 
-              << '\t' << categories[c]
-              << "\t counts : " << h_counts_sorted[c] 
-              << '\t' << counts[c] << std::endl;
-  }
+
   for (size_t c = 0; c < categories.size(); ++c) {
     EXPECT_EQ(h_categories_sorted[c], categories[c]);
     EXPECT_EQ(h_counts_sorted[c], counts[c]);
@@ -281,17 +251,9 @@ void statistics_test(const size_t batch_size, const size_t num_tables) {
 }
 
 TEST(calculate_statistics_test, dtype_uint32) {
-  // const size_t N = 5;
-  // for (size_t batch_size=128; batch_size < 15*64*1024; batch_size = 2*batch_size) {
-  //   for (size_t num_tables=1; num_tables <= 32; num_tables = 2*num_tables) {
-  //     for (size_t i = 0; i < N; ++i) {
-  //       statistics_test<uint32_t>(batch_size, num_tables);
-  //     }
-  //   }
-  // }
   const size_t N = 5;
-  for (size_t batch_size=8; batch_size < 16; batch_size = 2*batch_size) {
-    for (size_t num_tables=2; num_tables <= 2; num_tables = 2*num_tables) {
+  for (size_t batch_size=128; batch_size < 15*64*1024; batch_size = 4*batch_size) {
+    for (size_t num_tables=1; num_tables <= 32; num_tables = 4*num_tables) {
       for (size_t i = 0; i < N; ++i) {
         statistics_test<uint32_t>(batch_size, num_tables);
       }
@@ -299,13 +261,13 @@ TEST(calculate_statistics_test, dtype_uint32) {
   }
 }
 
-// TEST(calculate_statistics_test, dtype_long_long) { 
-//   const size_t N = 5;
-//   for (size_t batch_size=128; batch_size < 15*64*1024; batch_size = 2*batch_size) {
-//     for (size_t num_tables=1; num_tables <= 32; num_tables = 2*num_tables) {
-//       for (size_t i = 0; i < N; ++i) {
-//         statistics_test<long long>(batch_size, num_tables);
-//       }
-//     }
-//   }
-// }
+TEST(calculate_statistics_test, dtype_long_long) { 
+  const size_t N = 5;
+  for (size_t batch_size=128; batch_size < 15*64*1024; batch_size = 4*batch_size) {
+    for (size_t num_tables=1; num_tables <= 32; num_tables = 4*num_tables) {
+      for (size_t i = 0; i < N; ++i) {
+        statistics_test<long long>(batch_size, num_tables);
+      }
+    }
+  }
+}

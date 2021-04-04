@@ -31,7 +31,7 @@ namespace hybrid_embedding {
 template <typename dtype>
 struct EmbeddingTableFunctors {
   static dtype get_num_categories(const std::vector<size_t> &table_sizes);
-  static void get_embedding_offsets(std::vector<dtype>& embedding_offsets, 
+  static void get_embedding_offsets(std::vector<dtype> &embedding_offsets,
                                     const std::vector<size_t> &table_sizes);
   static size_t get_embedding_table_index(const std::vector<size_t> &table_sizes, dtype category);
 };
@@ -56,8 +56,8 @@ struct Data {
 
     std::vector<dtype> h_embedding_offsets;
     EmbeddingTableFunctors<dtype>::get_embedding_offsets(h_embedding_offsets, table_sizes);
-    CK_CUDA_THROW_(cudaMemcpy(embedding_offsets.get_ptr(), h_embedding_offsets.data(), 
-      sizeof(dtype) * h_embedding_offsets.size(), cudaMemcpyHostToDevice));
+    CK_CUDA_THROW_(cudaMemcpy(embedding_offsets.get_ptr(), h_embedding_offsets.data(),
+                              sizeof(dtype) * h_embedding_offsets.size(), cudaMemcpyHostToDevice));
   }
 
   Data() {}

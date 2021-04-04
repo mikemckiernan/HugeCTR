@@ -30,8 +30,9 @@ struct Statistics {
  public:
   Statistics() : num_samples(0), num_unique_categories(0) {}
   ~Statistics() {}
-  Statistics(const Data<dtype> &data) 
-    : num_samples(data.batch_size * data.num_iterations), num_unique_categories(0) {
+  Statistics(const Data<dtype> &data)
+      : num_samples(data.table_sizes.size() * data.batch_size * data.num_iterations),
+        num_unique_categories(0) {
     std::shared_ptr<GeneralBuffer2<CudaAllocator>> buf = GeneralBuffer2<CudaAllocator>::create();
     reserve(buf);
     buf->allocate();
