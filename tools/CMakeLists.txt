@@ -21,4 +21,12 @@ if(NOT DISABLE_CUDF)
     add_subdirectory(dlrm_script)
 endif()
 add_subdirectory(data_generator)
-add_subdirectory(embedding_plugin)
+
+option(DISABLE_EMBEDDING_PLUGIN "Disable embedding_plugin" OFF)
+
+if (DISABLE_EMBEDDING_PLUGIN)
+  message("Embedding plugin disabled")
+else()
+  message("Embedding plugin enabled")
+  add_subdirectory(embedding_plugin)
+endif()
