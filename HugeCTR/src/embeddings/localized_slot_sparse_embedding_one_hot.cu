@@ -45,12 +45,27 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         const Tensors2<TypeHashKey> &evaluate_value_tensors,
         const std::vector<std::shared_ptr<size_t>> &evaluate_nnz_array,
         const SparseEmbeddingHashParams<TypeEmbeddingComp> &embedding_params,
-        const std::string plan_file, const std::shared_ptr<ResourceManager> &resource_manager)
+        const std::string plan_file, const std::shared_ptr<ResourceManager> &resource_manager,
+        bool use_cuda_graph)
     : Base(train_row_offsets_tensors, train_value_tensors, train_nnz_array,
            evaluate_row_offsets_tensors, evaluate_value_tensors, evaluate_nnz_array,
            embedding_params, resource_manager),
+      gpu_barrier_(resource_manager),
+      use_cuda_graph_(use_cuda_graph),
       slot_size_array_(embedding_params.slot_size_array) {
   try {
+
+    if (use_cuda_graph_) {
+      size_t num_gpus_ = Base::get_resource_manager().get_local_gpu_count();
+      train_fprop_graph_.resize(num_gpus_, cudaGraph_t());
+      train_bprop_graph_.resize(num_gpus_, cudaGraph_t());
+      eval_graph_.resize(num_gpus_, cudaGraph_t());
+
+      train_fprop_instance_.resize(num_gpus_, cudaGraphExec_t());
+      train_bprop_instance_.resize(num_gpus_, cudaGraphExec_t());
+      eval_instance_.resize(num_gpus_, cudaGraphExec_t());
+    }
+
     max_vocabulary_size_ = 0;
     for (size_t slot_size : slot_size_array_) {
       max_vocabulary_size_ += slot_size;
@@ -103,7 +118,10 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       {
         Tensor2<size_t> tensor;
         buf->reserve({1, Base::get_universal_batch_size() * Base::get_max_feature_num()}, &tensor);
+        size_top_categories_.push_back(0);
         top_categories_.push_back(tensor);
+        // std::cout << "top_categories size : " << Base::get_universal_batch_size() * Base::get_max_feature_num()
+                  // << std::endl;
       }
 
       // new hash table value_index that get() from HashTable

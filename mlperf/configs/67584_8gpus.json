@@ -1,62 +1,44 @@
 {
-    "solver": {
-        "eval_metrics": [
-            "AUC:0.8025"
-        ],
-        "batchsize_eval": 43008,
-        "display": 1000,
-        "lr_policy": "fixed",
-        "mixed_precision": 1024,
-        "eval_interval": 4877,
-        "max_iter": 97545,
-        "snapshot": 10000000,
-        "gpu": [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7
-        ],
-        "batchsize": 43008,
-        "snapshot_prefix": "./",
-        "eval_batches": 2073
-    },
     "optimizer": {
-        "global_update": false,
+        "type": "SGD",
         "sgd_hparam": {
-            "learning_rate": 25,
-            "decay_start": 48772,
-            "end_lr": 0.0,
-            "decay_power": 2.0,
+            "learning_rate": 26,
             "warmup_steps": 2500,
-            "atomic_update": true,
-            "decay_steps": 29264
+            "decay_power": 2.0,
+            "decay_steps": 15518,
+            "decay_start": 49659,
+            "end_lr": 0.0,
+            "atomic_update": true
         },
-        "type": "SGD"
+        "global_update": false
     },
     "layers": [
         {
-            "num_samples": 4195196928,
+            "type": "Data",
+            "check": "None",
+            "source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/train_data.bin",
+            "sparse": [
+                {
+                    "type": "LocalizedSlot",
+                    "top": "data1",
+                    "max_feature_num_per_sample": 26,
+                    "max_nnz": 1,
+                    "slot_num": 26
+                }
+            ],
             "dense": {
                 "top": "dense",
                 "dense_dim": 13
             },
-            "source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/train_data.bin",
-            "cache_eval_data": 1613,
+            "name": "data",
             "format": "Raw",
-            "sparse": [
-                {
-                    "top": "data1",
-                    "slot_num": 26,
-                    "max_nnz": 1,
-                    "max_feature_num_per_sample": 26,
-                    "type": "LocalizedSlot"
-                }
-            ],
-            "check": "None",
+            "label": {
+                "label_dim": 1,
+                "top": "label"
+            },
+            "eval_num_samples": 89137319,
+            "cache_eval_data": 807,
+            "eval_source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/test_data.bin",
             "slot_size_array": [
                 39884406,
                 39043,
@@ -85,19 +67,12 @@
                 108,
                 36
             ],
-            "label": {
-                "top": "label",
-                "label_dim": 1
-            },
-            "name": "data",
-            "type": "Data",
-            "eval_num_samples": 89137319,
-            "eval_source": "/raid/datasets/criteo/mlperf/40m.limit_preshuffled/test_data.bin"
+            "num_samples": 4195196928
         },
         {
+            "type": "LocalizedSlotSparseEmbeddingOneHot",
             "top": "sparse_embedding1",
             "sparse_embedding_hparam": {
-                "embedding_vec_size": 128,
                 "combiner": 0,
                 "slot_size_array": [
                     39884406,
@@ -126,138 +101,163 @@
                     12972,
                     108,
                     36
-                ]
+                ],
+                "embedding_vec_size": 128
             },
             "bottom": "data1",
-            "name": "sparse_embedding1",
-            "type": "LocalizedSlotSparseEmbeddingOneHot"
+            "name": "sparse_embedding1"
         },
         {
             "fc_param": {
                 "num_output": 512
             },
+            "type": "FusedInnerProduct",
+            "bottom": "dense",
             "position": "Head",
-            "name": "fc1",
             "top": [
                 "fc11",
                 "fc12"
             ],
-            "type": "FusedInnerProduct",
-            "bottom": "dense"
+            "name": "fc1"
         },
         {
             "fc_param": {
                 "num_output": 256
             },
-            "position": "Body",
-            "name": "fc2",
-            "top": [
-                "fc21",
-                "fc22"
-            ],
             "type": "FusedInnerProduct",
             "bottom": [
                 "fc11",
                 "fc12"
-            ]
+            ],
+            "position": "Body",
+            "top": [
+                "fc21",
+                "fc22"
+            ],
+            "name": "fc2"
         },
         {
             "fc_param": {
                 "num_output": 128
             },
-            "position": "Tail",
-            "name": "fc3",
-            "top": "fc3",
             "type": "FusedInnerProduct",
             "bottom": [
                 "fc21",
                 "fc22"
-            ]
+            ],
+            "position": "Tail",
+            "top": "fc3",
+            "name": "fc3"
         },
         {
+            "type": "Interaction",
             "top": "interaction1",
             "bottom": [
                 "fc3",
                 "sparse_embedding1"
             ],
-            "name": "interaction1",
-            "type": "Interaction"
+            "name": "interaction1"
         },
         {
             "fc_param": {
                 "num_output": 1024
             },
+            "type": "FusedInnerProduct",
             "position": "Head",
-            "name": "fc4",
             "top": [
                 "fc41",
                 "fc42"
             ],
-            "type": "FusedInnerProduct",
-            "bottom": "interaction1"
+            "bottom": "interaction1",
+            "name": "fc4"
         },
         {
             "fc_param": {
                 "num_output": 1024
             },
-            "position": "Body",
-            "name": "fc5",
-            "top": [
-                "fc51",
-                "fc52"
-            ],
             "type": "FusedInnerProduct",
             "bottom": [
                 "fc41",
                 "fc42"
-            ]
+            ],
+            "position": "Body",
+            "top": [
+                "fc51",
+                "fc52"
+            ],
+            "name": "fc5"
         },
         {
             "fc_param": {
                 "num_output": 512
             },
-            "position": "Body",
-            "name": "fc6",
-            "top": [
-                "fc61",
-                "fc62"
-            ],
             "type": "FusedInnerProduct",
             "bottom": [
                 "fc51",
                 "fc52"
-            ]
+            ],
+            "position": "Body",
+            "top": [
+                "fc61",
+                "fc62"
+            ],
+            "name": "fc6"
         },
         {
             "fc_param": {
                 "num_output": 256
             },
-            "position": "Tail",
-            "name": "fc7",
-            "top": "fc7",
             "type": "FusedInnerProduct",
             "bottom": [
                 "fc61",
                 "fc62"
-            ]
+            ],
+            "position": "Tail",
+            "top": "fc7",
+            "name": "fc7"
         },
         {
-            "top": "fc8",
             "fc_param": {
                 "num_output": 1
             },
+            "type": "InnerProduct",
+            "top": "fc8",
             "bottom": "fc7",
-            "name": "fc8",
-            "type": "InnerProduct"
+            "name": "fc8"
         },
         {
+            "type": "BinaryCrossEntropyLoss",
             "top": "loss",
             "bottom": [
                 "fc8",
                 "label"
             ],
-            "name": "loss",
-            "type": "BinaryCrossEntropyLoss"
+            "name": "loss"
         }
-    ]
+    ],
+    "solver": {
+        "snapshot_prefix": "./",
+        "eval_batches": 807,
+        "batchsize": 67584,
+        "lr_policy": "fixed",
+        "gpu": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+        ],
+        "snapshot": 10000000,
+        "mixed_precision": 1024,
+        "display": 1000,
+        "eval_interval": 3103,
+        "batchsize_eval": 110592,
+        "eval_metrics": [
+            "AUC:0.8025"
+        ],
+        "max_iter": 62074
+    }
 }

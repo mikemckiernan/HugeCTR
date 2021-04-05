@@ -24,7 +24,9 @@
 #include "HugeCTR/include/tensor2.hpp"
 
 namespace HugeCTR {
+
 namespace hybrid_embedding {
+
 template <typename dtype>
 struct Statistics {
  public:
@@ -67,4 +69,5 @@ struct Statistics {
 };
 
 }  // namespace hybrid_embedding
+
 }  // namespace HugeCTR

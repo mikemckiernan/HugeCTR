@@ -19,6 +19,8 @@
 #include <network.hpp>
 #include <regularizers/no_regularizer.hpp>
 
+#include <omp.h>
+
 namespace HugeCTR {
 
 void conv_weight_gpu(size_t grid, size_t block, __half* dst, const float* src, int elems,
@@ -64,7 +66,11 @@ void Network::train(long long current_batchsize) {
   }
 
   if (enable_cuda_graph_) {
+#ifdef ENABLE_PROFILING
+    if (!train_fprop_graph_created_ || global_profiler.init_cuda_graph_this_iter) {
+#else
     if (!train_fprop_graph_created_) {
+#endif
       CK_CUDA_THROW_(
           cudaStreamBeginCapture(gpu_resource_->get_stream(), cudaStreamCaptureModeRelaxed));
       for (auto& layer : train_layers_) {
@@ -85,7 +91,11 @@ void Network::train(long long current_batchsize) {
   train_loss_->compute(true, current_batchsize);
 
   if (enable_cuda_graph_) {
+#ifdef ENABLE_PROFILING
+    if (!train_bprop_graph_created_ || global_profiler.init_cuda_graph_this_iter) {
+#else
     if (!train_bprop_graph_created_) {
+#endif
       CK_CUDA_THROW_(
           cudaStreamBeginCapture(gpu_resource_->get_stream(), cudaStreamCaptureModeRelaxed));
 
@@ -222,6 +232,7 @@ metrics::RawMetricMap Network::get_raw_metrics() const { return raw_metrics_; }
 void Network::exchange_wgrad() {
   if (gpu_resource_->support_nccl()) {
     CudaDeviceContext context(get_device_id());
+    PROFILE_RECORD("exchange_wgrad.start", gpu_resource_->get_stream(), get_device_id());
     if (use_mixed_precision_) {
       CK_NCCL_THROW_(ncclAllReduce((const void*)wgrad_tensor_half_.get_ptr(),
                                    (void*)wgrad_tensor_half_.get_ptr(),
@@ -233,6 +244,7 @@ void Network::exchange_wgrad() {
                                    ncclFloat, ncclSum, gpu_resource_->get_nccl(),
                                    gpu_resource_->get_stream()));
     }
+    PROFILE_RECORD("exchange_wgrad.stop", gpu_resource_->get_stream(), get_device_id());
   } else {
     CK_THROW_(Error_t::IllegalCall, "cannot call exchange_wgrad with single GPU");
   }

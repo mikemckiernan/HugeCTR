@@ -1039,7 +1039,7 @@ static void create_embeddings(std::map<std::string, SparseInput<TypeKey>>& spars
                              Embedding_t embedding_type, const nlohmann::json& config,
                              const std::shared_ptr<ResourceManager>& resource_manager,
                              size_t batch_size, size_t batch_size_eval, bool use_mixed_precision,
-                             float scaler, const nlohmann::json& j_layers) {
+                             float scaler, const nlohmann::json& j_layers, bool use_cuda_graph=false) {
 
   auto j_optimizer = get_json(config, "optimizer");
   auto embedding_name = get_value_from_json<std::string>(j_layers, "type");
@@ -1171,7 +1171,8 @@ static void create_embeddings(std::map<std::string, SparseInput<TypeKey>>& spars
       embeddings.emplace_back(new LocalizedSlotSparseEmbeddingOneHot<TypeKey, TypeFP>(
           sparse_input.train_row_offsets, sparse_input.train_values, sparse_input.train_nnz,
           sparse_input.evaluate_row_offsets, sparse_input.evaluate_values,
-          sparse_input.evaluate_nnz, embedding_params, plan_file, resource_manager));
+          sparse_input.evaluate_nnz, embedding_params, plan_file, resource_manager,
+          use_cuda_graph));
 
       break;
     }
@@ -1408,12 +1409,14 @@ static void create_pipeline_internal(std::shared_ptr<IDataReader>& train_data_re
             create_embeddings<TypeKey, __half>(sparse_input_map, train_tensor_entries_list,
                                                evaluate_tensor_entries_list, embeddings,
                                                embedding_type, config, resource_manager, batch_size,
-                                               batch_size_eval, use_mixed_precision, scaler, j);
+                                               batch_size_eval, use_mixed_precision, scaler, j,
+                                               use_cuda_graph);
           } else {
             create_embeddings<TypeKey, float>(sparse_input_map, train_tensor_entries_list,
                                               evaluate_tensor_entries_list, embeddings,
                                               embedding_type, config, resource_manager, batch_size,
-                                              batch_size_eval, use_mixed_precision, scaler, j);
+                                              batch_size_eval, use_mixed_precision, scaler, j,
+                                              use_cuda_graph);
           }
         }  // for ()
       }    // Create Embedding

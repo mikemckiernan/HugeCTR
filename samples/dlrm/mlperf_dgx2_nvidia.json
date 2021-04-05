@@ -29,7 +29,7 @@
 
   "layers": [ 
       {
-	 "name": "data",
+	  "name": "data",
 	  "type": "Data",
 	  "format": "Raw",
 	  "num_samples": 4195196928,

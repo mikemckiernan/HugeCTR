@@ -21,12 +21,12 @@ ENV CPATH=/opt/conda/include:$CPATH \
     NCCL_LAUNCH_MODE=PARALLEL
 RUN conda update -n base -c defaults conda && \
     conda install -c anaconda cmake=3.18.2 pip && \
-    conda install -c conda-forge ucx libhwloc=2.4.0 openmpi=4.1.0 openmpi-mpicc=4.1.0 mpi4py=3.0.3 && \
+    conda install -c conda-forge ucx libhwloc=2.4.0 openmpi=4.0.5 openmpi-mpicc=4.0.5 mpi4py=3.0.3 && \
     rm -rf /opt/conda/include/nccl.h /opt/conda/lib/libnccl.so /opt/conda/include/google
 ENV OMPI_MCA_plm_rsh_agent=sh \
     OMPI_MCA_opal_cuda_support=true
 RUN pip3 install numpy pandas sklearn ortools jupyter tensorflow==2.4.0
-RUN pip3 install --no-cache-dir https://github.com/mlperf/logging/archive/9ea0afa.zip
+
 RUN mkdir -p /var/tmp && cd /var/tmp && git clone --depth=1 --branch branch-0.17 https://github.com/rapidsai/rmm.git rmm && cd - && \
     cd /var/tmp/rmm && \
     mkdir -p build && cd build && \

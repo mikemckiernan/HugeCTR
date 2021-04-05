@@ -199,8 +199,7 @@ static const std::map<std::string, Optimizer_t> OPTIMIZER_TYPE_MAP = {
     {"SGD", Optimizer_t::SGD}};
 
 static const std::map<std::string, Update_t> UPDATE_TYPE_MAP = {
-    {"Local", Update_t::Local}, {"Global", Update_t::Global}, {"LazyGlobal", Update_t::LazyGlobal}, 
-    {"Atomic", Update_t::Atomic}, {"AtomicCached", Update_t::AtomicCached}};
+    {"Local", Update_t::Local}, {"Global", Update_t::Global}, {"LazyGlobal", Update_t::LazyGlobal}};
 
 static const std::map<std::string, Regularizer_t> REGULARIZER_TYPE_MAP = {
     {"L1", Regularizer_t::L1},

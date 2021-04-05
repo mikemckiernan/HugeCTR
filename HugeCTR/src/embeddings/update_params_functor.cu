@@ -771,11 +771,11 @@ void SparseEmbeddingFunctors::opt_sgd_atomic_cached<TypeEmbeddingComp>(
   const TypeEmbeddingComp *wgrad, float *hash_table_value, size_t *top_categories,
   size_t &size_top_categories, cudaStream_t stream, bool force_stats
 ) {
-
   static bool perform_stats = true;
   if (perform_stats || force_stats) {
     uint32_t num_unique_categories;
     hybrid_embedding::Statistics<size_t> statistics(num_samples);
+
     statistics.sort_categories_by_count(hash_value_index, (uint32_t) num_samples, top_categories,
                                         statistics.counts_sorted.get_ptr(), 
                                         num_unique_categories, stream);
@@ -807,34 +807,12 @@ void SparseEmbeddingFunctors::update_params<TypeEmbeddingComp>(
     size_t sm_count, cudaStream_t stream) {
   try {
     if (opt_params.optimizer == Optimizer_t::SGD && opt_params.hyperparams.sgd.atomic_update) {
-      const size_t grid_size = min(max(1ul, nnz), sm_count * 32);
-      const size_t block_size = embedding_vec_size;
-
       float lr_scale = opt_params.lr / opt_params.scaler;
 
-      switch(opt_params.update_type) {
-       case Update_t::Atomic:
-        // for one-hot, the sample_id is dedicated.
-        opt_sgd_atomic_kernel<<<grid_size, block_size, 0, stream>>>(
-            nnz, embedding_vec_size, lr_scale, hash_value_index.get_ptr(), wgrad.get_ptr(),
-            hash_table_value.get_ptr());
-        break;
-       case Update_t::AtomicCached:
-
-      //  size_t num_samples, size_t max_vocabulary_size, size_t embedding_vec_size, 
-      //  const size_t *hash_value_index, float lr, float scaler, 
-      //  const TypeEmbeddingComp *wgrad, float *hash_table_value, size_t *top_categories,
-      //  uint32_t &size_top_categories, cudaStream_t stream
-
-        opt_sgd_atomic_cached<TypeEmbeddingComp>(
-          nnz, max_vocabulary_size, embedding_vec_size,
-          hash_value_index.get_ptr(), opt_params.lr, opt_params.scaler, wgrad.get_ptr(),
-          hash_table_value.get_ptr(), top_categories.get_ptr(), size_top_categories, stream);
-        break;
-       default:
-        CK_THROW_(Error_t::WrongInput, "Error: Invalid update type");
-        break;
-      }
+      opt_sgd_atomic_cached<TypeEmbeddingComp>(
+        nnz, max_vocabulary_size, embedding_vec_size,
+        hash_value_index.get_ptr(), opt_params.lr, opt_params.scaler, wgrad.get_ptr(),
+        hash_table_value.get_ptr(), top_categories.get_ptr(), size_top_categories, stream);
     } else {
       CK_THROW_(Error_t::WrongInput, "Error: Invalid opitimizer type");
     }

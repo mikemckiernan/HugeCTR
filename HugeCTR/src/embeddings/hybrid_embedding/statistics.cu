@@ -38,9 +38,9 @@ void Statistics<dtype>::sort_categories_by_count(const Tensor2<dtype> &samples,
   dtype *d_categories = categories_sorted.get_ptr();
   uint32_t *d_counts = counts_sorted.get_ptr();
   sort_categories_by_count(d_samples, num_samples, d_categories, d_counts, num_unique_categories,
-                           stream);  // Kefengs' function
-  // categories_sorted.reset_shape({num_unique_categories, 1});
-  // counts_sorted.reset_shape({num_unique_categories, 1});
+                           stream);
+//   categories_sorted.reset_shape({num_unique_categories, 1});
+//   counts_sorted.reset_shape({num_unique_categories, 1});
 }
 
 template <typename dtype>
@@ -71,12 +71,13 @@ void Statistics<dtype>::reserve_temp_storage(std::shared_ptr<GeneralBuffer2<Cuda
 
 template <typename dtype>
 void Statistics<dtype>::sort_categories_by_count(const dtype *samples, uint32_t num_samples,
-                                                 dtype *categories_sorted, uint32_t *counts_sorted,
+                                                 dtype *p_categories_sorted, uint32_t *p_counts_sorted,
                                                  uint32_t &num_unique_categories,
                                                  cudaStream_t stream) {
   if (num_samples > 0x0fffffff) {
     CK_THROW_(Error_t::WrongInput, "num_samples is too large, overflow for int type");
   }
+
   void *p_sort_keys_temp =
       reinterpret_cast<void *>(sort_categories_by_count_temp_storages_[0].get_ptr());  // void*
   dtype *p_sort_keys_out =
@@ -96,6 +97,7 @@ void Statistics<dtype>::sort_categories_by_count(const dtype *samples, uint32_t 
   CK_CUDA_THROW_(cub::DeviceRadixSort::SortKeys(p_sort_keys_temp, temp_size, samples,
                                                 p_sort_keys_out, (int)num_samples, 0,
                                                 sizeof(dtype) * 8, stream));
+  CK_CUDA_THROW_(cudaPeekAtLastError());
 
   temp_size = sort_categories_by_count_temp_storages_[2].get_size_in_bytes();
   CK_CUDA_THROW_(cub::DeviceRunLengthEncode::Encode(
@@ -103,18 +105,19 @@ void Statistics<dtype>::sort_categories_by_count(const dtype *samples, uint32_t 
       p_unique_categories_counts, p_num_unique_categories, (int)num_samples, stream));
   CK_CUDA_THROW_(cudaMemcpyAsync((void *)&num_unique_categories, (void *)p_num_unique_categories,
                                  sizeof(uint32_t), cudaMemcpyDeviceToHost, stream));
+  CK_CUDA_THROW_(cudaPeekAtLastError());
 
   temp_size = sort_categories_by_count_temp_storages_[6].get_size_in_bytes();
   CK_CUDA_THROW_(cub::DeviceRadixSort::SortPairsDescending(
-      p_sort_pairs_temp, temp_size, p_unique_categories_counts, counts_sorted,
-      p_unique_categories_out, categories_sorted, (int)num_unique_categories, 0,
+      p_sort_pairs_temp, temp_size, p_unique_categories_counts, p_counts_sorted,
+      p_unique_categories_out, p_categories_sorted, (int)num_unique_categories, 0,
       sizeof(uint32_t) * 8, stream));
+  CK_CUDA_THROW_(cudaPeekAtLastError());
 }
 
 template class Statistics<uint32_t>;
 template class Statistics<long long>;
 template class Statistics<size_t>;
-
 }  // namespace hybrid_embedding
 
 }  // namespace HugeCTR
