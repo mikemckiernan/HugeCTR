@@ -170,9 +170,6 @@ include_directories(
   $ENV{CONDA_PREFIX}/include
   $ENV{CONDA_PREFIX}/include/libcudf/libcudacxx)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -fno-strict-aliasing")
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -fno-strict-aliasing")
-
 if(OPENMP_FOUND)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fopenmp")
   message(STATUS "add -fopenmp to compiler")
@@ -182,7 +179,6 @@ endif()
 
 link_directories(
   ${CUDNN_LIB_PATHS}
-  ${CUTLASS_LIB_PATHS}
   ${NCCL_LIB_PATHS}
   ${HWLOC_LIB_PATHS}
   ${UCX_LIB_PATHS}
