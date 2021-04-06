@@ -106,4 +106,8 @@ ELSE()
   TARGET_LINK_LIBRARIES(embedding_plugin PUBLIC cublas curand cudnn nccl nvToolsExt rmm cusparse ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
+if(NOT DISABLE_CUDF)
+  target_link_libraries(embedding_plugin PUBLIC cudf)
+endif()
+
 SET_TARGET_PROPERTIES(embedding_plugin PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

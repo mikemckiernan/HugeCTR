@@ -39,57 +39,51 @@ dlrm_interesed_events = {
     },
     'BottomMLP.fc1': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'BottomMLP.fc2': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'BottomMLP.fc3': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'Embedding': {
         'forward_events': [
-            'localized_slot_sparse_embedding_one_hot.forward',
+#            'localized_slot_sparse_embedding_one_hot.forward',
 #            'all2all_forward',
 #            'inter_node_hier_a2a.fprop'
         ],
         'backward_events': [
-            'localized_slot_sparse_embedding_one_hot.backward',
+#            'localized_slot_sparse_embedding_one_hot.backward',
 #            'all2all_backward',
 #            'inter_node_hier_a2a.bprop',
-            'localized_slot_sparse_embedding_one_hot.update_params'
+#            'localized_slot_sparse_embedding_one_hot.update_params'
         ]
     },
     'Interaction': {
@@ -102,86 +96,77 @@ dlrm_interesed_events = {
     },
     'TopMLP.fc4': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc5': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc6': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc7': {
         'forward_events': [
-#            'fused_relu_bias_fully_connected.fprop',
+            'fused_relu_bias_fully_connected.fprop',
 #            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fused_relu_bias_fully_connected.bprop',
-#            'fused_relu_bias_fully_connected.bprop.initialize_array',
+            'fused_relu_bias_fully_connected.bprop',
 #            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
-#            'fused_relu_bias_fully_connected.bprop.convert_array',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
 #            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'TopMLP.fc8': {
         'forward_events': [
-#            'fully_connected_layer_half.fprop',
-#            'fully_connected_layer_half.fprop.cublasGemmEx_1',
-#            'fully_connected_layer_half.fprop.cublasGemmEx_2'
+            'fused_relu_bias_fully_connected.fprop',
+#            'fused_relu_bias_fully_connected.fprop.cublasLtMatmul',
         ],
         'backward_events': [
-#            'fully_connected_layer_half.bprop',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_1',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_2',
-#            'fully_connected_layer_half.bprop.cublasGemmEx_3'
+            'fused_relu_bias_fully_connected.bprop',
+#            'fused_relu_bias_fully_connected.bprop.reverse_add_bias_and_re_kernel',
+#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_1',
+#            'fused_relu_bias_fully_connected.bprop.cublasGemmEx_2'
         ]
     },
     'Loss': {
         'forward_events': [
-#            'compute'
+            'compute'
         ]
     },
     'AllReduce_wgrads': {
         'forward_events': [
-#            'exchange_wgrad'
+            'exchange_wgrad'
         ]
     },
     'Update_Params': {
         'forward_events': [
-#            'update'
+            'update'
         ]
     }
 }
@@ -263,8 +248,8 @@ if __name__ == '__main__':
     `${host_name}.prof.json`. If you use multiple nodes, there will be several jsons appear. The result json is not
     human readable, so please use function below to parse it.
     '''
-    # result = parse_result(os.path.join(project_root, profiling_dir), dlrm_interesed_events)
-    #with open(os.path.join(project_root, profiling_dir, 'test' + '.json'), 'w') as f:
-    #    json.dump(result, f, indent=2)
-    #print(json.dumps(result, indent=2))
+    result = parse_result(os.path.join(project_root, profiling_dir), dlrm_interesed_events)
+    with open(os.path.join(project_root, profiling_dir, 'test' + '.json'), 'w') as f:
+        json.dump(result, f, indent=2)
+    print(json.dumps(result, indent=2))
 

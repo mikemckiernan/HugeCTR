@@ -152,7 +152,6 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/test
   ${PROJECT_SOURCE_DIR}/HugeCTR/include
   ${CUDA_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/third_party/cutlass
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp/include
   ${PROJECT_SOURCE_DIR}/third_party/cuml/cpp/src_prims
@@ -160,6 +159,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/HugeCTR/include
   ${PROJECT_SOURCE_DIR}/third_party
   ${PROJECT_SOURCE_DIR}/third_party/cub
+  ${PROJECT_SOURCE_DIR}/third_party/cutlass
   ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
   ${PROJECT_SOURCE_DIR}/third_party/json/single_include
 

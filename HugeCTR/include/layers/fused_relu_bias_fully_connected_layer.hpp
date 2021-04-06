@@ -24,13 +24,6 @@
 
 namespace HugeCTR {
 
-typedef enum 
-{
-    HEAD=0,
-    BODY,
-    TAIL,
-    ISOLATED
-} Position;
 
 /**
  * @brief
@@ -39,17 +32,24 @@ typedef enum
 class FusedReluBiasFullyConnectedLayer : public Layer {
   // Optimized cublasGemmEx algorithm selection
   cublasLtMatmulAlgo_t falgo_k_;
+  cublasLtMatmulAlgo_t balgo_dRelu_;
   cublasGemmAlgo_t balgo_k_{CUBLAS_GEMM_DEFAULT};
   cublasGemmAlgo_t balgo_x_{CUBLAS_GEMM_DEFAULT};
+  cublasGemmAlgo_t balgo_b_{CUBLAS_GEMM_DEFAULT};
 
   cublasLtMatrixLayout_t cublas_kernel_desc_ = NULL;
   cublasLtMatrixLayout_t cublas_top_desc_ = NULL;
   cublasLtMatrixLayout_t cublas_bottom_desc_ = NULL;
+  cublasLtMatrixLayout_t cublas_dRelu_top_desc_ = NULL;
+  cublasLtMatrixLayout_t cublas_dRelu_bottom_desc_ = NULL;
   cublasLtMatmulDesc_t cublas_op_desc_ = NULL;
+  cublasLtMatmulDesc_t cublas_op_desc_bprop_ = NULL;
 
   cublasLtMatmulPreference_t cublas_preference_ = NULL;
+  cublasLtMatmulPreference_t cublas_preference_dRelu_ = NULL;
   size_t cublaslt_workspace_size_ = 1024*1024*8;
   void* cublaslt_workspace_;
+  void* cublaslt_workspace_dRelu_;
 
   /*
    * stores the weight tensors for compute of this layer.
@@ -71,24 +71,47 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   /*
    * stores the references to the bottom tensors of this layer.
    */
-  Tensor2<__half> train_bottom_tensor_fprop_;
-  Tensor2<__half> train_bottom_tensor_bprop_;
+  Tensor2<__half> train_in_tensor_;
+  Tensor2<__half> mask_in_tensor_;
+  Tensor2<__half> dRelu_in_tensor_;
+  Tensor2<__half> db_in_tensor_;
+  Tensor2<int> mask_in_tensor_temp_;
 
   /*
    * stores the references to the top tensors of this layer.
    */
-  Tensor2<__half> top_tensor_fprop_;
-  Tensor2<__half> top_tensor_bprop_;
+  Tensor2<__half> train_out_tensor_;
+  Tensor2<__half> mask_out_tensor_;
+  Tensor2<__half> dRelu_out_tensor_;
+  Tensor2<__half> db_out_tensor_;
 
+
+  /*
+   * stores the references to the output tensors of GEMM.
+   */
+  Tensor2<__half> identity_tensor_;
+  
   /*
    * stores the references to the intermediate bias grad tensors of this layer.
    */
   Tensor2<float> bias_grad_tensor_;
 
+  void* bprop_fusion_;
+
   /*
    * stores the position of this layer in the network
    */
-  Position pos_;
+  FcPosition_t pos_;
+
+  /*
+   * stores the activation function of this layer
+   */
+  Activation_t act_;
+
+  /*
+   * skip the computation of dgrad or not
+   */
+  bool skip_dgrad_;
 
   std::unique_ptr<DataSimulator> get_uniform_initializer(const int index) override;
   std::unique_ptr<DataSimulator> get_xavier_uniform_initializer(const int index) override;
@@ -96,11 +119,11 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
   std::unique_ptr<DataSimulator> get_default_initializer(const int index) override;
 
   Tensor2<__half>& get_bottom_tensor_fprop(bool is_train) {
-    return train_bottom_tensor_fprop_;
+    return train_in_tensor_;
   }
 
   Tensor2<__half>& get_bottom_tensor_bprop(bool is_train) {
-    return train_bottom_tensor_bprop_;
+    return mask_in_tensor_;
   }
 
  public:
@@ -117,6 +140,7 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
    */
   void search_algorithm() final;
   void initialize() final;
+  void initialize_bprop();
 
   /**
    * This is the constructor of the FullyConnectedLayer.
@@ -137,12 +161,18 @@ class FusedReluBiasFullyConnectedLayer : public Layer {
       const std::shared_ptr<BufferBlock2<__half>>& weights_buff,
       const std::shared_ptr<BufferBlock2<__half>>& weights_grad_buff,
       const std::shared_ptr<GeneralBuffer2<CudaAllocator>>& blobs_buff,
-      const Tensor2<__half>& train_bottom_tensor_fprop,
-      const Tensor2<__half>& train_bottom_tensor_bprop,
-      const Tensor2<__half>& top_tensor_fprop, 
-      const Tensor2<__half>& top_tensor_bprop, 
+      const Tensor2<__half>& train_in_tensor,
+      const Tensor2<__half>& mask_in_tensor,
+      const Tensor2<__half>& dRelu_in_tensor,
+      const Tensor2<__half>& db_in_tensor,
+      const Tensor2<__half>& train_out_tensor, 
+      const Tensor2<__half>& mask_out_tensor, 
+      const Tensor2<__half>& dRelu_out_tensor,
+      Tensor2<__half>& db_out_tensor,
       const std::shared_ptr<GPUResource>& gpu_resource,
-      const std::string& pos,
+      const FcPosition_t& pos,
+      const Activation_t& act,
+      const bool& skip_dgrad,
       std::vector<Initializer_t> initializer_types = std::vector<Initializer_t>());
   FusedReluBiasFullyConnectedLayer(const FusedReluBiasFullyConnectedLayer&) = delete;
   FusedReluBiasFullyConnectedLayer& operator=(const FusedReluBiasFullyConnectedLayer&);

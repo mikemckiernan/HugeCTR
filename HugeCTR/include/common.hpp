@@ -111,7 +111,13 @@ enum class Optimizer_t { Adam, MomentumSGD, Nesterov, SGD };
 
 enum class Update_t { Local, Global, LazyGlobal };
 
+enum class Activation_t { Relu, None };
+
+enum class FcPosition_t { None, Head, Body, Tail, Isolated };
+
 enum class Regularizer_t { L1, L2 };
+
+enum class Alignment_t { Auto, None };
 
 enum class Layer_t {
   BatchNorm,
