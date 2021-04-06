@@ -229,6 +229,9 @@ bool Session::train() {
         long long current_batchsize_per_device =
             train_data_reader_->get_current_batchsize_per_device(id);
         networks_[id]->train(current_batchsize_per_device);
+        const auto& local_gpu = resource_manager_->get_local_gpu(id);
+        local_gpu->set_compute_event_sync(local_gpu->get_stream());
+        local_gpu->wait_on_compute_event(local_gpu->get_comp_overlap_stream());
         networks_[id]->exchange_wgrad();
         networks_[id]->update_params();
       }
@@ -236,17 +239,37 @@ bool Session::train() {
       long long current_batchsize_per_device =
           train_data_reader_->get_current_batchsize_per_device(0);
       networks_[0]->train(current_batchsize_per_device);
+      const auto& local_gpu = resource_manager_->get_local_gpu(0);
+      local_gpu->set_compute_event_sync(local_gpu->get_stream());
+      local_gpu->wait_on_compute_event(local_gpu->get_comp_overlap_stream());
       networks_[0]->exchange_wgrad();
       networks_[0]->update_params();
     } else {
       long long current_batchsize_per_device =
           train_data_reader_->get_current_batchsize_per_device(0);
       networks_[0]->train(current_batchsize_per_device);
+      const auto& local_gpu = resource_manager_->get_local_gpu(0);
+      local_gpu->set_compute_event_sync(local_gpu->get_stream());
+      local_gpu->wait_on_compute_event(local_gpu->get_comp_overlap_stream());
       networks_[0]->update_params();
     }
     for (const auto& one_embedding : embeddings_) {
       one_embedding->backward();
       one_embedding->update_params();
+    }
+    // set event for compute to wait on compute2 for iteration to conclude correct
+    if (networks_.size() > 1) {
+#pragma omp parallel num_threads(networks_.size())
+      {
+        size_t id = omp_get_thread_num();
+        const auto& local_gpu = resource_manager_->get_local_gpu(id);
+        local_gpu->set_compute2_event_sync(local_gpu->get_comp_overlap_stream());
+        local_gpu->wait_on_compute2_event(local_gpu->get_stream());
+      }
+    } else {
+      const auto& local_gpu = resource_manager_->get_local_gpu(0);
+      local_gpu->set_compute2_event_sync(local_gpu->get_comp_overlap_stream());
+      local_gpu->wait_on_compute2_event(local_gpu->get_stream());
     }
     return true;
 #else
