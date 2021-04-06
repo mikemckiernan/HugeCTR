@@ -50,7 +50,7 @@ void split(Tensor2<float>& label_tensor, Tensor2<TypeComp>& dense_tensor,
   const int batchsize = label_tensor.get_dimensions()[0];
   const int label_dim = label_tensor.get_dimensions()[1];
   const int dense_dim = dense_tensor.get_dimensions()[1];
-  // printf("%d, %d, %d\n", label_dim, dense_dim, label_dense_dim);
+  printf("%d, %d, %d\n", label_dim, dense_dim, label_dense_dim);
 
   const int BLOCK_DIM = 256;
   const int GRID_DIM = (label_dense_buffer.get_num_elements() - 1) / BLOCK_DIM + 1;
