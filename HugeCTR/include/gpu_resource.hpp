@@ -42,6 +42,9 @@ class GPUResource {
   size_t sm_count_;
   int cc_major_;
   int cc_minor_;
+  cudaStream_t computation_stream_2_;
+  cudaEvent_t compute_sync_event_;
+  cudaEvent_t compute2_sync_event_;
 
  public:
   GPUResource(int device_id, size_t global_id, unsigned long long replica_uniform_seed,
@@ -54,6 +57,7 @@ class GPUResource {
   size_t get_global_id() const { return global_id_; }
   const cudaStream_t& get_stream() const { return computation_stream_; }
   const cudaStream_t& get_memcpy_stream() const { return memcpy_stream_; }
+  const cudaStream_t& get_comp_overlap_stream() const { return computation_stream_2_; }
   const curandGenerator_t& get_replica_uniform_curand_generator() const {
     return replica_uniform_curand_generator_;
   }
@@ -68,6 +72,10 @@ class GPUResource {
   int get_cc_major() const { return cc_major_; }
   int get_cc_minor() const { return cc_minor_; }
   bool support_nccl() const { return comm_ != nullptr; }
+  void set_compute_event_sync(const cudaStream_t& sync_stream);
+  void wait_on_compute_event(const cudaStream_t& sync_stream);
+  void set_compute2_event_sync(const cudaStream_t& sync_stream);
+  void wait_on_compute2_event(const cudaStream_t& sync_stream);
 };
 
 }  // namespace HugeCTR
