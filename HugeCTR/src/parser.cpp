@@ -527,7 +527,6 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
                   train_out_tensor, mask_out_tensor, dRelu_out_tensor, db_out_tensor,
                   gpu_resource, pos_type, act_type, skip_dgrad, initializer_types));   
 	  }
-          skip_dgrad = false;   
 
           if(pos_type == FcPosition_t::Tail || pos_type == FcPosition_t::Isolated || pos_type ==FcPosition_t::None)
             output_tensor_entries.push_back({input_output_info.output_names[0], train_out_tensor.shrink()});
@@ -923,6 +922,8 @@ void create_layers(const nlohmann::json& j_array, std::vector<TensorEntry>& tens
       (*raw_metrics)[metrics::RawType::Pred] = input_output_info.inputs[0];
       (*raw_metrics)[metrics::RawType::Label] = input_output_info.inputs[1];
     }
+
+    skip_dgrad = false;
   }  // for layers
 }
 
