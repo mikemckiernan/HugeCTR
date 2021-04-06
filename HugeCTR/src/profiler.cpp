@@ -18,6 +18,13 @@
 #include <common.hpp>
 #include <nlohmann/json.hpp>
 
+#if CUDA_VERSION < 11010
+// this won't work for cuda graph, just to pass the compiling
+#define CUDA_GRAPH_EVENT_RECORD(...) cudaEventRecord(__VA_ARGS__)
+#else
+#define CUDA_GRAPH_EVENT_RECORD(...) cudaEventRecordWithFlags(__VA_ARGS__, cudaEventRecordExternal)
+#endif
+
 using nlohmann::json;
 
 namespace HugeCTR {
