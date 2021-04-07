@@ -85,6 +85,9 @@ FILE(GLOB  hugectr_src
   ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/distributed_slot_sparse_embedding_hash.cu
   ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/localized_slot_sparse_embedding_hash.cu
   ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/localized_slot_sparse_embedding_one_hot.cu
+  ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/hybrid_embedding/utils.cu
+  ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/hybrid_embedding/data.cu
+  ${PROJECT_SOURCE_DIR}/HugeCTR/src/embeddings/hybrid_embedding/statistics.cu
   ${PROJECT_SOURCE_DIR}/HugeCTR/src/diagnose.cu
 )
 

@@ -424,8 +424,8 @@ __global__ void opt_sgd_cached_kernel(int nnz, int embedding_vec_size, float lr_
 
   unsigned int update_top_category = 0;     // bit indicator sequence
 
-  int key_id_local = 0;
-  for (int key_id = bid*num_samples_per_block; key_id < nnz && key_id < (bid+1)*num_samples_per_block; ++key_id) {
+  size_t key_id_local = 0;
+  for (size_t key_id = bid*num_samples_per_block; key_id < nnz && key_id < (bid+1)*num_samples_per_block; ++key_id) {
     if (tid < embedding_vec_size) {
       int index_top_category = ds_index_top_categories[key_id_local];
       size_t category_embedding_index = ds_category[key_id_local];
