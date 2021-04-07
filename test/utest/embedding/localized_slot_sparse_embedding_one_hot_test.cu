@@ -223,7 +223,7 @@ void train_and_test(const std::vector<int> &device_list, const Optimizer_t &opti
           train_data_reader->get_row_offsets_tensors(), train_data_reader->get_value_tensors(),
           train_data_reader->get_nnz_array(), test_data_reader->get_row_offsets_tensors(),
           test_data_reader->get_value_tensors(), test_data_reader->get_nnz_array(),
-          embedding_params, plan_file, resource_manager));
+          embedding_params, plan_file, resource_manager, false, true));
 
   {
     // upload hash table to device

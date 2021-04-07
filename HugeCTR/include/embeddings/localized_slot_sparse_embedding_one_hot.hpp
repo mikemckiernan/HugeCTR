@@ -57,6 +57,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 
   Tensors2<size_t> top_categories_;
   std::vector<size_t> size_top_categories_;
+  bool force_stats_;
 
   // vars related to hierarchical A2A
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
@@ -206,7 +207,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       const std::vector<std::shared_ptr<size_t>> &evaluate_nnz_array,
       const SparseEmbeddingHashParams<TypeEmbeddingComp> &embedding_params,
       const std::string plan_file, const std::shared_ptr<ResourceManager> &resource_manager,
-      bool use_cuda_graph=false);
+      bool use_cuda_graph=false, bool fs=false);
 
   /**
    * The forward propagation of embedding layer.
@@ -530,7 +531,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
           Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
           top_categories_[id], size_top_categories_[id],
-          Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream());
+          Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream(), force_stats_);
 
       PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.stop", Base::get_local_gpu(id).get_stream(), false);
     }
@@ -568,6 +569,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 
     return;
   }
+
   void load_parameters(const TensorBag2 &keys, const Tensor2<float> &embeddings,
                        size_t num) override {}
 

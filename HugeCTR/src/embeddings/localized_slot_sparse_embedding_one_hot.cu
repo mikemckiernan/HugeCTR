@@ -46,13 +46,14 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
         const std::vector<std::shared_ptr<size_t>> &evaluate_nnz_array,
         const SparseEmbeddingHashParams<TypeEmbeddingComp> &embedding_params,
         const std::string plan_file, const std::shared_ptr<ResourceManager> &resource_manager,
-        bool use_cuda_graph)
+        bool use_cuda_graph, bool force_stats)
     : Base(train_row_offsets_tensors, train_value_tensors, train_nnz_array,
            evaluate_row_offsets_tensors, evaluate_value_tensors, evaluate_nnz_array,
            embedding_params, resource_manager),
       gpu_barrier_(resource_manager),
       use_cuda_graph_(use_cuda_graph),
-      slot_size_array_(embedding_params.slot_size_array) {
+      slot_size_array_(embedding_params.slot_size_array),
+      force_stats_(force_stats) {
   try {
 
     if (use_cuda_graph_) {
@@ -116,12 +117,13 @@ LocalizedSlotSparseEmbeddingOneHot<TypeHashKey, TypeEmbeddingComp>::
       // list of top categories, from single iteration worth of data, so max size is same as 
       // hash_table_value_index_ array
       {
+        std::cout << "Initializing size_top_categories_ and top_categories.." << std::endl;
         Tensor2<size_t> tensor;
         buf->reserve({1, Base::get_universal_batch_size() * Base::get_max_feature_num()}, &tensor);
         size_top_categories_.push_back(0);
         top_categories_.push_back(tensor);
         // std::cout << "top_categories size : " << Base::get_universal_batch_size() * Base::get_max_feature_num()
-                  // << std::endl;
+        // << std::endl;
       }
 
       // new hash table value_index that get() from HashTable

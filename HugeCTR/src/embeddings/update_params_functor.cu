@@ -789,6 +789,7 @@ void SparseEmbeddingFunctors::opt_sgd_atomic_cached<TypeEmbeddingComp>(
   size_t grid_size = max(1ul, (num_samples - 1) / num_samples_per_block + 1 );
   // each thread sets one embedding vector element
   size_t block_size = embedding_vec_size;
+  CK_CUDA_THROW_(cudaPeekAtLastError());
   opt_sgd_cached_kernel<<<grid_size, block_size, 0, stream>>>(
     num_samples, embedding_vec_size, lr_scale, top_categories, size_top_categories,
     hash_value_index, wgrad, hash_table_value);
@@ -804,7 +805,7 @@ void SparseEmbeddingFunctors::update_params<TypeEmbeddingComp>(
     const Tensor2<TypeEmbeddingComp> &wgrad,
     Tensor2<float> &hash_table_value,
     Tensor2<size_t> &top_categories, size_t &size_top_categories,
-    size_t sm_count, cudaStream_t stream) {
+    size_t sm_count, cudaStream_t stream, bool force_stats) {
   try {
     if (opt_params.optimizer == Optimizer_t::SGD && opt_params.hyperparams.sgd.atomic_update) {
       float lr_scale = opt_params.lr / opt_params.scaler;
@@ -812,7 +813,8 @@ void SparseEmbeddingFunctors::update_params<TypeEmbeddingComp>(
       opt_sgd_atomic_cached<TypeEmbeddingComp>(
         nnz, max_vocabulary_size, embedding_vec_size,
         hash_value_index.get_ptr(), opt_params.lr, opt_params.scaler, wgrad.get_ptr(),
-        hash_table_value.get_ptr(), top_categories.get_ptr(), size_top_categories, stream);
+        hash_table_value.get_ptr(), top_categories.get_ptr(), size_top_categories, 
+        stream, force_stats);
     } else {
       CK_THROW_(Error_t::WrongInput, "Error: Invalid opitimizer type");
     }
@@ -889,7 +891,7 @@ template void SparseEmbeddingFunctors::update_params<float>(
   const Tensor2<float> &wgrad,
   Tensor2<float> &hash_table_value,
   Tensor2<size_t> &top_categories, size_t &size_top_categories,
-  size_t sm_count, cudaStream_t stream);
+  size_t sm_count, cudaStream_t stream, bool force_stats);
 
 template void SparseEmbeddingFunctors::update_params<__half>(
   size_t embedding_vec_size, 
@@ -899,6 +901,6 @@ template void SparseEmbeddingFunctors::update_params<__half>(
   const Tensor2<__half> &wgrad,
   Tensor2<float> &hash_table_value,
   Tensor2<size_t> &top_categories, size_t &size_top_categories,
-  size_t sm_count, cudaStream_t stream);
+  size_t sm_count, cudaStream_t stream, bool force_stats);
 
 }  // namespace HugeCTR

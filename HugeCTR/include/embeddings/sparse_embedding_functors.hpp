@@ -328,7 +328,7 @@ class SparseEmbeddingFunctors {
                      const Tensor2<size_t> &hash_value_index,
                      const Tensor2<TypeEmbeddingComp> &wgrad, Tensor2<float> &hash_table_value,
                      Tensor2<size_t> &top_categories, size_t &size_top_categories, size_t sm_count,
-                     cudaStream_t stream);
+                     cudaStream_t stream, bool force_stats=false);
 
   /**
    * Atomic cached sgd update.
