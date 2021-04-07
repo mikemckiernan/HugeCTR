@@ -18,12 +18,6 @@
 #include <common.hpp>
 #include <nlohmann/json.hpp>
 
-#if CUDA_VERSION < 11010
-#define CUDA_EVENT_RECORD_GRAPH(...) cudaEventRecord(__VA_ARGS__)
-#else
-#define CUDA_EVENT_RECORD_GRAPH(...) cudaEventRecordWithFlags(__VA_ARGS__, cudaEventRecordExternal)
-#endif
-
 using nlohmann::json;
 
 namespace HugeCTR {
@@ -40,37 +34,21 @@ namespace HugeCTR {
     cudaEventDestroy(stop_);
   }
 
-  void Profiler::GPUTimer::iter_start(cudaStream_t stream, bool use_cuda_graph) {
-    if (use_cuda_graph) {
-      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(iter_start_, stream);
-      if (retval != cudaSuccess) {
-        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
-        CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
-      }
-    } else {
-      CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
-    }
+  void Profiler::GPUTimer::iter_start(cudaStream_t stream) {
+    CK_CUDA_THROW_(cudaEventRecord(iter_start_, stream));
   }
 
-  void Profiler::GPUTimer::event_start(cudaStream_t stream, bool use_cuda_graph) {
-    if (use_cuda_graph) {
-      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(start_, stream);
-      if (retval != cudaSuccess) {
-        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
-        CK_CUDA_THROW_(cudaEventRecord(start_, stream));
-      }
+  void Profiler::GPUTimer::event_start(cudaStream_t stream, bool in_cuda_graph) {
+    if (in_cuda_graph) {
+      CK_CUDA_THROW_(cudaEventRecordWithFlags(start_, stream, cudaEventRecordExternal));
     } else {
       CK_CUDA_THROW_(cudaEventRecord(start_, stream));
     }
   }
 
-  void Profiler::GPUTimer::event_stop(cudaStream_t stream, bool use_cuda_graph) {
-    if (use_cuda_graph) {
-      cudaError_t retval = CUDA_EVENT_RECORD_GRAPH(stop_, stream);
-      if (retval != cudaSuccess) {
-        // some layers are not in cuda stream captured mode. so fall back to the normal cudaEventRecord
-        CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
-      }
+  void Profiler::GPUTimer::event_stop(cudaStream_t stream, bool in_cuda_graph) {
+    if (in_cuda_graph) {
+      CK_CUDA_THROW_(cudaEventRecordWithFlags(stop_, stream, cudaEventRecordExternal));
     } else {
       CK_CUDA_THROW_(cudaEventRecord(stop_, stream));
     }
@@ -132,10 +110,18 @@ namespace HugeCTR {
       warmup_after_cudagraph_reinit_ = std::atoi(warmup_after_cudagraph_reinit_str);
     }
     if(use_cuda_graph) {
-      MESSAGE_(std::string("Profiler using PROFILING_WARMUP_AFTER_CUDAGRAPH_REINIT: ") + std::to_string(warmup_after_cudagraph_reinit_));
+      MESSAGE_(std::string("Profiler using WARMUP_AFTER_CUDAGRAPH_REINIT: ") + std::to_string(warmup_after_cudagraph_reinit_));
       // for extra cuda graph init iter, it won't count
       repeat_times_ += warmup_after_cudagraph_reinit_;
     }
+    char* data_collection_iterations_str = std::getenv("PROFILING_DATA_COLLECTION_ITERS");
+    if (data_collection_iterations_str == NULL) {
+      data_collection_iterations_ = 0;
+    } else {
+      data_collection_iterations_ = std::atoi(data_collection_iterations_str);
+    }
+    MESSAGE_(std::string("Profiler using DATA_COLLECTION_ITERS: ") + std::to_string(data_collection_iterations_));
+
     repeat_times_ += 1;
     current_reapted_times_ = 0;
 
@@ -153,6 +139,9 @@ namespace HugeCTR {
     MESSAGE_(std::string("Profiler using cuda graph: ") + std::to_string(use_cuda_graph_));
     if (use_cuda_graph_) {
       MESSAGE_("Profiler Warning. 'extra_info' arg in the PROFILE_RECORD maybe ignored, if the event is executed in cuda graph.");
+      if (data_collection_iterations_ > 0) {
+        MESSAGE_("Profiler Warning. Data collection may not fuction when cuda graph is ON!");
+      }
     }
 
     exit_when_finished_ = exit_when_finished;
@@ -161,11 +150,14 @@ namespace HugeCTR {
     events_num_ = 0;
     init_cuda_graph_this_iter = false;
     unit_test_mode = false;
+    current_data_collection_iteration_ = 0;
+    record_data_phase = false;
     iter_time_ms_.clear();
     map_stream_to_gpu_timer_.clear();
     events_.clear();
     map_event_key_to_event_idx_.clear();
     map_internal_.clear();
+    runtime_data_.clear();
   }
 
 
@@ -192,7 +184,7 @@ namespace HugeCTR {
     } else {
       // not first iteration
       // whether to record result logic block
-      if(!init_cuda_graph_this_iter) {
+      if(!init_cuda_graph_this_iter && !record_data_phase) {
         if (!use_cuda_graph_ || (use_cuda_graph_ && current_reapted_times_ > warmup_after_cudagraph_reinit_)) {
           iter_time_ms_.push_back(
             std::chrono::duration_cast<std::chrono::nanoseconds>(end - iter_check_).count() / 1000000.0
@@ -219,8 +211,9 @@ namespace HugeCTR {
         current_reapted_times_ = 0;
         current_event_idx_ += 1;
       }
+
       if (current_event_idx_ >= int(events_.size())) {
-          // finish iterate events, should write result and end
+        if(current_data_collection_iteration_ >= data_collection_iterations_) {
           write_result();
           MESSAGE_("Profiling complete!");
           if(exit_when_finished_) {
@@ -228,6 +221,14 @@ namespace HugeCTR {
             std::exit(0);
           }
           return true;
+        } else {
+          if (current_data_collection_iteration_ % 100 == 0) {
+            MESSAGE_(std::string("Iteration: ") + std::to_string(current_iteration_) + ". Profiler collecting run time data ...");
+          }
+          record_data_phase = true;
+          current_data_collection_iteration_++;
+          return false;
+        }
       }
       prepare_iter_start();
     }
@@ -270,12 +271,16 @@ namespace HugeCTR {
     for(auto& s_and_gt : map_stream_to_gpu_timer_) {
       s_and_gt.second->extra_info_start.clear();
       s_and_gt.second->extra_info_stop.clear();
-      s_and_gt.second->iter_start(s_and_gt.first, false);
     }
+
+    auto target_stream = static_cast<GPUEvent*>(events_[current_event_idx_].get())->stream;
+    map_stream_to_gpu_timer_[target_stream]->iter_start(target_stream);
     iter_check_ = std::chrono::steady_clock::now();
   }
 
-  void Profiler::record_event(const char* event_label_char, cudaStream_t stream, int device_id, const std::string& extra_info) {
+  void Profiler::record_event(const char* event_label_char, cudaStream_t stream,
+                              bool could_be_in_cuda_graph, int device_id,
+                              const std::string& extra_info) {
     try {
       // auto t_start = std::chrono::steady_clock::now();
       std::string event_label = std::string(event_label_char);
@@ -403,10 +408,10 @@ namespace HugeCTR {
 
         if (event_type == "start") {
           gpu_timer->extra_info_start = extra_info;
-          gpu_timer->event_start(stream, use_cuda_graph_);
+          gpu_timer->event_start(stream, use_cuda_graph_ && could_be_in_cuda_graph);
         } else {
           gpu_timer->extra_info_stop = extra_info;
-          gpu_timer->event_stop(stream, use_cuda_graph_);
+          gpu_timer->event_stop(stream, use_cuda_graph_ && could_be_in_cuda_graph);
           // event_start and event_stop usually costs 0.002ms on DGXA100
           map_internal_[stream]->operator[](event_name) = met_times_within_this_stream + 1;
           // Above post event record operation costs 0.00x on DGXA100, usually x is 1 - 2.
@@ -421,7 +426,57 @@ namespace HugeCTR {
     }
   }
 
-  void Profiler::record_event_unit_test(const char* event_label_char, cudaStream_t stream, int device_id, const std::string& extra_info) {
+
+  bool Profiler::record_data(const char* data_label_char, cudaStream_t stream,
+                             const std::string& data, int device_id) {
+    try {
+      std::string data_label = std::string(data_label_char);
+      int dot_pos = data_label.find_last_of(std::string("."));
+      std::string type = data_label.substr(dot_pos + 1);
+      if (type != "start" && type != "stop") {
+        throw internal_runtime_error(HugeCTR::Error_t::UnspecificError, \
+        std::string("Invalid data name. Should end with .start or .stop"));
+      }
+      std::string data_name = data_label.substr(0, dot_pos);
+      if(!record_data_phase) { return false; }
+      if (type == "start") {
+        return true;
+      }
+      thread_local int current_device_id;
+      CK_CUDA_THROW_(cudaGetDevice(&current_device_id));
+      if (device_id < 0) {
+        device_id = current_device_id;
+      }
+      mtx_.lock();
+      int i = 0;
+      for(; i < int(runtime_data_.size()); i++) {
+        if (runtime_data_[i]->data_name == data_name &&
+            runtime_data_[i]->device_id == device_id &&
+            runtime_data_[i]->stream == stream)
+        {
+          runtime_data_[i]->data.push_back(data);
+          break;
+        }
+      }
+
+      if (i == int(runtime_data_.size())) {
+        auto rdp = std::make_shared<RuntimeData>();
+        rdp->data_name = data_name;
+        rdp->device_id = device_id;
+        rdp->stream = stream;
+        rdp->data = { data };
+        runtime_data_.push_back(rdp);
+      }
+
+      mtx_.unlock();
+      return false;
+    } catch (const std::runtime_error& rt_err) {
+      std::cerr << rt_err.what() << std::endl;
+      throw;
+    }
+  }
+
+  void Profiler::record_event_unit_test(const char* event_label_char, cudaStream_t stream, bool could_be_in_cuda_graph, int device_id, const std::string& extra_info) {
     try {
       // should only be working in single thread
       thread_local int current_device_id;
@@ -626,6 +681,7 @@ namespace HugeCTR {
     result["host_name"] = host_name_;
     result["iter_time_ms"] = iter_time_ms_;
     result["events"] = json::array();
+    result["runtime_data"] = json::array();
     for (auto& event_p : events_) {
       GPUEvent* gep = static_cast<GPUEvent*>(event_p.get());
       json j;
@@ -641,6 +697,15 @@ namespace HugeCTR {
       j["extra_infos_stop"] = gep->extra_infos_stop;
       result["events"].push_back(j);
     }
+    for (auto& data : runtime_data_) {
+      json j;
+      j["data_name"] = data->data_name;
+      j["device_id"] = data->device_id;
+      j["stream"] = stream_str(data->stream);
+      j["data"] = data->data;
+      result["runtime_data"].push_back(j);
+    }
+
     std::string result_jstring = result.dump();
     std::ofstream outfile;
     outfile.open(result_file.c_str());
