@@ -3,7 +3,7 @@
     "lr_policy": "fixed",
     "display": 1000,
     "max_iter": 75868,
-    "gpu": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+    "gpu": [0,1,2,3,4,5,6,7],
     "batchsize": 55296,
     "batchsize_eval": 55296,
     "snapshot": 10000000,
@@ -72,8 +72,9 @@
     {
       "name": "fc1",
       "type": "FusedInnerProduct",
+      "position": "Head",
       "bottom": "dense",
-      "top": "fc1",
+      "top": ["fc11","fc12","fc13","fc14"],
       "fc_param": {
         "num_output": 512
       }
@@ -82,8 +83,9 @@
     {
       "name": "fc2",
       "type": "FusedInnerProduct",
-      "bottom": "fc1",
-      "top": "fc2",
+      "position": "Body",
+      "bottom": ["fc11","fc12","fc13","fc14"],
+      "top": ["fc21","fc22","fc23","fc24"],
       "fc_param": {
         "num_output": 256
       }
@@ -93,7 +95,8 @@
     {
       "name": "fc3",
       "type": "FusedInnerProduct",
-      "bottom": "fc2",
+      "position": "Tail",
+      "bottom": ["fc21","fc22","fc23","fc24"],
       "top": "fc3",
       "fc_param": {
         "num_output": 128
@@ -110,8 +113,9 @@
     {
       "name": "fc4",
       "type": "FusedInnerProduct",
+      "position": "Head",
       "bottom": "interaction1",
-      "top": "fc4",
+      "top": ["fc41","fc42","fc43","fc44"],
        "fc_param": {
         "num_output": 1024
       }
@@ -120,8 +124,9 @@
     {
       "name": "fc5",
       "type": "FusedInnerProduct",
-      "bottom": "fc4",
-      "top": "fc5",
+      "position": "Body",
+      "bottom": ["fc41","fc42","fc43","fc44"],
+      "top": ["fc51","fc52","fc53","fc54"],
       "fc_param": {
         "num_output": 1024
       }
@@ -130,8 +135,9 @@
     {
       "name": "fc6",
       "type": "FusedInnerProduct",
-      "bottom": "fc5",
-      "top": "fc6",
+      "position": "Body",
+      "bottom": ["fc51","fc52","fc53","fc54"],
+      "top": ["fc61","fc62","fc63","fc64"],
       "fc_param": {
         "num_output": 512
       }
@@ -140,7 +146,8 @@
     {
       "name": "fc7",
       "type": "FusedInnerProduct",
-      "bottom": "fc6",
+      "position": "Tail",
+      "bottom": ["fc61","fc62","fc63","fc64"],
       "top": "fc7",
       "fc_param": {
         "num_output": 256

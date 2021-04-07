@@ -18,6 +18,7 @@
 #include <utils.cuh>
 #include <utils.hpp>
 
+
 namespace HugeCTR {
 
 namespace {
@@ -257,6 +258,7 @@ void FusedFullyConnectedLayer::bprop() {
   CK_CUDA_THROW_(cudaGetLastError());
 #endif
 }
+
 
 void FusedFullyConnectedLayer::search_algorithm() {
   // Set to the CUDA device where this layer assigned to

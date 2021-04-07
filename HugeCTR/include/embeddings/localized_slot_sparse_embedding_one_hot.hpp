@@ -412,42 +412,43 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
         // int i = omp_get_thread_num();
         context.set_device(Base::get_local_gpu(i).get_device_id());  // set device
         CK_CUDA_THROW_(cudaGraphLaunch(train_bprop_instance_[i], 
-              Base::get_local_gpu(i).get_stream()));
+              Base::get_local_gpu(i).get_comp_overlap_stream()));
       }
     }
     else if (global_gpu_count == local_gpu_count) {
       for (size_t i = 0; i < Base::get_resource_manager().get_local_gpu_count(); i++) {
         context.set_device(Base::get_local_gpu(i).get_device_id());
+        const cudaStream_t worker_stream = Base::get_local_gpu(i).get_comp_overlap_stream();
 
 #ifdef ENABLE_PROFILING
         if (use_cuda_graph_ && (!is_train_bprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
 #else
         if (use_cuda_graph_ && !is_train_bprop_graph_captured_) {
 #endif
-          CK_CUDA_THROW_(cudaStreamBeginCapture(Base::get_local_gpu(i).get_stream(), cudaStreamCaptureModeRelaxed));
+          CK_CUDA_THROW_(cudaStreamBeginCapture(worker_stream, cudaStreamCaptureModeRelaxed));
         }
-        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", Base::get_local_gpu(i).get_stream());
-        gpu_barrier_.sync_all_gpus(Base::get_local_gpu(i).get_stream(), i);
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.start", worker_stream);
+        gpu_barrier_.sync_all_gpus(worker_stream, i);
         functors_.backward_fuse_per_gpu(
             i, Base::get_resource_manager().get_local_gpu_count(), Base::get_batch_size(true),
             Base::get_batch_size_per_gpu(true), Base::get_slot_num(), slot_num_per_gpu_[i],
             Base::get_embedding_vec_size(), Base::get_combiner(), get_embedding_features(true),
             wgrad_tensors_[i], Base::get_local_gpu(i).get_sm_count(),
-            Base::get_local_gpu(i).get_stream());
-        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", Base::get_local_gpu(i).get_stream());
+            worker_stream);
+        PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.backward.stop", worker_stream);
 
 #ifdef ENABLE_PROFILING
         if (use_cuda_graph_ && (!is_train_bprop_graph_captured_ || global_profiler.init_cuda_graph_this_iter)) {
 #else
         if (use_cuda_graph_ && !is_train_bprop_graph_captured_) {
 #endif
-          CK_CUDA_THROW_(cudaStreamEndCapture(Base::get_local_gpu(i).get_stream(),
+          CK_CUDA_THROW_(cudaStreamEndCapture(worker_stream,
                 &train_bprop_graph_[i]));
           CK_CUDA_THROW_(cudaGraphInstantiate(&train_bprop_instance_[i],
                 train_bprop_graph_[i],
                 NULL, NULL, 0));
           CK_CUDA_THROW_(cudaGraphLaunch(train_bprop_instance_[i],
-                Base::get_local_gpu(i).get_stream()));
+                worker_stream));
 
           if (i == Base::get_resource_manager().get_local_gpu_count() - 1) {
             is_train_bprop_graph_captured_ = true;
@@ -520,8 +521,9 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
     {
       size_t id = omp_get_thread_num();
       CudaDeviceContext context(Base::get_local_gpu(id).get_device_id());
+      const cudaStream_t worker_stream = Base::get_local_gpu(id).get_comp_overlap_stream();
 
-      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.start", Base::get_local_gpu(id).get_stream(), false);
+      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.start", worker_stream, false);
       // accumulate times for adam optimizer
       Base::get_opt_params(id).hyperparams.adam.times++;
 
@@ -531,9 +533,9 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
           Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
           top_categories_[id], size_top_categories_[id],
-          Base::get_local_gpu(id).get_sm_count(), Base::get_local_gpu(id).get_stream(), force_stats_);
+          Base::get_local_gpu(id).get_sm_count(), worker_stream, force_stats_);
 
-      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.stop", Base::get_local_gpu(id).get_stream(), false);
+      PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.stop", worker_stream, false);
     }
 
     return;
