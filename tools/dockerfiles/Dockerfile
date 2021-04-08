@@ -1,10 +1,9 @@
 FROM gitlab-master.nvidia.com:5005/dl/dgx/cuda:11.3-devel-ubuntu20.04--master AS devel
 
-RUN apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        vim gdb git wget tar python-dev python3-dev \
-        zlib1g-dev lsb-release ca-certificates clang-format libboost-all-dev numactl libnuma-dev libaio-dev && \
-    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update -y && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends vim gdb git wget tar python-dev python3-dev zlib1g-dev lsb-release ca-certificates clang-format numactl libnuma-dev libaio-dev aptitude
+RUN aptitude -y install libboost-all-dev
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/tmp && wget -q -nc --no-check-certificate -P /var/tmp http://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh && \
     bash /var/tmp/Miniconda3-4.7.12-Linux-x86_64.sh -b -p /opt/conda && \
