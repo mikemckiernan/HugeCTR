@@ -186,7 +186,6 @@ void train(std::string config_file) {
       i = 0;
       continue;
 #endif
-
       if (i % solver_config.display == 0 && i != 0) {
         timer_train.stop();
         // display

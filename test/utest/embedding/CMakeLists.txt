@@ -16,8 +16,11 @@
 cmake_minimum_required(VERSION 3.8)
 file(GLOB embedding_test_src
   distributed_slot_sparse_embedding_hash_test.cu 
+  hybrid_embedding/input_generator.cpp
+  hybrid_embedding/statistics_test.cu
   localized_slot_sparse_embedding_hash_test.cu 
   localized_slot_sparse_embedding_one_hot_test.cu 
+  localized_slot_sparse_embedding_one_hot_update_test.cu
   all2all_hierarchical.cu
 )
 

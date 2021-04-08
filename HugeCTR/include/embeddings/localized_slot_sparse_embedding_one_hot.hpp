@@ -55,6 +55,10 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
   Tensor2<TypeEmbeddingComp *> evaluate_embedding_features_;
   Tensors2<TypeEmbeddingComp> wgrad_tensors_; /**< the input tensor of the backward(). */
 
+  Tensors2<size_t> top_categories_;
+  std::vector<size_t> size_top_categories_;
+  bool force_stats_;
+
   // vars related to hierarchical A2A
 #if defined(NCCL_A2A) && defined(ENABLE_MPI)
   std::shared_ptr<InterNodeHierarchicalAlltoAll<TypeEmbeddingComp>> inter_node_hier_a2a;
@@ -203,7 +207,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
       const std::vector<std::shared_ptr<size_t>> &evaluate_nnz_array,
       const SparseEmbeddingHashParams<TypeEmbeddingComp> &embedding_params,
       const std::string plan_file, const std::shared_ptr<ResourceManager> &resource_manager,
-      bool use_cuda_graph=false);
+      bool use_cuda_graph=false, bool fs=false);
 
   /**
    * The forward propagation of embedding layer.
@@ -525,9 +529,11 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 
       // do update params operation: only support SGD
       functors_.update_params(
-          Base::get_embedding_vec_size(), Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
+          Base::get_embedding_vec_size(), max_vocabulary_size_,
+          Base::get_opt_params(id), *Base::get_nnz_array(true)[id],
           hash_value_index_tensors_[id], wgrad_tensors_[id], hash_table_value_tensors_[id],
-          Base::get_local_gpu(id).get_sm_count(), worker_stream);
+          top_categories_[id], size_top_categories_[id],
+          Base::get_local_gpu(id).get_sm_count(), worker_stream, force_stats_);
 
       PROFILE_RECORD("localized_slot_sparse_embedding_one_hot.update_params.stop", worker_stream, false);
     }
@@ -565,6 +571,7 @@ class LocalizedSlotSparseEmbeddingOneHot : public Embedding<TypeHashKey, TypeEmb
 
     return;
   }
+
   void load_parameters(const TensorBag2 &keys, const Tensor2<float> &embeddings,
                        size_t num) override {}
 
