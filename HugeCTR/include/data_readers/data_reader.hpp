@@ -313,12 +313,13 @@ DataReader<TypeKey>::DataReader(int batchsize, size_t label_dim, int dense_dim,
 
   // zero-initialization
   for (size_t i = 0; i < local_gpu_count; i++) {
+    const auto local_gpu = resource_manager_->get_local_gpu(i);
     if (use_mixed_precision_) {
       Tensor2<__half> tensor = Tensor2<__half>::stretch_from(dense_tensors_[i]);
-      CK_CUDA_THROW_(cudaMemset(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(__half)));
+      CK_CUDA_THROW_(cudaMemsetAsync(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(__half), local_gpu->get_memcpy_stream()));
     } else {
       Tensor2<float> tensor = Tensor2<float>::stretch_from(dense_tensors_[i]);
-      CK_CUDA_THROW_(cudaMemset(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(float)));
+      CK_CUDA_THROW_(cudaMemsetAsync(tensor.get_ptr(), 0, tensor.get_num_elements()*sizeof(float), local_gpu->get_memcpy_stream()));
     }
   }  
 
