@@ -20,12 +20,39 @@ before_script:
   - export NCCL_LAUNCH_MODE=PARALLEL
 
 
+mlperf_converge_build:
+  tags:
+    - 1GPU
+  stage: build
+  script:
+    - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}"
+    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest"
+    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
+    - docker build --pull
+        -t "${MLPERF_IMAGE_VERSIONED}"
+        -f ./tools/dockerfiles/Dockerfile
+        ${PWD}
+    - docker push "${MLPERF_IMAGE_VERSIONED}"
+    - docker tag ${MLPERF_IMAGE_VERSIONED} ${MLPERF_IMAGE_LATEST}
+    - docker push ${MLPERF_IMAGE_LATEST}
+  rules:
+    - if: $NIGHTLY == "1"
+      when: always
+
+
 ### Stage: build
 build:
   tags:
     - 1GPU
   stage: build
+  allow_failure: true
   script:
+    - export OPENED_MR_ON_BRANCH=$(curl --header "Private-Token:${CI_PRIVATE_KEY}" "https://$CI_SERVER_HOST/api/v4/merge_requests?project_id=$CI_PROJECT_ID&source_branch=$CI_COMMIT_BRANCH&state=opened&wip=no")
+    - |
+      if [[ "${OPENED_MR_ON_BRANCH}" != "[]" && -n "$CI_COMMIT_BRANCH" ]]; then \
+        echo "There is at least one MR opened on branch $CI_COMMIT_BRANCH. Stopping the push pipeline in favor of the merge request pipeline"; \
+        exit 1; \
+      fi
     - export JOB_DOCKERFILE="Dockerfile.${CI_JOB_NAME%%--*}.${CI_PIPELINE_ID}" && echo ${JOB_DOCKERFILE}
     - echo "FROM ${IMAGE}" > ${JOB_DOCKERFILE}
     - echo "ARG SM=\"70;75;80\"" >> ${JOB_DOCKERFILE}
@@ -40,8 +67,55 @@ build:
                    -f "${JOB_DOCKERFILE}"
                    ${PWD}
     - docker push "${DEST_FW_IMAGE_VERSIONED}"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
+      
+### Stage: build
+build_from_sratch:
+  tags:
+    - 1GPU
+  stage: build
+  allow_failure: true
+  script:
+    - export OPENED_MR_ON_BRANCH=$(curl --header "Private-Token:${CI_PRIVATE_KEY}" "https://$CI_SERVER_HOST/api/v4/merge_requests?project_id=$CI_PROJECT_ID&source_branch=$CI_COMMIT_BRANCH&state=opened&wip=no")
+    - |
+      if [[ "${OPENED_MR_ON_BRANCH}" != "[]" && -n "$CI_COMMIT_BRANCH" ]]; then \
+        echo "There is at least one MR opened on branch $CI_COMMIT_BRANCH. Using merge request pipeline"; \
+      else
+        echo "Stopping merge request pipeline"; \
+        exit 1; \
+      fi
+    - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}"
+    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
+    - docker build --pull
+        -t "${MLPERF_IMAGE_VERSIONED}"
+        -f ./tools/dockerfiles/Dockerfile
+        ${PWD}
+    - docker push "${MLPERF_IMAGE_VERSIONED}"
+    - export JOB_DOCKERFILE="Dockerfile.${CI_JOB_NAME%%--*}.${CI_PIPELINE_ID}" && echo ${JOB_DOCKERFILE}
+    - echo "FROM ${MLPERF_IMAGE_VERSIONED}" > ${JOB_DOCKERFILE}
+    - echo "ARG SM=\"70;75;80\"" >> ${JOB_DOCKERFILE}
+    - echo "
+      RUN git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab-master.nvidia.com/dl/hugectr/hugectr.git ${WORK_DIR} && cd ${WORK_DIR} && git checkout ${CI_COMMIT_SHA} && git submodule update --init --recursive && mkdir build && cd build && mkdir build_single && cd build_single && cmake -DCMAKE_BUILD_TYPE=Release -DSM=\$SM -DDISABLE_CUDF=ON ../.. && make -j && cd .. && mkdir build_multi_nccl && cd build_multi_nccl && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_MULTINODES=ON -DSM=\$SM -DDISABLE_CUDF=ON ../.. && make -j && cd .. && mkdir build_multi_gossip && cd build_multi_gossip && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_MULTINODES=ON -DNCCL_A2A=OFF -DSM=\$SM -DDISABLE_CUDF=ON ../.. && make -j
+      " >> ${JOB_DOCKERFILE}
+    - cat ${JOB_DOCKERFILE}
+    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
+    - docker pull ${IMAGE}
+    - docker build --pull
+                   -t "${DEST_FW_IMAGE_VERSIONED}"
+                   -f "${JOB_DOCKERFILE}"
+                   ${PWD}
+    - docker push "${DEST_FW_IMAGE_VERSIONED}"
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 ### Stage: test
 # unit test
@@ -51,6 +125,7 @@ unit_tests:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -71,9 +146,12 @@ unit_tests:
         ./session_test &&
         ./auc_test &&
         ./embedding_test"
-  only:
-    - pushes
   timeout: 2 hours
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 
 # single node
@@ -83,6 +161,7 @@ criteo:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -95,8 +174,12 @@ criteo:
         cd /dataset/criteo_kaggle/criteo_multi_slots;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_multi_slots_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_multi_slots_8gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 dcn:
   extends: .selene_job
@@ -104,6 +187,7 @@ dcn:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -115,8 +199,12 @@ dcn:
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_8gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_localized_embedding_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_localized_embedding_8gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 wdl_deepfm:
   extends: .selene_job
@@ -124,6 +212,7 @@ wdl_deepfm:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -138,8 +227,12 @@ wdl_deepfm:
         cd /dataset/criteo_kaggle/deepfm;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/deepfm_1gpu.json;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/deepfm_8gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 mlperf_ci_test_a100:
   extends: .selene_job
@@ -147,6 +240,7 @@ mlperf_ci_test_a100:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
       -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -156,8 +250,12 @@ mlperf_ci_test_a100:
       bash -cx "
       cd ${CI_PROJECT_DIR};
       ${WORK_DIR}/build/build_single/bin/huge_ctr --train mlperf/configs/55296_8gpus.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 dlrm1:
   extends: .selene_job
@@ -165,6 +263,7 @@ dlrm1:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -173,8 +272,11 @@ dlrm1:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_1gpu.json;"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 
 .dlrm2:
@@ -183,6 +285,7 @@ dlrm1:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -191,8 +294,12 @@ dlrm1:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_8gpu.json;"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 dlrm3:
   extends: .selene_job
@@ -200,6 +307,7 @@ dlrm3:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -208,8 +316,11 @@ dlrm3:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_1gpu.json;"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 
 .dlrm4:
@@ -218,6 +329,7 @@ dlrm3:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -226,8 +338,12 @@ dlrm3:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_single/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_8gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 # multinode with nccl
 criteo_multinode:
@@ -236,6 +352,7 @@ criteo_multinode:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=2
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -245,8 +362,12 @@ criteo_multinode:
         bash -cx "
         cd /dataset/criteo_kaggle/criteo;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 dcn_multinode:
   extends: .selene_job
@@ -254,6 +375,7 @@ dcn_multinode:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=4
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -263,8 +385,12 @@ dcn_multinode:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dcn_4node_2gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 dlrm_multinode_fp16:
   extends: .selene_job
@@ -272,6 +398,7 @@ dlrm_multinode_fp16:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=4
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -281,14 +408,20 @@ dlrm_multinode_fp16:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp16_4node_2gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
+
 dlrm_multinode_fp32:
   extends: .selene_job
   allow_failure: false
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=4
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -298,8 +431,12 @@ dlrm_multinode_fp32:
         bash -cx "
         cd /dataset/criteo_kaggle/dcn;
         ${WORK_DIR}/build/build_multi_nccl/bin/huge_ctr --train ${WORK_DIR}/test/scripts/dlrm_fp32_4node_2gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
 
 # multinode with gossip
 criteo_multinode_gossip:
@@ -308,6 +445,7 @@ criteo_multinode_gossip:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=2
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -317,8 +455,11 @@ criteo_multinode_gossip:
         bash -cx "
         cd /dataset/criteo_kaggle/criteo;
         ${WORK_DIR}/build/build_multi_gossip/bin/huge_ctr --train ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 
 # python interface single node
@@ -328,6 +469,7 @@ python_interface_single_node:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -337,8 +479,11 @@ python_interface_single_node:
         cd /dataset/criteo_kaggle/wdl;
         cp ${WORK_DIR}/build/build_single/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/single_node_wdl_fp16_8gpu.py ${WORK_DIR}/test/scripts/wdl_fp16_8gpu.json;"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 # python interface single node + model prefetch
 python_interface_single_node_model_prefetch:
@@ -347,6 +492,7 @@ python_interface_single_node_model_prefetch:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=1
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -356,9 +502,12 @@ python_interface_single_node_model_prefetch:
         cd /dataset/criteo_kaggle/wdl_data_keyset;
         cp ${WORK_DIR}/build/build_single/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         mkdir ${TMP_DIR}/temp_embedding;
-        python3 ${WORK_DIR}/test/pybind_test/model_prefetch_wdl_1gpu.py /dataset/criteo_kaggle/wdl_data_keyset/wdl.json ${TMP_DIR}/temp_embedding"
-  only:
-    - pushes
+        python3 ${WORK_DIR}/test/pybind_test/model_prefetch_wdl_1gpu.py /dataset/criteo_kaggle/ wdl_data_keyset/wdl.json ${TMP_DIR}/temp_embedding"
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 # python interface multi node + nccl
 python_interface_multi_node_nccl:
@@ -367,6 +516,7 @@ python_interface_multi_node_nccl:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=4
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -377,8 +527,11 @@ python_interface_multi_node_nccl:
         cd /dataset/criteo_kaggle/dcn;
         cp ${WORK_DIR}/build/build_multi_nccl/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/multi_node_dcn_4node_2gpu.py ${WORK_DIR}/test/scripts/dcn_4node_2gpu.json"
-  only:
-    - pushes
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
 
 # python interface multi node + gossip
 python_interface_multi_node_gossip:
@@ -387,6 +540,7 @@ python_interface_multi_node_gossip:
   stage: test
   dependencies: 
     - build
+    - build_from_sratch
   script:
     - srun --ntasks=2
         -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
@@ -397,29 +551,13 @@ python_interface_multi_node_gossip:
         cd /dataset/criteo_kaggle/criteo;
         cp ${WORK_DIR}/build/build_multi_gossip/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         python3 ${WORK_DIR}/test/pybind_test/multi_node_criteo_2node_4gpu.py ${WORK_DIR}/test/scripts/criteo_2node_4gpu.json"
-  only:
-    - pushes
-
-mlperf_converge_build:
-  tags:
-    - 1GPU
-  stage: build
-  script:
-    - export MLPERF_IMAGE_VERSIONED="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.${CI_PIPELINE_ID}"
-    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest"
-    - docker login -u ${CI_PRIVATE_USER} -p "${CI_PRIVATE_KEY}" "${CI_REGISTRY}"
-    - docker build --pull
-        -t "${MLPERF_IMAGE_VERSIONED}"
-        -f ./mlperf/ci.Dockerfile
-        ${PWD}
-    - docker push "${MLPERF_IMAGE_VERSIONED}"
-    - docker tag ${MLPERF_IMAGE_VERSIONED} ${MLPERF_IMAGE_LATEST}
-    - docker push ${MLPERF_IMAGE_LATEST}
-  only:
-    variables:
-      - $NIGHTLY == "1"
-
-
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+    
+  
 .mlperf_ci_test_dgx2:
   extends: .circe_job
   allow_failure: false
