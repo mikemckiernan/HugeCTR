@@ -1,4 +1,4 @@
-FROM gitlab-master.nvidia.com:5005/dl/dgx/cuda:11.3-devel-ubuntu20.04--master AS devel
+FROM gitlab-master.nvidia.com:5005/dl/dgx/cuda:11.3-devel-ubuntu20.04--21.04 AS devel
 
 
 RUN apt-get update -y && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends vim gdb git wget tar python-dev python3-dev zlib1g-dev lsb-release ca-certificates clang-format numactl libnuma-dev libaio-dev aptitude
