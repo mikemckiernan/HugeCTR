@@ -234,29 +234,6 @@ wdl_deepfm:
       when: always
 
 
-mlperf_ci_test_a100:
-  extends: .selene_job
-  allow_failure: false
-  stage: test
-  dependencies: 
-    - build
-    - build_from_sratch
-  script:
-    - srun --ntasks=1
-      -A devtech -J devtech-hugectr:${CI_PIPELINE_ID}:aleliu:hugectr:dl/hugectr/HugeCTR:${CI_COMMIT_BRANCH}:${CI_JOB_ID} -p luna
-      --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
-      --container-mounts ${CI_PROJECT_DIR}:${CI_PROJECT_DIR},/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
-      --ntasks-per-node 1
-      bash -cx "
-      cd ${CI_PROJECT_DIR};
-      ${WORK_DIR}/build/build_single/bin/huge_ctr --train mlperf/configs/55296_8gpus.json"
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
-      when: never
-    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
-      when: always
-
-
 dlrm1:
   extends: .selene_job
   allow_failure: false
@@ -556,42 +533,3 @@ python_interface_multi_node_gossip:
       when: never
     - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
       when: always
-    
-  
-.mlperf_ci_test_dgx2:
-  extends: .circe_job
-  allow_failure: false
-  stage: test
-  dependencies: 
-    - mlperf_ci_build
-  script:
-    - export MLPERF_IMAGE_LATEST="${CI_REGISTRY}/dl/hugectr/hugectr:${CI_COMMIT_BRANCH}.latest.ci"
-    - export MLPERF_IMAGE_LATEST_CORRECT=$(echo ${MLPERF_IMAGE_LATEST} | sed 's/:5005//g')
-    - srun --ntasks=1
-      --container-image ${MLPERF_IMAGE_LATEST_CORRECT}
-      --container-mounts $(pwd):$(pwd),/raid/datasets/criteo/mlperf/40m.limit_preshuffled:/raid/datasets/criteo/mlperf/40m.limit_preshuffled/
-      --ntasks-per-node 1
-      bash -cx "
-      cd $(pwd);
-      huge_ctr --train mlperf/configs/55296_16gpus.json"
-  only:
-    variables:
-      - $NIGHTLY == "1"
-
-# mlperf_converge_test:
-#   extends: .selene_job
-#   allow_failure: false
-#   stage: test
-#   dependencies: 
-#     - build
-#   script:
-#     - srun --ntasks=1
-#         --container-image ${DEST_FW_IMAGE_VERSIONED_ENROOT}
-#         --container-mounts ${DATASET}:${DATASET_MOUNT},${CI_PROJECT_DIR}:${CI_PROJECT_DIR}
-#         bash -cx "
-#         cd ${WORK_DIR}/test/embedding_plugin_test;
-#         python3 embedding_plugin_deepfm_main.py --batch_size=16384 --batch_size_eval=4 --n_epochs=1 --gpus 0 1 3 4 --embedding_vec_size=10 --data_path=/dataset/criteo_kaggle/embedding_plugin/"
-#   only:
-#     variables:
-#       - $NIGHTLY == "1"
-
