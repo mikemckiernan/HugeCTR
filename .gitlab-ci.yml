@@ -502,7 +502,7 @@ python_interface_single_node_model_prefetch:
         cd /dataset/criteo_kaggle/wdl_data_keyset;
         cp ${WORK_DIR}/build/build_single/lib/hugectr.so ${WORK_DIR}/test/pybind_test/;
         mkdir ${TMP_DIR}/temp_embedding;
-        python3 ${WORK_DIR}/test/pybind_test/model_prefetch_wdl_1gpu.py /dataset/criteo_kaggle/ wdl_data_keyset/wdl.json ${TMP_DIR}/temp_embedding"
+        python3 ${WORK_DIR}/test/pybind_test/model_prefetch_wdl_1gpu.py /dataset/criteo_kaggle/wdl_data_keyset/wdl.json ${TMP_DIR}/temp_embedding"
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(trigger)$/
       when: never
