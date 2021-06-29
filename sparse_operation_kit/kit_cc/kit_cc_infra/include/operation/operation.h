@@ -22,6 +22,8 @@
 #include "operation/construction_context.h"
 #include <vector>
 #include <memory>
+#include <unordered_set>
+#include <string>
 
 namespace SparseOperationKit {
 /*
@@ -49,9 +51,17 @@ public:
     virtual void backward(const Context_t &replica_context) = 0;
 
     void set_next(std::shared_ptr<Operation> operation);
+
+    void set_op_name(const std::string& op_name);
+    std::string get_op_name() const;
+
+    static std::string gen_unique_op_name(const std::string op_name);
 private:
     std::shared_ptr<Operation> next_op_ = nullptr;
     ConstructionContext_t base_context_;
+    std::string op_name_;
+
+    static std::unordered_set<std::string> operation_names;
 };
 
 using Dispatcher = Operation;

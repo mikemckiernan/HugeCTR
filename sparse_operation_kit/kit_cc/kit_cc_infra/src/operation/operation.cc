@@ -20,7 +20,7 @@
 namespace SparseOperationKit {
 
 Operation::Operation(ConstructionContext_t context)
-: base_context_(context) 
+: base_context_(context), op_name_(gen_unique_op_name("sok_operation"))
 {}
 
 void Operation::AllocateForwardSpaces(size_t const global_batch_size) {
@@ -54,6 +54,40 @@ void Operation::set_next(std::shared_ptr<Operation> operation) {
 
 ConstructionContext_t Operation::base_context() const {
     return base_context_;
+}
+
+std::unordered_set<std::string> Operation::operation_names;
+
+std::string Operation::gen_unique_op_name(const std::string op_name) {
+    std::string unique_op_name = op_name;
+
+    while (true) {
+        auto iter = operation_names.find(unique_op_name);
+        if (operation_names.end() != iter) { // already exists
+            auto name_vec = str_split(unique_op_name, /*pattern=*/"_");
+            const int32_t num = string2num(*(name_vec.rbegin()));
+            if (-1 == num) { // not numerical
+                unique_op_name = op_name + "_" + std::to_string(1);
+            } else { // numerical
+                *(name_vec.rbegin()) = std::to_string(num + 1);
+                unique_op_name = strs_concat(name_vec, /*connection=*/"_");
+            }
+        } else { // not exists
+            operation_names.emplace(unique_op_name);
+            break;
+        }
+    }
+
+    return unique_op_name;
+}
+
+void Operation::set_op_name(const std::string& op_name) {
+    const std::string &unique_op_name = gen_unique_op_name(op_name);
+    op_name_ = unique_op_name;
+}
+
+std::string Operation::get_op_name() const {
+    return op_name_;
 }
 
 } // namespace SparseOperationKit
