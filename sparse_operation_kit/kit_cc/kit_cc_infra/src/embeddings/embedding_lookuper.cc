@@ -23,4 +23,8 @@ EmbeddingLookuper::EmbeddingLookuper(ConstructionContext_t construction_context,
 : Operation(construction_context), param_(param) 
 {}
 
+void EmbeddingLookuper::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
+    return load_tensors(tensors);
+}
+
 } // namespace SparseOperationKit

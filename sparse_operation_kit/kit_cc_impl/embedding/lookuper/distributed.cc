@@ -261,7 +261,7 @@ public:
     #endif // DEBUG
     }
 
-    void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) override {
+    void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) override {
         /*step 1 allocate temp spaces*/
         const size_t embedding_vec_size = param_->get_embedding_vec_size();
         size_t rows_num = 0;

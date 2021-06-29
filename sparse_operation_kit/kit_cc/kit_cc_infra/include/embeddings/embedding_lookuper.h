@@ -26,7 +26,8 @@ class EmbeddingLookuper : public Operation {
 public:
     EmbeddingLookuper(ConstructionContext_t construction_context, std::shared_ptr<ParamInterface> param);
 
-    virtual void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) = 0;
+    void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) override final;
+    virtual void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) = 0;
 
 protected:
     std::shared_ptr<ParamInterface> param_;

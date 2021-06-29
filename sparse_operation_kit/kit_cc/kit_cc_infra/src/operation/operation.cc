@@ -90,4 +90,13 @@ std::string Operation::get_op_name() const {
     return op_name_;
 }
 
+void Operation::LoadTensorsToMemory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
+    load_tensors_to_memory(tensors);
+    if (next_op_) next_op_->LoadTensorsToMemory(tensors);
+}
+
+void Operation::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
+    // by default, it does not do anything.
+}
+
 } // namespace SparseOperationKit

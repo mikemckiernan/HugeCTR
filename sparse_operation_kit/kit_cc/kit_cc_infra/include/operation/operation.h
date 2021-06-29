@@ -55,6 +55,15 @@ public:
     void set_op_name(const std::string& op_name);
     std::string get_op_name() const;
 
+    void LoadTensorsToMemory(const std::vector<std::shared_ptr<Tensor>>& tensors);
+    
+    /**
+    * by default, operation did not do anything when this function is called.
+    * if an operation instance has some internal states needs to be initialized at the 
+    * time of this function is called, it has to override this function.
+    */
+    virtual void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors);
+
     static std::string gen_unique_op_name(const std::string op_name);
 private:
     std::shared_ptr<Operation> next_op_ = nullptr;

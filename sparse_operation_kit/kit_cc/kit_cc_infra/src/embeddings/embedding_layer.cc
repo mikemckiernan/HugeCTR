@@ -128,8 +128,11 @@ void EmbeddingLayer::restore_from_file(std::ifstream& file_stream) {
 }
 
 void EmbeddingLayer::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
-    // TODO: only embedding_lookuper_ has parameters to save
-    embedding_lookuper_->load_tensors_to_memory(tensors);
+    input_dispatcher_->LoadTensorsToMemory(tensors);
+
+    embedding_lookuper_->LoadTensorsToMemory(tensors);
+
+    output_dispatcher_->LoadTensorsToMemory(tensors);
 }
 
 ConstructionContext_t EmbeddingLayer::base_context() const {
