@@ -84,7 +84,7 @@
 * 2. "operation_interface.h" should be included in that souce file.
 * 3. inherit from EmbeddingLookuper class, and override methods: 
 *   allocate_forward_spaces, allocate_backward_spaces, forward, backward, 
-*   load_tensors_to_memory
+*   load_tensors
 *   for example: 
 *   class MyLookuper : public EmbeddingLookuper {
 *   public:
@@ -108,7 +108,7 @@
 *           // do backward propagation.
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
-*       void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) override {
+*       void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) override {
 *           // load tensors to initialize trainable parameters.
 *           // the input tensors is a vector of tensor whose shape is [dim, embedding_vec_size],
 *           // and all the the sum of dim is <= max_vocabulary_size_in_total.

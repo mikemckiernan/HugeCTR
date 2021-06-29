@@ -171,6 +171,8 @@ void RawParam::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>
     * this job to embedding layer*/
     MESSAGE("Loading tensors to GPU memory.");
 
+    // FIXME: when this function is called. the internal states need to be reset.
+
     user_->load_tensors_to_memory(tensors);
 
     MESSAGE("Loaded.");
