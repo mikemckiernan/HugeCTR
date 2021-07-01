@@ -128,7 +128,7 @@ public:
                          const size_t current_step);
 
     void dump_to_file(const tensorflow::Tensor* var_handle,
-                      const std::string filename);
+                      const std::string filepath);
     void restore_from_file(const tensorflow::Tensor* var_handle,
                            const std::string filename);
     void load_tensors_to_var(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,

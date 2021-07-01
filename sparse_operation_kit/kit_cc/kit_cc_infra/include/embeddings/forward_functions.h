@@ -21,10 +21,6 @@
 
 namespace SparseOperationKit {
 
-void get_hash_value(size_t count, size_t embedding_vec_size, const size_t *value_index,
-                    const float *embedding_table, float *value_retrieved,
-                    cudaStream_t stream);
-
 template <typename TypeHashKey, typename TypeEmbeddingComp>
 void forward_sum(size_t batch_size, size_t slot_num, size_t embedding_vec_size,
                  const TypeHashKey *row_offset, const size_t *hash_value_index,

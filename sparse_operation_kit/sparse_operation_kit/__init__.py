@@ -16,6 +16,8 @@
 
 print("[INFO]: %s is imported" %__name__)
 
+from sparse_operation_kit.core._version import __version__
+
 import os
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"

@@ -119,8 +119,12 @@ size_t EmbeddingLayer::get_max_vocabulary_size_per_gpu() const {
     return base_context_->get_param()->get_max_vocabulary_size_per_gpu();
 }
 
-void EmbeddingLayer::dump_to_file(std::ofstream& file_stream) const {
-    throw std::runtime_error(ErrorBase + "dump_to_file not implemented.");
+void EmbeddingLayer::dump_to_file(const std::string filepath) const {
+    input_dispatcher_->DumpToFile(filepath);
+
+    embedding_lookuper_->DumpToFile(filepath);
+
+    output_dispatcher_->DumpToFile(filepath);
 }
 
 void EmbeddingLayer::restore_from_file(std::ifstream& file_stream) {

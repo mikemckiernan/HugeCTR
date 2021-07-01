@@ -360,13 +360,13 @@ void Facade::apply_gradients(const tensorflow::core::RefCountPtr<tensorflow::Emb
 
 
 void Facade::dump_to_file(const tensorflow::Tensor* var_handle,
-                          const std::string filename) {
+                          const std::string filepath) {
     // get param handle
     std::shared_ptr<ParamInterface> param;
     GetParamFromVariantTensor(var_handle, param);
 
     // delegate dump to file to param manager.
-    params_mgr_->dump_to_file(param, filename);
+    params_mgr_->dump_to_file(param, filepath);
 }
 
 void Facade::restore_from_file(const tensorflow::Tensor* var_handle,

@@ -128,6 +128,7 @@ file(GLOB kit_infra
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/*.cu
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/resources/*.cc
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/parameters/*.cc
+    ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/parameters/*.cu
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/hashtable/*.cu
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/embeddings/*.cc
     ${PROJECT_SOURCE_DIR}/kit_cc/kit_cc_infra/src/embeddings/*.cu

@@ -19,16 +19,6 @@
 
 namespace SparseOperationKit {
 
-void get_hash_value(size_t count, size_t embedding_vec_size, const size_t *value_index,
-                    const float *embedding_table, float *value_retrieved,
-                    cudaStream_t stream) {
-    const size_t block_size = embedding_vec_size;
-    const size_t grid_size = count;
-
-    HugeCTR::get_hash_value_kernel<<<grid_size, block_size, 0, stream>>>(count, embedding_vec_size,
-                                                    value_index, embedding_table, value_retrieved);
-}
-
 template <typename TypeHashKey, typename TypeEmbeddingComp>
 void forward_sum(size_t batch_size, size_t slot_num, size_t embedding_vec_size,
                  const TypeHashKey *row_offset, const size_t *hash_value_index,

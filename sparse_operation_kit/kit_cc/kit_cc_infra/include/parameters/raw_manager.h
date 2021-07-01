@@ -39,7 +39,7 @@ public:
     void allocate_memory(const size_t global_replica_id) const override;
     void params_initialization(const size_t global_replica_id) const override;
     void dump_to_file(const std::shared_ptr<ParamInterface>& param,
-                      const std::string filename) override;
+                      const std::string filepath) override;
     void restore_from_file(const std::shared_ptr<ParamInterface>& param,
                            const std::string filename) override;
     void load_tensors_to_var(std::shared_ptr<ParamInterface>& param, 

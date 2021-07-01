@@ -44,7 +44,7 @@ public:
     std::string get_var_name() const;
     size_t get_max_vocabulary_size_per_gpu() const;
 
-    void dump_to_file(std::ofstream& file_stream) const;
+    void dump_to_file(const std::string filepath) const;
     void restore_from_file(std::ifstream& file_stream);
     void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors);
 

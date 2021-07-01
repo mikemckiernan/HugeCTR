@@ -99,4 +99,22 @@ void Operation::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>
     // by default, it does not do anything.
 }
 
+void Operation::DumpToFile(const std::string filepath) const {
+    try {
+        const std::string filename = filepath + "/" + get_op_name() + ".file";
+        std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
+        dump(file_stream);
+        file_stream.close();
+
+        if (next_op_) next_op_->DumpToFile(filepath);
+
+    } catch (const std::exception &error) {
+        throw std::runtime_error(ErrorBase + error.what());
+    }
+}
+
+void Operation::dump(const std::ofstream &filestream) const {
+    // by default, it does nothing.
+}
+
 } // namespace SparseOperationKit

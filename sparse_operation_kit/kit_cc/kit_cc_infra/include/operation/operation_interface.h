@@ -71,6 +71,11 @@
 *           // do backward propagation.
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
+*       [Optional]:
+*       void dump(const std::ofstream &filestream) override {
+*           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
+*       }
 *   };
 *    
 * 4. register this dispatcher by calling 'REGISTER_INPUT_DISPATCHER_BUILDER' macro in the cpp file.
@@ -114,6 +119,11 @@
 *           // and all the the sum of dim is <= max_vocabulary_size_in_total.
 *           // this function will be called by one CPU-threads.
 *       }
+*       [Optional]:
+*       void dump(const std::ofstream &filestream) override {
+*           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
+*       }
 *   };
 *    
 * 4. register this embedding_lookuper by calling 'REGISTER_EMB_LOOKUPER_BUILDER' macro in the cpp file.
@@ -148,6 +158,11 @@
 *       void backward(Context_t replica_context) override {
 *           // do backward propagation.
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
+*       }
+*       [Optional]:
+*       void dump(const std::ofstream &filestream) override {
+*           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
 *       }
 *   };
 *    

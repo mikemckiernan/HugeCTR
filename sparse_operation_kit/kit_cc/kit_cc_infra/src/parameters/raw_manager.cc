@@ -144,8 +144,18 @@ void RawManager::params_initialization(const size_t global_replica_id) const {
 }
 
 void RawManager::dump_to_file(const std::shared_ptr<ParamInterface>& param,
-                              const std::string filename) {
-    param->dump_to_file(filename);
+                              const std::string filepath) {
+    try {
+        MESSAGE("Saving " + param->get_var_name() + " to " + filepath + "..");
+        // step 1: save param to file.
+        param->dump_to_file(filepath);
+
+        // step 2: save operations' content from param's user to file
+        param->let_user_dump_to_file(filepath);
+        MESSAGE("Saved " + param->get_var_name() + " to " + filepath + ".");
+    } catch (const std::exception &error) {
+        throw std::runtime_error(ErrorBase + error.what());
+    }
 }
 
 void RawManager::restore_from_file(const std::shared_ptr<ParamInterface>& param,

@@ -27,17 +27,17 @@ class Saver(object):
     def __call__(self):
         pass
 
-    def dump_to_file(self, emb_var_handle, filename):
+    def dump_to_file(self, embedding_variable, filepath):
         """
         This function is used to save one emb_var to file.
         """
-        return dump_to_file(emb_var_handle, filename)
+        return dump_to_file(embedding_variable.values[0].emb_handle, filepath)
 
-    def restore_from_file(self, emb_var_handle, filename):
+    def restore_from_file(self, embedding_variable, filepath):
         """
         This function is used to restore one emb_var from file.
         """
-        return restore_from_file(emb_var_handle, filename)
+        return restore_from_file(embedding_variable.values[0].emb_handle, filepath)
 
     def load_tensors_to_variable(self, embedding_variable, tensors):
         """

@@ -35,7 +35,7 @@ public:
     virtual void allocate_memory(const size_t global_replica_id) const = 0;
     virtual void params_initialization(const size_t global_replica_id) const = 0;
     virtual void dump_to_file(const std::shared_ptr<ParamInterface>& param,
-                              const std::string filename) = 0;
+                              const std::string filepath) = 0;
     virtual void restore_from_file(const std::shared_ptr<ParamInterface>& param,
                                    const std::string filename) = 0;
     virtual void load_tensors_to_var(std::shared_ptr<ParamInterface>& param, 

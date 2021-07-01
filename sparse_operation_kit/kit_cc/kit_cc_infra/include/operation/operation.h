@@ -24,6 +24,7 @@
 #include <memory>
 #include <unordered_set>
 #include <string>
+#include <fstream>
 
 namespace SparseOperationKit {
 /*
@@ -56,13 +57,20 @@ public:
     std::string get_op_name() const;
 
     void LoadTensorsToMemory(const std::vector<std::shared_ptr<Tensor>>& tensors);
-    
     /**
     * by default, operation did not do anything when this function is called.
     * if an operation instance has some internal states needs to be initialized at the 
-    * time of this function is called, it has to override this function.
+    * time of this function is called, it has to override this virtual function.
     */
     virtual void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors);
+
+    void DumpToFile(const std::string filepath) const;
+    /**
+    * by default, operation did not do anything when this function is called.
+    * if an operation instance has something needed to be dumped to file, 
+    * it has to override this virtual function.
+    */
+    virtual void dump(const std::ofstream &filestream) const;
 
     static std::string gen_unique_op_name(const std::string op_name);
 private:

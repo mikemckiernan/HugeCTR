@@ -26,6 +26,10 @@ void ParamInterface::set_user(std::shared_ptr<EmbeddingLayer>& embedding) {
     throw std::runtime_error(ErrorBase + "Not implemented.");
 }
 
+void ParamInterface::let_user_dump_to_file(const std::string filepath) {
+    throw std::runtime_error(ErrorBase + "Not implemented.");
+}
+
 std::shared_ptr<Tensor>& ParamInterface::get_tensor(const size_t local_replica_id) {
     return get_embedding_table_tensor(local_replica_id);
 }
