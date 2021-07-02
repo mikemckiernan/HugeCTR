@@ -47,7 +47,7 @@ def test_sok_demo(args, init_tensors, *random_samples):
         dense_opt = utils.get_dense_optimizer(args.optimizer)(learning_rate=0.1)
 
     plugin_saver = sok.Saver()
-    status = plugin_saver.load_tensors_to_variable(plugin_demo.embedding_layer.embedding_variable, init_tensors)
+    status = plugin_saver.load_embedding_values(plugin_demo.embedding_layer.embedding_variable, init_tensors)
 
     loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
     def _replica_loss(labels, logits):

@@ -24,5 +24,5 @@ using namespace tensorflow::shape_inference;
 
 REGISTER_OP("RestoreFromFile")
     .Input("var_handle: variant")
-    .Input("filename: string")
+    .Input("filepath: string")
     .Output("status: string");

@@ -29,12 +29,4 @@ HugeCTR::get_hash_value_kernel<<<grid_size, block_size, 0, stream>>>(count, embe
                                                 value_index, embedding_table, value_retrieved);
 }
 
-
-void indexes_add_offset(size_t *indexes, const size_t count, const size_t offset) {
-    const size_t block_size = 1024;
-    const size_t grid_size = (count + block_size - 1) / block_size;
-    auto helper = [offset] __device__ (size_t index) -> size_t { return index + offset; };
-    transform_array<<<grid_size, block_size>>>(indexes, indexes, count, helper);
-}
-
 } // namespace SparseOperationKit

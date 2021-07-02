@@ -104,7 +104,9 @@ public:
 
     void backward(const Context_t &replica_context) override {}
 
-    void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) override {}
+    void restore_params(const std::shared_ptr<Tensor> &keys, 
+                        const std::shared_ptr<Tensor> &embedding_values,
+                        const size_t num_total_keys) override {}
 
 private:
     std::shared_ptr<ResourcesManager> resource_mgr_;

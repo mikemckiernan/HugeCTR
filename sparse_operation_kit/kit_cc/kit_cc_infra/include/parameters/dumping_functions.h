@@ -26,8 +26,6 @@ void get_hash_value(size_t count, size_t embedding_vec_size, const size_t *value
                 const float *embedding_table, float *value_retrieved,
                 cudaStream_t stream);
 
-void indexes_add_offset(size_t *indexes, const size_t count, const size_t offset);
-
 } // namespace SparseOperationKit
 
 #endif // DUMPING_FUNCTIONS_H

@@ -20,7 +20,6 @@
 #include "operation/operation.h"
 #include "embeddings/embedding_lookuper.h"
 #include "tensorflow/core/framework/tensor.h"
-#include <fstream>
 
 namespace SparseOperationKit {
 
@@ -45,8 +44,13 @@ public:
     size_t get_max_vocabulary_size_per_gpu() const;
 
     void dump_to_file(const std::string filepath) const;
-    void restore_from_file(std::ifstream& file_stream);
-    void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors);
+    // restore the operations' content from file
+    void restore_from_file(const std::string filepath);
+    // help to restore params 
+    void restore_params(const std::shared_ptr<Tensor> &keys,
+                        const std::shared_ptr<Tensor> &embedding_values,
+                        const size_t num_total_keys);
+    void load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list);
 
 protected:
     EmbeddingLayer(std::shared_ptr<Dispatcher> input_dispatcher,

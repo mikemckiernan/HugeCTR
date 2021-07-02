@@ -130,8 +130,8 @@ public:
     void dump_to_file(const tensorflow::Tensor* var_handle,
                       const std::string filepath);
     void restore_from_file(const tensorflow::Tensor* var_handle,
-                           const std::string filename);
-    void load_tensors_to_var(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,
+                           const std::string filepath);
+    void load_embedding_values(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,
                              const tensorflow::OpInputList* tensor_list);
 
 

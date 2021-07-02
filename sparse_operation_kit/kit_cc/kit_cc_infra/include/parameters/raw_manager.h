@@ -41,9 +41,9 @@ public:
     void dump_to_file(const std::shared_ptr<ParamInterface>& param,
                       const std::string filepath) override;
     void restore_from_file(const std::shared_ptr<ParamInterface>& param,
-                           const std::string filename) override;
-    void load_tensors_to_var(std::shared_ptr<ParamInterface>& param, 
-                             const std::vector<std::shared_ptr<Tensor>>& tensors) override;
+                           const std::string filepath) override;
+    void load_embedding_values(std::shared_ptr<ParamInterface>& param, 
+                             const std::vector<std::shared_ptr<Tensor>>& tensor_list) override;
     void push_back_embedding_buffer_builder(const size_t local_replica_id,
                             std::shared_ptr<EmbeddingBufferBuilder>& builder) override;
 

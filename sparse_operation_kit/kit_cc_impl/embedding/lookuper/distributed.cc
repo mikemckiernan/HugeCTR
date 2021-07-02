@@ -261,49 +261,17 @@ public:
     #endif // DEBUG
     }
 
-    void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) override {
-        /*step 1 allocate temp spaces*/
-        const size_t embedding_vec_size = param_->get_embedding_vec_size();
-        size_t rows_num = 0;
-        for (auto tensor : tensors) { 
-            size_t row_num = tensor->get_num_elements() / embedding_vec_size;
-            rows_num += row_num; 
-        } // iter on tensors
+    void restore_params(const std::shared_ptr<Tensor> &keys, 
+                        const std::shared_ptr<Tensor> &embedding_values,
+                        const size_t num_total_keys) override {
+        const size_t total_max_vocabulary_size = 
+            param_->get_max_vocabulary_size_per_gpu() * resource_mgr_->get_global_gpu_count();
 
-        std::shared_ptr<HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>> blobs_buff = 
-            HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>::create();
+        MESSAGE("num_total_keys = " + std::to_string(num_total_keys) + ", "
+                "while total_max_vocabulary_size = " + std::to_string(total_max_vocabulary_size));
 
-        Tensor2<int64_t> keys;
-        blobs_buff->reserve({rows_num}, &keys);
-        Tensor2<float> embedding_vectors;
-        blobs_buff->reserve({rows_num, embedding_vec_size}, &embedding_vectors);
-        blobs_buff->allocate();
-        MESSAGE("Allocated temporary buffer for loading tensors.");
-
-        /*step 2: write content to temporary spaces*/
-        size_t row_offset = 0;
-        // treat row-index as the initialized keys
-        for (size_t i = 0; i < rows_num; i++) keys.get_ptr()[i] = static_cast<int64_t>(i);
-        for (const auto &tensor : tensors) {
-            const size_t row_num = tensor->get_num_elements() / embedding_vec_size;
-            std::memcpy(embedding_vectors.get_ptr() + row_offset * embedding_vec_size,
-                        tensor->GetPtrWithType<float>(),
-                        tensor->get_size_in_bytes());
-            row_offset += row_num;
-        } // iter on tensors
-        if (row_offset != rows_num) throw std::runtime_error(ErrorBase + "Error happened in copy tensor content.");
-
-        const size_t total_max_vocabulary_size = param_->get_max_vocabulary_size_per_gpu() * resource_mgr_->get_global_gpu_count();
-        if (rows_num > total_max_vocabulary_size) throw std::runtime_error(ErrorBase + 
-                        "The total rows_num is out of the range of total vocabulary_size of this variable.");
-        
-        MESSAGE("Total rows_num = " + std::to_string(rows_num) + ", " +
-                "while total vocabulary_size = " + std::to_string(total_max_vocabulary_size));
-
-        load_parameters(keys, embedding_vectors, rows_num, 
-                        total_max_vocabulary_size,
-                        param_->get_embedding_vec_size(),
-                        param_->get_max_vocabulary_size_per_gpu());
+        load_parameters(keys, embedding_values, num_total_keys, total_max_vocabulary_size,
+                        param_->get_embedding_vec_size(), param_->get_max_vocabulary_size_per_gpu());
     }
 
 private:
@@ -321,19 +289,17 @@ private:
     Tensors2<float> wgrad_tensors_;
     Tensors2<int64_t> row_offset_allreduce_tensors_;
 
-    void load_parameters(const Tensor2<int64_t>& keys,
-                        const Tensor2<float>& embeddings,
+    void load_parameters(const std::shared_ptr<Tensor> &keys,
+                        const std::shared_ptr<Tensor> &embeddings,
                         const size_t rows_num,
                         const size_t total_vocabulary_size,
                         const size_t embedding_vec_size,
                         const size_t max_vocabulary_size_per_gpu) {
-        if (keys.get_dimensions()[0] != rows_num || embeddings.get_dimensions()[0] != rows_num) 
-            throw std::runtime_error(ErrorBase + "The rows of keys and embeddings are not consistent.");
         if (rows_num > total_vocabulary_size)
             throw std::runtime_error(ErrorBase + "file size is larger than total_vocabulary_size.");
 
-        const int64_t *key_ptr = keys.get_ptr();
-        const float *embedding_ptr = embeddings.get_ptr();
+        const int64_t *key_ptr = keys->GetPtrWithType<int64_t>();
+        const float *embedding_ptr = embeddings->GetPtrWithType<float>();
 
         /*step 5: allocate temporary spaces*/
         const size_t worker_id = resource_mgr_->get_worker_id();

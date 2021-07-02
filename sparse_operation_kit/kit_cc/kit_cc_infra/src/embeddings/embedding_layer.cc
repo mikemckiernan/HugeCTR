@@ -127,16 +127,29 @@ void EmbeddingLayer::dump_to_file(const std::string filepath) const {
     output_dispatcher_->DumpToFile(filepath);
 }
 
-void EmbeddingLayer::restore_from_file(std::ifstream& file_stream) {
-    throw std::runtime_error(ErrorBase + "restore_from_file not implemented.");
+void EmbeddingLayer::restore_from_file(const std::string filepath) {
+    input_dispatcher_->RestoreFromFile(filepath);
+
+    embedding_lookuper_->RestoreFromFile(filepath);
+
+    output_dispatcher_->RestoreFromFile(filepath);
 }
 
-void EmbeddingLayer::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
-    input_dispatcher_->LoadTensorsToMemory(tensors);
+void EmbeddingLayer::restore_params(const std::shared_ptr<Tensor> &keys,
+                                    const std::shared_ptr<Tensor> &embedding_values,
+                                    const size_t num_total_keys) {
+    // because the params is only used by embedding lookuper,
+    // so that delegate this job to embedding lookuper
+    embedding_lookuper_->restore_params(keys, embedding_values, num_total_keys); 
+}
 
-    embedding_lookuper_->LoadTensorsToMemory(tensors);
 
-    output_dispatcher_->LoadTensorsToMemory(tensors);
+void EmbeddingLayer::load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) {
+    input_dispatcher_->LoadEmbeddingValues(tensor_list);
+
+    embedding_lookuper_->LoadEmbeddingValues(tensor_list);
+
+    output_dispatcher_->LoadEmbeddingValues(tensor_list);
 }
 
 ConstructionContext_t EmbeddingLayer::base_context() const {

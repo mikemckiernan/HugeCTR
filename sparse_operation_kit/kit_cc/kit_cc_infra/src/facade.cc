@@ -370,7 +370,7 @@ void Facade::dump_to_file(const tensorflow::Tensor* var_handle,
 }
 
 void Facade::restore_from_file(const tensorflow::Tensor* var_handle,
-                               const std::string filename) {
+                               const std::string filepath) {
     // try to allocate internal memory
     try_allocate_memory();
 
@@ -379,11 +379,11 @@ void Facade::restore_from_file(const tensorflow::Tensor* var_handle,
     GetParamFromVariantTensor(var_handle, param);
 
     // delegate restore from file to param manager.
-    params_mgr_->restore_from_file(param, filename);
+    params_mgr_->restore_from_file(param, filepath);
 
 }
 
-void Facade::load_tensors_to_var(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,
+void Facade::load_embedding_values(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,
                                  const tensorflow::OpInputList* tensor_list) {
     if (tensor_list->size() < 1) throw std::runtime_error(ErrorBase + "There must be at least one tensor.");
 
@@ -409,7 +409,7 @@ void Facade::load_tensors_to_var(tensorflow::core::RefCountPtr<tensorflow::Embed
     } // iter in tensor_list
 
     // delegate this job to param manager
-    params_mgr_->load_tensors_to_var(param, tensors);
+    params_mgr_->load_embedding_values(param, tensors);
 }
 
 // backdoors for unit test

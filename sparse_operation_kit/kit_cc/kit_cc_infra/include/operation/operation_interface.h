@@ -72,8 +72,16 @@
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
 *       [Optional]:
-*       void dump(const std::ofstream &filestream) override {
+*       void dump(std::ofstream &filestream) const override {
 *           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
+*       }
+*       void restore(const std::ifstream &filestream) override {
+*           // if this operation has something needed to be restored from file,
+*           // then override this virtual function.
+*       }
+*       void load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list) override {
+*           // if this operation has something needed to be modified with embedding values,
 *           // then override this virtual function.
 *       }
 *   };
@@ -119,9 +127,24 @@
 *           // and all the the sum of dim is <= max_vocabulary_size_in_total.
 *           // this function will be called by one CPU-threads.
 *       }
+*       void restore_params(const std::shared_ptr<Tensor> &keys,
+*                           const std::shared_ptr<Tensor> &embedding_values,
+*                           const size_t num_total_keys) override {
+*           // the embedding lookuper has to override this function to help 
+*           // param restoring the parameters from CPU keys and embedding values 
+*           // to param's GPU memory.
+*       }
 *       [Optional]:
-*       void dump(const std::ofstream &filestream) override {
+*       void dump(std::ofstream &filestream) const override {
 *           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
+*       }
+*       void restore(const std::ifstream &filestream) override {
+*           // if this operation has something needed to be restored from file,
+*           // then override this virtual function.
+*       }
+*       void load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list) override {
+*           // if this operation has something needed to be modified with embedding values,
 *           // then override this virtual function.
 *       }
 *   };
@@ -160,8 +183,16 @@
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
 *       [Optional]:
-*       void dump(const std::ofstream &filestream) override {
+*       void dump(std::ofstream &filestream) const override {
 *           // if this dispatcher has something needed to be dump to file,
+*           // then override this virtual function.
+*       }
+*       void restore(const std::ifstream &filestream) override {
+*           // if this operation has something needed to be restored from file,
+*           // then override this virtual function.
+*       }
+*       void load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list) override {
+*           // if this operation has something needed to be modified with embedding values,
 *           // then override this virtual function.
 *       }
 *   };
@@ -173,5 +204,6 @@
 
 #include "operation/operation.h"
 #include "operation/operation_helper.h"
+#include "tensor_buffer/tensor2_wrapper.h"
 
 #endif // OPERATION_INTERFACE_H

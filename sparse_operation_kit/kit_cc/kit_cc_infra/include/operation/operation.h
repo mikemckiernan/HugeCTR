@@ -56,21 +56,29 @@ public:
     void set_op_name(const std::string& op_name);
     std::string get_op_name() const;
 
-    void LoadTensorsToMemory(const std::vector<std::shared_ptr<Tensor>>& tensors);
-    /**
-    * by default, operation did not do anything when this function is called.
-    * if an operation instance has some internal states needs to be initialized at the 
-    * time of this function is called, it has to override this virtual function.
-    */
-    virtual void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors);
-
     void DumpToFile(const std::string filepath) const;
     /**
     * by default, operation did not do anything when this function is called.
     * if an operation instance has something needed to be dumped to file, 
     * it has to override this virtual function.
     */
-    virtual void dump(const std::ofstream &filestream) const;
+    virtual void dump(std::ofstream &filestream) const;
+
+    void RestoreFromFile(const std::string filepath);
+    /**
+    * by default, operation did not do anything when this function is called.
+    * if an operation has something needed to be restored from file,
+    * it has to override this virtual function.
+    */
+    virtual void restore(const std::ifstream &filestream);
+
+    void LoadEmbeddingValues(const std::vector<std::shared_ptr<Tensor>>& tensor_list);
+    /**
+    * by default, operation did not do anything when this function is called.
+    * if an operation instance has something needed to be modified with embedding values,
+    * it has to override this virtual function.
+    */
+    virtual void load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list);
 
     static std::string gen_unique_op_name(const std::string op_name);
 private:

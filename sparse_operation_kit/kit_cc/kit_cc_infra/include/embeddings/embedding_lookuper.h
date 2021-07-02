@@ -26,8 +26,10 @@ class EmbeddingLookuper : public Operation {
 public:
     EmbeddingLookuper(ConstructionContext_t construction_context, std::shared_ptr<ParamInterface> param);
 
-    void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) override final;
-    virtual void load_tensors(const std::vector<std::shared_ptr<Tensor>>& tensors) = 0;
+    // help Param to restore parameters from CPU tensor to GPU memory 
+    virtual void restore_params(const std::shared_ptr<Tensor> &keys, 
+                                const std::shared_ptr<Tensor> &embedding_values,
+                                const size_t num_total_keys) = 0;
 
 protected:
     std::shared_ptr<ParamInterface> param_;

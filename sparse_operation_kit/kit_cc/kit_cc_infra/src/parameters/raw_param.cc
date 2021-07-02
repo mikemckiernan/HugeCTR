@@ -221,7 +221,6 @@ void RawParam::dump_to_file(const std::string filepath) {
     std::unique_ptr<int64_t *[]> h_hash_table_key(new int64_t *[local_gpu_count]);
     std::unique_ptr<int64_t *[]> d_hash_table_key(new int64_t *[local_gpu_count]);
     std::unique_ptr<int64_t *[]> d_hash_table_key_sort(new int64_t *[local_gpu_count]);
-    std::unique_ptr<size_t *[]> h_hash_table_value_index(new size_t *[local_gpu_count]);
     std::unique_ptr<size_t *[]> d_hash_table_value_index(new size_t *[local_gpu_count]);
     std::unique_ptr<size_t *[]> d_hash_table_value_index_sort(new size_t *[local_gpu_count]);
     std::unique_ptr<float *[]> h_hash_table_value(new float *[local_gpu_count]);
@@ -237,7 +236,6 @@ void RawParam::dump_to_file(const std::string filepath) {
         CK_CUDA(cudaMallocHost(&h_hash_table_key[dev_id], local_worker_max_count * sizeof(int64_t))); 
         CK_CUDA(cudaMalloc(&d_hash_table_key[dev_id], local_worker_max_count * sizeof(int64_t)));
         CK_CUDA(cudaMalloc(&d_hash_table_key_sort[dev_id], local_worker_max_count * sizeof(int64_t)));
-        CK_CUDA(cudaMallocHost(&h_hash_table_value_index[dev_id], local_worker_max_count * sizeof(size_t)));
         CK_CUDA(cudaMalloc(&d_hash_table_value_index[dev_id], local_worker_max_count * sizeof(size_t)));
         CK_CUDA(cudaMalloc(&d_hash_table_value_index_sort[dev_id], local_worker_max_count * sizeof(size_t)));
         CK_CUDA(cudaMallocHost(&h_hash_table_value[dev_id], local_worker_max_count * embedding_vector_size_ * sizeof(float)));
@@ -287,21 +285,16 @@ void RawParam::dump_to_file(const std::string filepath) {
     // Only cheif worker needs to copy parameters from GPU to CPU, and then write it to file,
     // all the other workers only send their datas to cheif worker via NCCL.
     constexpr size_t key_size = sizeof(int64_t);
-    constexpr size_t index_size = sizeof(size_t);
     const size_t values_size = sizeof(float) * embedding_vector_size_;
     std::unique_ptr<char []> key_buf(new char[local_worker_max_count * key_size]());
-    std::unique_ptr<char []> index_buf(new char[local_worker_max_count * index_size]());
     std::unique_ptr<char []> embedding_value_buf(new char[local_worker_max_count * values_size]());
 
     if (0 == worker_id) { // on cheif worker
-        const std::string key_filename = filepath + "/" + var_name_ + "_key.file";
-        const std::string index_filename = filepath + "/" + var_name_ + "_index.file";
+        const std::string key_filename = filepath + "/" + var_name_ + "_keys.file";
         const std::string values_filename = filepath + "/" + var_name_ + "_values.file";
         std::ofstream key_stream(key_filename, std::ios::binary | std::ios::out);
-        std::ofstream index_stream(index_filename, std::ios::binary | std::ios::out);
         std::ofstream values_stream(values_filename, std::ios::binary | std::ios::out);
 
-        size_t count_offset = 0;
         for (size_t worker = 0; worker < worker_num; worker++) {
             if (worker_id != worker) { /*cheif worker receives data from other workers*/ 
                 CK_NCCL(ncclGroupStart());
@@ -314,11 +307,6 @@ void RawParam::dump_to_file(const std::string filepath) {
                             CK_NCCL(ncclRecv(d_hash_table_key_sort[dev_id], 
                                              pair_count,
                                              ncclInt64, /*peer=*/peer,
-                                             local_gpu->get_nccl(),
-                                             local_gpu->get_stream()));
-                            CK_NCCL(ncclRecv(d_hash_table_value_index_sort[dev_id],
-                                             pair_count,
-                                             ncclUint64, /*peer=*/peer,
                                              local_gpu->get_nccl(),
                                              local_gpu->get_stream()));
                             CK_NCCL(ncclRecv(d_hash_table_value[dev_id], 
@@ -348,18 +336,10 @@ void RawParam::dump_to_file(const std::string filepath) {
                                         pair_count * sizeof(int64_t),
                                         cudaMemcpyDeviceToHost,
                                         local_gpu->get_stream()));
-
-                indexes_add_offset(d_hash_table_value_index_sort[dev_id], pair_count, count_offset);
-
-                CK_CUDA(cudaMemcpyAsync(h_hash_table_value_index[dev_id], d_hash_table_value_index_sort[dev_id],
-                                        pair_count * sizeof(size_t),
-                                        cudaMemcpyDeviceToHost,
-                                        local_gpu->get_stream()));
                 CK_CUDA(cudaMemcpyAsync(h_hash_table_value[dev_id], d_hash_table_value[dev_id],
                                         pair_count * embedding_vector_size_ * sizeof(float),
                                         cudaMemcpyDeviceToHost,
                                         local_gpu->get_stream()));
-                count_offset += pair_count;
             } // for dev_id in local_gpu_count
             resource_mgr_->sync_local_gpus();
 
@@ -369,9 +349,6 @@ void RawParam::dump_to_file(const std::string filepath) {
                 // save sorted keys
                 std::memcpy(key_buf.get(), h_hash_table_key[dev_id], pair_count * key_size);
                 key_stream.write(key_buf.get(), pair_count * key_size);
-                // save sorted indexes
-                std::memcpy(index_buf.get(), h_hash_table_value_index[dev_id], pair_count * index_size);
-                index_stream.write(index_buf.get(), pair_count * index_size);
                 // save embedding vectors
                 std::memcpy(embedding_value_buf.get(), h_hash_table_value[dev_id], pair_count * values_size);
                 values_stream.write(embedding_value_buf.get(), pair_count * values_size);
@@ -382,7 +359,6 @@ void RawParam::dump_to_file(const std::string filepath) {
         } // for worker in worker_num
 
         key_stream.close();
-        index_stream.close();
         values_stream.close();
     } else { // non-cheif worker
         for (size_t worker = 1; worker < worker_num; worker++) {
@@ -394,10 +370,6 @@ void RawParam::dump_to_file(const std::string filepath) {
                     const int32_t peer = 0 * local_gpu_count + dev_id;
                     CK_NCCL(ncclSend(d_hash_table_key_sort[dev_id], 
                                      pair_count, ncclInt64, 
-                                     /*peer=*/peer, 
-                                     local_gpu->get_nccl(), local_gpu->get_stream()));
-                    CK_NCCL(ncclSend(d_hash_table_value_index_sort[dev_id], 
-                                     pair_count, ncclUint64,
                                      /*peer=*/peer, 
                                      local_gpu->get_nccl(), local_gpu->get_stream()));
                     CK_NCCL(ncclSend(d_hash_table_value[dev_id], 
@@ -436,7 +408,6 @@ void RawParam::dump_to_file(const std::string filepath) {
         CK_CUDA(cudaFreeHost(h_hash_table_key[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_key[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_key_sort[dev_id]));
-        CK_CUDA(cudaFreeHost(h_hash_table_value_index[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_value_index[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_value_index_sort[dev_id]));
         CK_CUDA(cudaFreeHost(h_hash_table_value[dev_id]));
@@ -450,35 +421,114 @@ void RawParam::let_user_dump_to_file(const std::string filepath) {
     user_->dump_to_file(filepath);
 }
 
-void RawParam::restore_from_file(const std::string filename) {
-    MESSAGE("Restoring " + var_name_ + " from " + filename);
+void RawParam::restore_from_file(const std::string filepath) {
+    const std::string key_filename = filepath + "/" + var_name_ + "_keys.file";
+    const std::string values_filename = filepath + "/" + var_name_ + "_values.file";
+    std::ifstream key_stream(key_filename, std::ios::binary | std::ios::in);
+    std::ifstream values_stream(values_filename, std::ios::binary | std::ios::in);
 
-    /* for RawParam, the content need to be restored from file
-    *  is related to the details of embedding, so delegate
-    *  this job to embedding layer.*/
-    try {
-        /*all nodes reads the file simultaneously.*/
-        std::ifstream param_stream(filename, std::ifstream::binary);
-        user_->restore_from_file(param_stream);
-        param_stream.close();
-    } catch (const std::system_error& error) {
-        throw std::runtime_error(ErrorBase + error.what());
-    }
+    // step 1: check whether the number of content is consistent and valid.
+    key_stream.seekg(0, key_stream.end);
+    const size_t key_size_in_bytes = key_stream.tellg();
+    key_stream.seekg(0, key_stream.beg);
 
-    MESSAGE("Restored.");
+    values_stream.seekg(0, values_stream.end);
+    const size_t values_size_in_bytes = values_stream.tellg();
+    values_stream.seekg(0, values_stream.beg);
+
+    if (key_size_in_bytes == 0 || values_size_in_bytes == 0)
+        throw std::runtime_error(ErrorBase + "Invalid files, several file(s) size is 0 bytes, where "
+                                    "key: " + std::to_string(key_size_in_bytes) + "bytes, values: " +
+                                    std::to_string(values_size_in_bytes) + "bytes.");
+    if (key_size_in_bytes % sizeof(int64_t) != 0)
+        throw std::runtime_error(ErrorBase + "Invalid file stream for keys, because the count of "
+                                             "keys is not divisible by sizeof(int64).");
+    if (values_size_in_bytes % (sizeof(float) * embedding_vector_size_) != 0)
+        throw std::runtime_error(ErrorBase + "Invalid file stream for embedding values, because the "
+                                             "count of embedding values is not divisible by "
+                                             "sizeof(float) * embedding_vector_size.");
+    const size_t key_count = key_size_in_bytes / sizeof(int64_t);
+    const size_t values_count = values_size_in_bytes / (sizeof(float) * embedding_vector_size_);
+    if (key_count ^ values_count)
+        throw std::runtime_error(ErrorBase + "The count of key and values are not consistent, which are "
+                                             "key: " + std::to_string(key_count) + ", values: " + 
+                                             std::to_string(values_count) + " respectively.");
+
+    // step 2: allocate temp spaces
+    std::shared_ptr<HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>> host_buffer =
+        HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>::create();
+    HugeCTR::Tensor2<int64_t> keys;
+    host_buffer->reserve({key_count}, &keys);
+    HugeCTR::Tensor2<float> embedding_values;
+    host_buffer->reserve({values_count, embedding_vector_size_}, &embedding_values);
+    host_buffer->allocate();
+    MESSAGE("Allocated temporary pinned buffer for loading parameters.");
+
+    // step 3: read content from file to pinned memory
+    key_stream.read(reinterpret_cast<char *>(keys.get_ptr()), key_size_in_bytes);
+    values_stream.read(reinterpret_cast<char *>(embedding_values.get_ptr()), values_size_in_bytes);
+
+    key_stream.close();
+    values_stream.close();
+
+    // step 4: upload content to GPU memory
+    // because how to load parameters to each GPU is related to 
+    // how will the embedding lookuper use those parameters.
+    // so that delegate this loading job to embedding lookuper
+    user_->restore_params(/*keys=*/Tensor2Wrapper<int64_t>::create(keys),
+                          /*embedding_values=*/Tensor2Wrapper<float>::create(embedding_values),
+                          /*num_total_keys=*/key_count);
+
+    // finnaly: synchronize all workers.
+    resource_mgr_->sync_all_workers();
 }
 
-void RawParam::load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) {
-    /*for RawParam, how to load tensors to GPU memory 
-    * is related to the details of embedding, so delegate
-    * this job to embedding layer*/
-    MESSAGE("Loading tensors to GPU memory.");
+void RawParam::let_user_restore_from_file(const std::string filepath) {
+    user_->restore_from_file(filepath);
+}
 
-    // FIXME: when this function is called. the internal states need to be reset.
+void RawParam::load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) {
+    // step 1: allocate temp spaces
+    size_t total_key_count = 0;
+    for (const auto &tensor : tensor_list) {
+        total_key_count += (tensor->get_num_elements() / embedding_vector_size_);
+    } // iter on tensors
 
-    user_->load_tensors_to_memory(tensors);
+    std::shared_ptr<HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>> host_buffer = 
+        HugeCTR::GeneralBuffer2<HugeCTR::CudaHostAllocator>::create();
 
-    MESSAGE("Loaded.");
+    Tensor2<int64_t> keys;
+    host_buffer->reserve({total_key_count}, &keys);
+    Tensor2<float> embedding_values;
+    host_buffer->reserve({total_key_count, embedding_vector_size_}, &embedding_values);
+    host_buffer->allocate();
+    MESSAGE("Allocated temporary buffer for loading embedding values.");
+
+    // step 2: generate keys and copy content to temp spaces.
+    for (size_t i = 0; i < total_key_count; i++) keys.get_ptr()[i] = static_cast<int64_t>(i);
+    size_t offset = 0;
+    for (const auto &tensor : tensor_list) {
+        std::memcpy(embedding_values.get_ptr() + offset,
+                    tensor->GetPtrWithType<float>(),
+                    tensor->get_size_in_bytes());
+        offset += tensor->get_num_elements();
+    } // iter on tensors
+    if (embedding_values.get_num_elements() != offset)
+        throw std::runtime_error(ErrorBase + "Error happened in copy tensor content.");
+
+    // step 3: upload content to GPU memory
+    // because how to load parameters to each GPU is related to 
+    // how will the embedding lookuper use those parameters.
+    // so delegate this loading job to embedding lookuper
+    user_->restore_params(/*keys=*/Tensor2Wrapper<int64_t>::create(keys),
+                          /*embedding_values=*/Tensor2Wrapper<float>::create(embedding_values),
+                          /*num_total_keys=*/total_key_count);
+
+    resource_mgr_->sync_all_workers();
+}
+
+void RawParam::let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) {
+    user_->load_embedding_values(tensor_list);
 }
 
 } // namespace SparseOperationKit

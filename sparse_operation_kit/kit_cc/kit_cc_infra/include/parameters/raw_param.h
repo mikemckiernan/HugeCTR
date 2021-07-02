@@ -52,8 +52,10 @@ public:
     virtual std::string get_var_name() const override;
     void dump_to_file(const std::string filepath) override;
     void let_user_dump_to_file(const std::string filepath) override;
-    void restore_from_file(const std::string filename) override;
-    void load_tensors_to_memory(const std::vector<std::shared_ptr<Tensor>>& tensors) override;
+    void restore_from_file(const std::string filepath) override;
+    void let_user_restore_from_file(const std::string filepath) override;
+    void load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) override;
+    void let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) override;
     
 private:
     RawParam(const std::string& initializer, const std::vector<size_t> shape,

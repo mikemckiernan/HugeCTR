@@ -27,7 +27,15 @@ void ParamInterface::set_user(std::shared_ptr<EmbeddingLayer>& embedding) {
 }
 
 void ParamInterface::let_user_dump_to_file(const std::string filepath) {
-    throw std::runtime_error(ErrorBase + "Not implemented.");
+    // by default, it does nothing.
+}
+
+void ParamInterface::let_user_restore_from_file(const std::string filepath) {
+    // by default, it does nothing.
+}
+
+void ParamInterface::let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list) {
+    // by default, it does nothing
 }
 
 std::shared_ptr<Tensor>& ParamInterface::get_tensor(const size_t local_replica_id) {
