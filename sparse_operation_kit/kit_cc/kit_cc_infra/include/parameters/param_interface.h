@@ -50,11 +50,6 @@ public:
     virtual void let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list);
 };
 
-void GetParamFromVariantTensor(const tensorflow::Tensor* tensor,
-                               std::shared_ptr<ParamInterface>& out_param);
-void StoreParamInVariantTensor(const std::shared_ptr<ParamInterface>& param, 
-                               tensorflow::Tensor* tensor);
-
 } // namespace SparseOperationKit 
 
 #endif // PARAM_INTERFACE_H

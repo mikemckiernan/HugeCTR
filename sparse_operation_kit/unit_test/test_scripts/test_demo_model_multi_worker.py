@@ -47,7 +47,11 @@ def test_sok_demo(args, init_tensors, *random_samples):
         dense_opt = utils.get_dense_optimizer(args.optimizer)(learning_rate=0.1)
 
     plugin_saver = sok.Saver()
-    status = plugin_saver.load_embedding_values(plugin_demo.embedding_layer.embedding_variable, init_tensors)
+    if (1 == args.restore_params):
+        filepath = r"./embedding_variables"
+        plugin_saver.restore_from_file(plugin_demo.embedding_layer.embedding_variable, filepath)
+    else:
+        status = plugin_saver.load_embedding_values(plugin_demo.embedding_layer.embedding_variable, init_tensors)
 
     loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
     def _replica_loss(labels, logits):
@@ -100,8 +104,6 @@ def test_sok_demo(args, init_tensors, *random_samples):
 
     return sok_results
 
-    return sok_results
-
 def compare_sok_with_tf(args):
     if (args.global_batch_size % args.local_gpu_num != 0):
         raise ValueError("global_batch_size: %d is not divisible by local_gpu_num: %d"
@@ -121,10 +123,15 @@ def compare_sok_with_tf(args):
     else:
         random_samples_local = utils.restore_from_file(r"./random_samples_" + str(args.task_id) + r".file")
 
-    # each worker generate same init tensors, because each worker will do the filtering by itself.
-    init_tensors = utils.get_ones_tensor(max_vocab_size_per_gpu=args.max_vocabulary_size_per_gpu,
-                                        embedding_vec_size=args.embedding_vec_size,
-                                        num=args.local_gpu_num * args.worker_num)
+    if (0 == args.restore_params):
+        # each worker generate same init tensors, because each worker will do the filtering by itself.
+        init_tensors = utils.get_ones_tensor(max_vocab_size_per_gpu=args.max_vocabulary_size_per_gpu,
+                                            embedding_vec_size=args.embedding_vec_size,
+                                            num=args.local_gpu_num * args.worker_num)
+    else:
+        filepath = r"./embedding_variables"
+        tf_values_filename = os.path.join(filepath, r"tf_variable.file")
+        init_tensors = utils.restore_from_file(tf_values_filename)
 
     sok_results_local = test_sok_demo(args, init_tensors, *random_samples_local)
     # save the forward embedding vector from different worker to file
@@ -226,6 +233,12 @@ if __name__ == "__main__":
                         required=False, default=1)
     parser.add_argument('--save_params', type=int, choices=[0, 1],
                         help='whether to save the trained parameters.',
+                        required=False, default=0)
+    parser.add_argument('--restore_params', type=int, choices=[0, 1],
+                        help='whether to restore from saved files. '+\
+                             'By default, the testing program will generate random ' +\
+                             'initial value to initialize trainable parameters '+\
+                             'rather than restore trainable parameters from file.',
                         required=False, default=0)
     args = parser.parse_args()
 

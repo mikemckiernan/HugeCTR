@@ -27,7 +27,7 @@ python3 test_demo_model_single_worker.py \
         --restore_params=1 \
         --generate_new_datas=1
 
-# ----------- multi worker test with ips set mannually ------ #
+# ----------- multi worker test with ips set mannually, save testing ------ #
 # python3 test_demo_model_multi_worker.py \
 #         --local_gpu_num=8 --iter_num=100 \
 #         --max_vocabulary_size_per_gpu=1024 \
@@ -39,8 +39,20 @@ python3 test_demo_model_single_worker.py \
 #         --generate_new_datas=1 \
 #         --ips "10.33.12.11" "10.33.12.29"
 
+# # ----------- multi worker test with ips set mannually, restore testing ------ #
+# python3 test_demo_model_multi_worker.py \
+#         --local_gpu_num=8 --iter_num=100 \
+#         --max_vocabulary_size_per_gpu=1024 \
+#         --slot_num=10 --max_nnz=4 \
+#         --embedding_vec_size=4 \
+#         --combiner='mean' --global_batch_size=65536 \
+#         --optimizer='plugin_adam' \
+#         --restore_params=1 \
+#         --generate_new_datas=1 \
+#         --ips "10.33.12.11" "10.33.12.29"
 
-# ------ multi worker test within single worker but using different GPUs.
+
+# ------ multi worker test within single worker but using different GPUs. save
 python3 test_demo_model_multi_worker.py \
         --local_gpu_num=8 --iter_num=100 \
         --max_vocabulary_size_per_gpu=1024 \
@@ -50,4 +62,16 @@ python3 test_demo_model_multi_worker.py \
         --optimizer='plugin_adam' \
         --generate_new_datas=1 \
         --save_params=1 \
+        --ips "localhost" "localhost"
+
+# ------ multi worker test within single worker but using different GPUs. restore
+python3 test_demo_model_multi_worker.py \
+        --local_gpu_num=8 --iter_num=100 \
+        --max_vocabulary_size_per_gpu=1024 \
+        --slot_num=10 --max_nnz=4 \
+        --embedding_vec_size=4 \
+        --combiner='mean' --global_batch_size=65536 \
+        --optimizer='plugin_adam' \
+        --generate_new_datas=1 \
+        --restore_params=1 \
         --ips "localhost" "localhost"

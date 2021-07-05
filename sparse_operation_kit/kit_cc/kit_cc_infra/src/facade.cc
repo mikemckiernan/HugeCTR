@@ -369,14 +369,14 @@ void Facade::dump_to_file(const tensorflow::core::RefCountPtr<tensorflow::Embedd
     params_mgr_->dump_to_file(param, filepath);
 }
 
-void Facade::restore_from_file(const tensorflow::Tensor* var_handle,
+void Facade::restore_from_file(tensorflow::core::RefCountPtr<tensorflow::EmbeddingVariable>& emb_variable,
                                const std::string filepath) {
     // try to allocate internal memory
     try_allocate_memory();
 
     // get param handle
     std::shared_ptr<ParamInterface> param;
-    GetParamFromVariantTensor(var_handle, param);
+    emb_variable->get_param(param);
 
     // delegate restore from file to param manager.
     params_mgr_->restore_from_file(param, filepath);

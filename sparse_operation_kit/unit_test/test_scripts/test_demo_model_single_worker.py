@@ -104,7 +104,12 @@ def test_sok_demo(args, init_tensors, *random_samples):
         dense_opt = utils.get_dense_optimizer(args.optimizer)(learning_rate=0.1)
 
     plugin_saver = sok.Saver()
-    status = plugin_saver.load_embedding_values(plugin_demo.embedding_layer.embedding_variable, init_tensors)
+
+    if (1 == args.restore_params): # restore from trained parameters
+        filepath = r"./embedding_variables"
+        plugin_saver.restore_from_file(plugin_demo.embedding_layer.embedding_variable, filepath)
+    else: # initialize using randomized initial value
+        status = plugin_saver.load_embedding_values(plugin_demo.embedding_layer.embedding_variable, init_tensors)
 
     loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
     def _replica_loss(labels, logits):
@@ -189,9 +194,11 @@ def test_tf_demo(args, init_tensors, *random_samples):
         import time
         time.sleep(0.2) # seconds
 
-    if 1 == args.save_params:
+    if not hasattr(args, "task_id"):
+        # In single worker, which means MirroedStrategy is used.
+        args.task_id = 0
+    if 1 == args.save_params and args.task_id == 0:
         filepath = r"./embedding_variables/"
-
         utils.save_to_file(os.path.join(filepath, r"tf_variable.file"), 
                            tf_demo.params.numpy())
 
@@ -233,9 +240,20 @@ def compare_sok_with_tf(args):
     else:
         random_samples = utils.restore_from_file(r"./random_samples.file")
 
-    init_tensors = utils.get_ones_tensor(max_vocab_size_per_gpu=args.max_vocabulary_size_per_gpu,
-                                         embedding_vec_size=args.embedding_vec_size,
-                                         num=args.gpu_num)
+    if (1 == args.restore_params): # initialize using trained params
+        filepath = r"./embedding_variables"
+
+        # because we already checked the Variable consistency when saving.
+        # so that here we can directly use TensorFlow Variable file to initialize
+        # tf's variable.
+        # FIXME: what if not all TensorFlow embedding vectors are used??
+        tf_values_filename = os.path.join(filepath, r"tf_variable.file")
+        init_tensors = utils.restore_from_file(tf_values_filename)
+
+    else: # initialize using random initial value
+        init_tensors = utils.get_ones_tensor(max_vocab_size_per_gpu=args.max_vocabulary_size_per_gpu,
+                                            embedding_vec_size=args.embedding_vec_size,
+                                            num=args.gpu_num)
 
     sok_results = test_sok_demo(args, init_tensors, *random_samples)
     tf_results = test_tf_demo(args, init_tensors, *random_samples)
