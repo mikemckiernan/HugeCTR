@@ -143,6 +143,11 @@ void EmbeddingLayer::restore_params(const std::shared_ptr<Tensor> &keys,
     embedding_lookuper_->restore_params(keys, embedding_values, num_total_keys); 
 }
 
+bool EmbeddingLayer::save_params(const std::string filepath) const {
+    // because the params is only used by embedding lookuper,
+    // so that delegate this job to embedding lookuper
+    return embedding_lookuper_->save_params(filepath);
+}
 
 void EmbeddingLayer::load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) {
     input_dispatcher_->LoadEmbeddingValues(tensor_list);

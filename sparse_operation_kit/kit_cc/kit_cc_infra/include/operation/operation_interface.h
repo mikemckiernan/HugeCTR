@@ -147,6 +147,11 @@
 *           // if this operation has something needed to be modified with embedding values,
 *           // then override this virtual function.
 *       }
+*       bool save_params(const std::string filepath) const override {
+*           // by default, it return false, which means it does not help ParamInterface to save 
+*           // parameters to file. If it wants to help ParamInterface to save to file, 
+*           // then override this function and return true.
+*       }
 *   };
 *    
 * 4. register this embedding_lookuper by calling 'REGISTER_EMB_LOOKUPER_BUILDER' macro in the cpp file.

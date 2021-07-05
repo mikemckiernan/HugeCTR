@@ -50,6 +50,8 @@ public:
     void restore_params(const std::shared_ptr<Tensor> &keys,
                         const std::shared_ptr<Tensor> &embedding_values,
                         const size_t num_total_keys);
+    // help to save params
+    bool save_params(const std::string filepath) const;
     void load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list);
 
 protected:

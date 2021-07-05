@@ -125,6 +125,9 @@ std::string RawParam::get_var_name() const {
 }
 
 void RawParam::dump_to_file(const std::string filepath) {
+    // if embedding lookuper already saved parameters to file. then skip the following codes.
+    if (user_->save_params(filepath)) return;
+
     const size_t local_gpu_count = resource_mgr_->get_local_gpu_count();
     const size_t worker_id = resource_mgr_->get_worker_id();
     const size_t worker_num = resource_mgr_->get_workers_num();
@@ -220,14 +223,10 @@ void RawParam::dump_to_file(const std::string filepath) {
     // step 3: allocate temp spaces for dump parameters from GPU to CPU
     std::unique_ptr<int64_t *[]> h_hash_table_key(new int64_t *[local_gpu_count]);
     std::unique_ptr<int64_t *[]> d_hash_table_key(new int64_t *[local_gpu_count]);
-    std::unique_ptr<int64_t *[]> d_hash_table_key_sort(new int64_t *[local_gpu_count]);
     std::unique_ptr<size_t *[]> d_hash_table_value_index(new size_t *[local_gpu_count]);
-    std::unique_ptr<size_t *[]> d_hash_table_value_index_sort(new size_t *[local_gpu_count]);
     std::unique_ptr<float *[]> h_hash_table_value(new float *[local_gpu_count]);
     std::unique_ptr<float *[]> d_hash_table_value(new float *[local_gpu_count]);
     std::unique_ptr<size_t *[]> d_dump_counter(new size_t *[local_gpu_count]);
-    std::unique_ptr<void *[]> d_temp_storage(new void *[local_gpu_count]);
-    std::vector<size_t> d_temp_storage_size(local_gpu_count, 0);
     for (size_t dev_id = 0; dev_id < local_gpu_count; ++dev_id) {
         const auto &local_gpu = resource_mgr_->get_local_gpu(dev_id);
         device_context.set_device(local_gpu->get_local_device_id());
@@ -235,18 +234,10 @@ void RawParam::dump_to_file(const std::string filepath) {
         // TODO: use count[dev_id] instead of local_worker_max_count??
         CK_CUDA(cudaMallocHost(&h_hash_table_key[dev_id], local_worker_max_count * sizeof(int64_t))); 
         CK_CUDA(cudaMalloc(&d_hash_table_key[dev_id], local_worker_max_count * sizeof(int64_t)));
-        CK_CUDA(cudaMalloc(&d_hash_table_key_sort[dev_id], local_worker_max_count * sizeof(int64_t)));
         CK_CUDA(cudaMalloc(&d_hash_table_value_index[dev_id], local_worker_max_count * sizeof(size_t)));
-        CK_CUDA(cudaMalloc(&d_hash_table_value_index_sort[dev_id], local_worker_max_count * sizeof(size_t)));
         CK_CUDA(cudaMallocHost(&h_hash_table_value[dev_id], local_worker_max_count * embedding_vector_size_ * sizeof(float)));
         CK_CUDA(cudaMalloc(&d_hash_table_value[dev_id], local_worker_max_count * embedding_vector_size_ * sizeof(float)));
         CK_CUDA(cudaMalloc(&d_dump_counter[dev_id], 1 * sizeof(size_t))); // FIXME: ???
-
-        CK_CUDA(SortPairs((void*)nullptr, d_temp_storage_size[dev_id], 
-                          /*d_keys_in=*/(size_t*)nullptr, /*d_keys_out=*/(size_t*)nullptr,
-                          /*d_values_in=*/(int64_t*)nullptr, /*d_values_out=*/(int64_t*)nullptr,
-                          /*num_items=*/local_worker_max_count));
-        CK_CUDA(cudaMalloc(&d_temp_storage[dev_id], d_temp_storage_size[dev_id]));
     } // for dev_id in local_gpu_count
     resource_mgr_->sync_all_workers();
 
@@ -262,21 +253,8 @@ void RawParam::dump_to_file(const std::string filepath) {
         hashtables_[dev_id]->dump(d_hash_table_key[dev_id], d_hash_table_value_index[dev_id],
                                   d_dump_counter[dev_id], local_gpu->get_stream());
 
-        // sort key-index pairs.
-        const int32_t end_bit = static_cast<int32_t>(std::log2(static_cast<float>(max_vocabulary_size_per_gpu_))) + 1;
-        CK_CUDA(SortPairs(/*d_temp_storage=*/d_temp_storage[dev_id],
-                          /*temp_storage_bytes=*/d_temp_storage_size[dev_id],
-                          /*d_keys_in=*/d_hash_table_value_index[dev_id],
-                          /*d_keys_out=*/d_hash_table_value_index_sort[dev_id],
-                          /*d_values_in=*/d_hash_table_key[dev_id],
-                          /*d_values_out=*/d_hash_table_key_sort[dev_id],
-                          /*num_items=*/count[dev_id],
-                          /*begin_bit=*/0,
-                          /*end_bit*/end_bit,
-                          local_gpu->get_stream(), false));
-
         // get embedding vector by sorted index
-        get_hash_value(count[dev_id], embedding_vector_size_, d_hash_table_value_index_sort[dev_id],
+        get_hash_value(count[dev_id], embedding_vector_size_, d_hash_table_value_index[dev_id],
                        emb_table_tensors_[dev_id].get_ptr(), d_hash_table_value[dev_id],
                        local_gpu->get_stream());
     } // for dev_id in local_gpu_count
@@ -304,7 +282,7 @@ void RawParam::dump_to_file(const std::string filepath) {
                             const int32_t peer = worker * local_gpu_count + dev_id;
                             const auto &local_gpu = resource_mgr_->get_local_gpu(dev_id);
                             const size_t pair_count = count[recv_worker * local_gpu_count + dev_id];
-                            CK_NCCL(ncclRecv(d_hash_table_key_sort[dev_id], 
+                            CK_NCCL(ncclRecv(d_hash_table_key[dev_id], 
                                              pair_count,
                                              ncclInt64, /*peer=*/peer,
                                              local_gpu->get_nccl(),
@@ -332,7 +310,7 @@ void RawParam::dump_to_file(const std::string filepath) {
             for (size_t dev_id = 0; dev_id < local_gpu_count; dev_id++) {
                 const size_t pair_count = count[worker * local_gpu_count + dev_id];
                 const auto &local_gpu = resource_mgr_->get_local_gpu(dev_id);
-                CK_CUDA(cudaMemcpyAsync(h_hash_table_key[dev_id], d_hash_table_key_sort[dev_id],
+                CK_CUDA(cudaMemcpyAsync(h_hash_table_key[dev_id], d_hash_table_key[dev_id],
                                         pair_count * sizeof(int64_t),
                                         cudaMemcpyDeviceToHost,
                                         local_gpu->get_stream()));
@@ -368,7 +346,7 @@ void RawParam::dump_to_file(const std::string filepath) {
                     const size_t pair_count = count[dev_id];
                     const auto &local_gpu = resource_mgr_->get_local_gpu(dev_id);
                     const int32_t peer = 0 * local_gpu_count + dev_id;
-                    CK_NCCL(ncclSend(d_hash_table_key_sort[dev_id], 
+                    CK_NCCL(ncclSend(d_hash_table_key[dev_id], 
                                      pair_count, ncclInt64, 
                                      /*peer=*/peer, 
                                      local_gpu->get_nccl(), local_gpu->get_stream()));
@@ -407,13 +385,10 @@ void RawParam::dump_to_file(const std::string filepath) {
         CK_CUDA(cudaFree(d_count[dev_id]));
         CK_CUDA(cudaFreeHost(h_hash_table_key[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_key[dev_id]));
-        CK_CUDA(cudaFree(d_hash_table_key_sort[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_value_index[dev_id]));
-        CK_CUDA(cudaFree(d_hash_table_value_index_sort[dev_id]));
         CK_CUDA(cudaFreeHost(h_hash_table_value[dev_id]));
         CK_CUDA(cudaFree(d_hash_table_value[dev_id]));
         CK_CUDA(cudaFree(d_dump_counter[dev_id]));
-        CK_CUDA(cudaFree(d_temp_storage[dev_id]));
     } // for dev_id in local_gpu_count
 }
 
