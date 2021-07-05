@@ -26,7 +26,7 @@ import os, json
 import pickle
 import utils
 
-from test_demo_model_single_worker import SOKDemo, test_tf_demo
+from test_demo_model_single_worker import SOKDemo, test_tf_demo, check_saved_embedding_variables
 
 def test_sok_demo(args, init_tensors, *random_samples):
     port = 12345
@@ -90,6 +90,15 @@ def test_sok_demo(args, init_tensors, *random_samples):
         # may exist some conficts with datareader, which cause the program hang.
         import time
         time.sleep(0.2) # seconds
+
+    # save params to file.
+    if 1 == args.save_params:
+        filepath = r"./embedding_variables/"
+        utils.try_make_dirs(filepath, chief=(True if args.task_id == 0 else False))
+
+        plugin_saver.dump_to_file(plugin_demo.embedding_layer.embedding_variable, filepath)
+
+    return sok_results
 
     return sok_results
 
@@ -169,6 +178,9 @@ def compare_sok_with_tf(args):
     print("\n[INFO]: With MultiWorkerMirroredStrategy, the embedding vector obtained from " +\
           "sparse operation kit and tensorflow are consistent for %d iterations."
           %args.iter_num)
+    
+    if (1 == args.save_params):
+        check_saved_embedding_variables(args)
 
 def get_task_id(ips):
     local_ip = utils.get_local_ip()
@@ -212,6 +224,9 @@ if __name__ == "__main__":
     parser.add_argument('--generate_new_datas', type=int, choices=[0, 1],
                         help='whether to generate new random samples',
                         required=False, default=1)
+    parser.add_argument('--save_params', type=int, choices=[0, 1],
+                        help='whether to save the trained parameters.',
+                        required=False, default=0)
     args = parser.parse_args()
 
     if not isinstance(args.ips, list):

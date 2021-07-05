@@ -16,7 +16,7 @@
 
 import argparse
 
-import sys
+import sys, os
 sys.path.append("../../") # where to find plugin
 import sparse_operation_kit as sok
 import tensorflow as tf
@@ -191,7 +191,6 @@ def test_tf_demo(args, init_tensors, *random_samples):
 
     if 1 == args.save_params:
         filepath = r"./embedding_variables/"
-        utils.try_make_dirs(filepath)
 
         utils.save_to_file(os.path.join(filepath, r"tf_variable.file"), 
                            tf_demo.params.numpy())

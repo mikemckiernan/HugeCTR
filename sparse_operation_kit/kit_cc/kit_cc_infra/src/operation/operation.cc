@@ -92,13 +92,18 @@ std::string Operation::get_op_name() const {
 
 void Operation::DumpToFile(const std::string filepath) const {
     try {
-        const std::string filename = filepath + "/" + get_op_name() + ".file";
-        std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
-        dump(file_stream);
-        const size_t file_size_in_bytes = file_stream.tellp();
-        file_stream.close();
-        if (0 == file_size_in_bytes) delete_file(filename);
-
+        if (0 == base_context()->get_resource_mgr()->get_worker_id()) { // chief worker
+            const std::string filename = filepath + "/" + get_op_name() + ".file";
+            std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
+            dump(file_stream);
+            const size_t file_size_in_bytes = file_stream.tellp();
+            file_stream.close();
+            if (0 == file_size_in_bytes) delete_file(filename);
+        } else { // other worker
+            std::ofstream file_stream;
+            dump(file_stream);
+        }
+        
         if (next_op_) next_op_->DumpToFile(filepath);
 
     } catch (const std::exception &error) {

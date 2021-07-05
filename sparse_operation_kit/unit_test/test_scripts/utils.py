@@ -225,9 +225,9 @@ def tf_dataset(keys, labels,
                             num_parallel_calls=1)
     return dataset
 
-def try_make_dirs(directory):
+def try_make_dirs(directory, chief=True):
     import os
-    if not os.path.exists(directory):
+    if not os.path.exists(directory) and chief:
         os.makedirs(directory)
 
 def sort_embedding_variables_by_key(keys, embedding_values, embedding_vec_size):
