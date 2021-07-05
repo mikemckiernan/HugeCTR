@@ -225,6 +225,120 @@ def tf_dataset(keys, labels,
                             num_parallel_calls=1)
     return dataset
 
+def try_make_dirs(directory):
+    import os
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+def sort_embedding_variables_by_key(keys, embedding_values, embedding_vec_size):
+    """
+    This function is used to sort the embedding values by its relavent keys.
+    For example, keys: [5, 3, 6, 1], embedding values: [[0, 0, 0, 0],
+                                                        [1, 1, 1, 1],
+                                                        [2, 2, 2, 2],
+                                                        [3, 3, 3, 3]]
+    After sorted, keys: [1, 3, 5, 6], embedding values: [[3, 3, 3, 3],
+                                                         [1, 1, 1, 1],
+                                                         [0, 0, 0, 0],
+                                                         [2, 2, 2, 2]]
+    """
+    cuda_version = get_cuda_version()
+    cuda_version = "".join(cuda_version.split("."))
+    try:
+        import cupy as cp
+    except:
+        import os
+        os.system("pip install cupy-cuda"+cuda_version)
+        import cupy as cp
+
+    if not isinstance(keys, np.ndarray):
+        keys = np.array(keys, dtype=np.int64)
+    if not isinstance(embedding_values, np.ndarray):
+        embedding_values = np.array(embedding_values, dtype=np.float32)
+
+    sorted_indexes = np.argsort(keys)
+    sorted_keys = keys[sorted_indexes]
+    
+    with cp.cuda.Device(0):
+        d_sorted_values = cp.zeros(shape=embedding_values.shape, dtype=cp.float32)
+        d_sorted_indexes = cp.asarray(sorted_indexes)
+        d_embedding_values = cp.asarray(embedding_values)
+
+        sort_values_kernel = cp.RawKernel(r'''
+            extern "C" __global__
+            void my_kernel(const size_t *sorted_indexes, 
+                           const float *values,
+                           float *sorted_values, 
+                           const size_t values_step, 
+                           const size_t count) {
+                const size_t col_id = threadIdx.x;
+                for (size_t row_id = blockIdx.x; row_id < count; row_id += blockDim.x) {
+                    sorted_values[row_id * values_step + col_id] =
+                            values[sorted_indexes[row_id] * values_step + col_id];
+                }
+            } 
+        ''', 'my_kernel')
+
+        sort_values_kernel((keys.size,), (embedding_vec_size,),
+                            (d_sorted_indexes, d_embedding_values, d_sorted_values, 
+                            embedding_vec_size, keys.size))
+        sorted_values = d_sorted_values.get()
+
+    return sorted_keys, sorted_values
+
+def read_binary_file(filename,
+                     element_type,
+                     chunk_num_elements=65536):
+    import struct, os
+
+    element_type_map = {"float": ["f", 4],
+                        "int32": ["i", 4],
+                        "long long": ["q", 8],
+                        "unsigned long long": ["Q", 8],
+                        "size_t": ["N", 8]}
+
+    elem_size_in_bytes = element_type_map[element_type][1]
+
+    file_size_in_bytes = os.path.getsize(filename)
+    if (file_size_in_bytes % elem_size_in_bytes != 0):
+        raise ValueError("Invalid element size for file: %s." %filename)
+
+    chunk_size_in_bytes = chunk_num_elements * elem_size_in_bytes
+    if (file_size_in_bytes <= chunk_size_in_bytes):
+        chunk_size_in_bytes = file_size_in_bytes
+        chunk_count = 1
+    else:
+        chunk_count = file_size_in_bytes // chunk_size_in_bytes
+
+    results = list()
+    with open(filename, "rb") as file:
+        for _ in range(chunk_count):
+            buffer = file.read(chunk_size_in_bytes)
+            if (0 == len(buffer)):
+                raise RuntimeError("Error in reading file.")
+            elements = struct.unpack(str(chunk_size_in_bytes // elem_size_in_bytes) + 
+                                     element_type_map[element_type][0],
+                                     buffer)        
+            results += elements
+        
+        if (file_size_in_bytes - chunk_count * chunk_size_in_bytes > 0):
+            buffer_size_in_bytes = file_size_in_bytes - chunk_count * chunk_size_in_bytes
+            buffer = file.read(buffer_size_in_bytes)
+            elements = struct.unpack(str(buffer_size_in_bytes // elem_size_in_bytes) + 
+                                     element_type_map[element_type][0],
+                                     buffer)
+            results += elements
+    return results
+
+def get_valid_tf_values(keys, values):
+    if not isinstance(keys, np.ndarray):
+        keys = np.array(keys, dtype=np.int64)
+    if not isinstance(values, np.ndarray):
+        values = np.array(values, dtype=np.float32)
+
+    keys = tf.reshape(keys, [-1])
+    return tf.gather(values, keys).numpy()
+
 if __name__ == "__main__":
     # all_keys, all_labels = generate_random_samples(num_of_samples=65536 * 100,
     #                                                vocabulary_size=8 * 1024 * 1,
@@ -240,5 +354,31 @@ if __name__ == "__main__":
     # a = restore_from_file("./test.file")
     # print(a)
 
-    local_ip = get_local_ip()
-    print("local_ip: %s" %local_ip)
+    # local_ip = get_local_ip()
+    # print("local_ip: %s" %local_ip)
+
+    # keys = np.array([5, 3, 6, 1], dtype=np.int64)
+    # values = np.array([[0, 0, 0, 0],
+    #                    [1, 1, 1, 1],
+    #                    [2, 2, 2, 2],
+    #                    [3, 3, 3, 3]], dtype=np.float32)
+
+    # sorted_keys, sorted_values = sort_embedding_variables_by_key(keys, values, embedding_vec_size=4)
+    # print(sorted_keys)
+    # print(sorted_values)
+
+    # filename = r"./embedding_variables/test_values.file"
+    # keys = read_binary_file(filename, element_type="float")
+    # print(len(keys))
+
+    keys = [5, 3, 6, 1]
+    values = [[0, 0],
+              [1, 1],
+              [2, 2],
+              [3, 3],
+              [4, 4], 
+              [5, 5],
+              [6, 6]]
+    print(get_valid_tf_values(keys, values))
+
+

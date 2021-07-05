@@ -149,6 +149,13 @@ def test_sok_demo(args, init_tensors, *random_samples):
         import time
         time.sleep(0.2) # seconds
     
+    # save params to file.
+    if 1 == args.save_params:
+        filepath = r"./embedding_variables/"
+        utils.try_make_dirs(filepath)
+
+        plugin_saver.dump_to_file(plugin_demo.embedding_layer.embedding_variable, filepath)
+
     return sok_results
 
 def test_tf_demo(args, init_tensors, *random_samples):
@@ -182,7 +189,35 @@ def test_tf_demo(args, init_tensors, *random_samples):
         import time
         time.sleep(0.2) # seconds
 
+    if 1 == args.save_params:
+        filepath = r"./embedding_variables/"
+        utils.try_make_dirs(filepath)
+
+        utils.save_to_file(os.path.join(filepath, r"tf_variable.file"), 
+                           tf_demo.params.numpy())
+
     return tf_results
+
+def check_saved_embedding_variables(args):
+    filepath = r"./embedding_variables"
+    
+    sok_keys_filename = os.path.join(filepath, r"test_keys.file")
+    sok_keys = utils.read_binary_file(sok_keys_filename, element_type="long long")
+    sok_values_filename = os.path.join(filepath, r"test_values.file")
+    sok_values = utils.read_binary_file(sok_values_filename, element_type="float")
+
+    sorted_sok_keys, sorted_sok_values = utils.sort_embedding_variables_by_key(sok_keys, sok_values, 
+                                                    embedding_vec_size=args.embedding_vec_size)
+
+    tf_values_filename = os.path.join(filepath, r"tf_variable.file")
+    tf_values = utils.restore_from_file(tf_values_filename)
+    valid_tf_values = utils.get_valid_tf_values(sorted_sok_keys, tf_values[0])
+
+    tf.debugging.assert_near(tf.reshape(sorted_sok_values, 
+                                shape=(sorted_sok_keys.size, args.embedding_vec_size)), 
+                            valid_tf_values, 
+                            atol=1e-5, rtol=1e-5)
+    print("[INFO]: the saved parameters are consistent between sparse operation kit and TensorFlow")
 
 
 def compare_sok_with_tf(args):
@@ -224,6 +259,9 @@ def compare_sok_with_tf(args):
           "sparse operation kit and tensorflow are consistent for %d iterations." 
           %args.iter_num)
 
+    if (1 == args.save_params):
+        check_saved_embedding_variables(args)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test demo model with single worker.')
     parser.add_argument('--gpu_num', type=int,
@@ -255,6 +293,15 @@ if __name__ == "__main__":
     parser.add_argument('--generate_new_datas', type=int, choices=[0, 1],
                         help='whether to generate new random samples',
                         required=False, default=1)
+    parser.add_argument('--save_params', type=int, choices=[0, 1],
+                        help='whether to save the trained parameters.',
+                        required=False, default=0)
+    parser.add_argument('--restore_params', type=int, choices=[0, 1],
+                        help='whether to restore from saved files. '+\
+                             'By default, the testing program will generate random ' +\
+                             'initial value to initialize trainable parameters '+\
+                             'rather than restore trainable parameters from file.',
+                        required=False, default=0)
 
     args = parser.parse_args()
 

@@ -57,7 +57,9 @@ public:
 };
 
 REGISTER_KERNEL_BUILDER(Name("DumpToFile")
-                        .Device(DEVICE_CPU),
-                        DumpToFileOp<CPUDevice>);
+                        .Device(DEVICE_GPU)
+                        .HostMemory("var_handle")
+                        .HostMemory("filepath"),
+                        DumpToFileOp<GPUDevice>);
 
 } // namespace tensorflow
