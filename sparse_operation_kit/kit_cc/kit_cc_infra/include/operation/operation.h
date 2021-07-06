@@ -25,6 +25,7 @@
 #include <unordered_set>
 #include <string>
 #include <fstream>
+#include <functional>
 
 namespace SparseOperationKit {
 /*
@@ -60,9 +61,10 @@ public:
     /**
     * by default, operation did not do anything when this function is called.
     * if an operation instance has something needed to be dumped to file, 
-    * it has to override this virtual function.
+    * it has to override this virtual function and return true.
     */
-    virtual void dump(std::ofstream &filestream) const;
+    using DumpCallBack = std::function<void(std::ofstream&)> &;
+    virtual bool dump(DumpCallBack dump_call_back) const;
 
     void RestoreFromFile(const std::string filepath);
     /**

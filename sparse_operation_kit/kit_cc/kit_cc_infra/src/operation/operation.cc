@@ -92,16 +92,17 @@ std::string Operation::get_op_name() const {
 
 void Operation::DumpToFile(const std::string filepath) const {
     try {
-        if (0 == base_context()->get_resource_mgr()->get_worker_id()) { // chief worker
-            const std::string filename = filepath + "/" + get_op_name() + ".file";
-            std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
-            dump(file_stream);
-            const size_t file_size_in_bytes = file_stream.tellp();
-            file_stream.close();
-            if (0 == file_size_in_bytes) delete_file(filename);
-        } else { // other worker
-            std::ofstream file_stream;
-            dump(file_stream);
+        std::function<void(std::ofstream&)> call_back;
+        if (dump(call_back)) {
+            if (0 == base_context()->get_resource_mgr()->get_worker_id()) { // chief worker
+                const std::string filename = filepath + "/" + get_op_name() + ".file";
+                std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
+                call_back(file_stream);
+                MESSAGE("Saved " + get_op_name() + " to " + filename);
+            } else { // sub worker
+                std::ofstream file_stream;
+                call_back(file_stream);
+            }
         }
         
         if (next_op_) next_op_->DumpToFile(filepath);
@@ -111,8 +112,9 @@ void Operation::DumpToFile(const std::string filepath) const {
     }
 }
 
-void Operation::dump(std::ofstream &filestream) const {
-    // by default, it does nothing.
+bool Operation::dump(DumpCallBack dump_call_back) const {
+    //by default, it return false, which means this opeation has nothing to dump.
+    return false;
 }
 
 void Operation::RestoreFromFile(const std::string filepath) {

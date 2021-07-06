@@ -72,9 +72,23 @@
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
 *       [Optional]:
-*       void dump(std::ofstream &filestream) const override {
+*       bool dump(DumpCallBack dump_call_back) const override {
 *           // if this dispatcher has something needed to be dump to file,
-*           // then override this virtual function.
+*           // then override this virtual function, and return true!!
+*           // 
+*           // if this virtual function is overrided, then write the logics of 
+*           // dumping internal states to a dump_call_back function. 
+*           // DumpCallBack is a function object which only takes std::ofstream& as
+*           // its input.
+*           // usage example:
+*           bool dump(DumpCallBack dump_call_back) const override {
+*               dump_call_back = [](std::ofstream &file_stream) {
+*                   std::cout << "the dump call back function is called." << std::endl;
+*               };
+*               // important: this overrided function must return true, otherwise its
+*               // dump_call_back will not be called.
+*               return true;
+*           }
 *       }
 *       void restore(const std::ifstream &filestream) override {
 *           // if this operation has something needed to be restored from file,
@@ -135,9 +149,23 @@
 *           // to param's GPU memory.
 *       }
 *       [Optional]:
-*       void dump(std::ofstream &filestream) const override {
+*       bool dump(DumpCallBack dump_call_back) const override {
 *           // if this dispatcher has something needed to be dump to file,
-*           // then override this virtual function.
+*           // then override this virtual function, and return true!!
+*           // 
+*           // if this virtual function is overrided, then write the logics of 
+*           // dumping internal states to a dump_call_back function. 
+*           // DumpCallBack is a function object which only takes std::ofstream& as
+*           // its input.
+*           // usage example:
+*           bool dump(DumpCallBack dump_call_back) const override {
+*               dump_call_back = [](std::ofstream &file_stream) {
+*                   std::cout << "the dump call back function is called." << std::endl;
+*               };
+*               // important: this overrided function must return true, otherwise its
+*               // dump_call_back will not be called.
+*               return true;
+*           }
 *       }
 *       void restore(const std::ifstream &filestream) override {
 *           // if this operation has something needed to be restored from file,
@@ -188,9 +216,23 @@
 *           // this function will be called by multiple CPU-threads if there are multiple GPUs.
 *       }
 *       [Optional]:
-*       void dump(std::ofstream &filestream) const override {
+*       bool dump(DumpCallBack dump_call_back) const override {
 *           // if this dispatcher has something needed to be dump to file,
-*           // then override this virtual function.
+*           // then override this virtual function, and return true!!
+*           // 
+*           // if this virtual function is overrided, then write the logics of 
+*           // dumping internal states to a dump_call_back function. 
+*           // DumpCallBack is a function object which only takes std::ofstream& as
+*           // its input.
+*           // usage example:
+*           bool dump(DumpCallBack dump_call_back) const override {
+*               dump_call_back = [](std::ofstream &file_stream) {
+*                   std::cout << "the dump call back function is called." << std::endl;
+*               };
+*               // important: this overrided function must return true, otherwise its
+*               // dump_call_back will not be called.
+*               return true;
+*           }
 *       }
 *       void restore(const std::ifstream &filestream) override {
 *           // if this operation has something needed to be restored from file,
