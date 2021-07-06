@@ -72,26 +72,31 @@ void EmbeddingManager::create_embedding(const std::shared_ptr<ParamInterface>& p
     // produce input_dispatcher
     auto input_dis_builder = InputContainer::instance("input_dispatcher_builders")->get_builder(input_dispatcher);
     std::shared_ptr<Dispatcher> _input_dispatcher = input_dis_builder->produce(construction_context);
+    _input_dispatcher->set_op_name(input_dispatcher);
     
     // produce input_dispatcher subsequent operations
     for (auto op_name : input_dispatcher_subsequent_ops) {
         auto builder = OperationContainer::instance("operation_builders")->get_builder(op_name);
         std::shared_ptr<Operation> _operation = builder->produce(construction_context);
+        _operation->set_op_name(op_name);
         _input_dispatcher->set_next(_operation); // link this op to input_dispatcher
     } // for op_name in input_dispatcher_subsequent_ops
 
     // produce embedding executor
     auto emb_lookuper_builder = LookuperContainer::instance("embedding_lookuper_builders")->get_builder(embedding_executor);
     std::shared_ptr<EmbeddingLookuper> _embedding_lookuper = emb_lookuper_builder->produce(construction_context, param);
+    _embedding_lookuper->set_op_name(embedding_executor);
 
     // produce output_dispatcher
     auto output_dis_builder = OutputContainer::instance("output_dispatcher_builders")->get_builder(output_dispatcher);
     std::shared_ptr<Dispatcher> _output_dispatcher = output_dis_builder->produce(construction_context);
+    _output_dispatcher->set_op_name(output_dispatcher);
 
     // produce output_dispatcher subsequent operations
     for (auto op_name : output_dispatcher_subsequent_ops) {
         auto builder = OperationContainer::instance("operation_builders")->get_builder(op_name);
         std::shared_ptr<Operation> _operation = builder->produce(construction_context);
+        _operation->set_op_name(op_name);
         _output_dispatcher->set_next(_operation); // link this op to output_dispatcher
     } // for op_name in output_dispatcher_subsequent_ops
 

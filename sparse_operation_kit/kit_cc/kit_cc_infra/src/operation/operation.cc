@@ -20,7 +20,7 @@
 namespace SparseOperationKit {
 
 Operation::Operation(ConstructionContext_t context)
-: base_context_(context), op_name_(gen_unique_op_name("sok_operation"))
+: base_context_(context), op_name_("sok_operation")
 {}
 
 void Operation::AllocateForwardSpaces(size_t const global_batch_size) {
