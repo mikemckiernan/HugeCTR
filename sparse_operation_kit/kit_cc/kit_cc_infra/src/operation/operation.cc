@@ -98,10 +98,12 @@ void Operation::DumpToFile(const std::string filepath) const {
                 const std::string filename = filepath + "/" + get_op_name() + ".file";
                 std::ofstream file_stream = std::ofstream(filename, std::ios::binary | std::ios::out);
                 call_back(file_stream);
-                MESSAGE("Saved " + get_op_name() + " to " + filename);
+                if (file_stream.is_open()) file_stream.close();
+                MESSAGE("Saved operation: " + get_op_name() + " to " + filename);
             } else { // sub worker
                 std::ofstream file_stream;
                 call_back(file_stream);
+                if (file_stream.is_open()) file_stream.close();
             }
         }
         
