@@ -50,6 +50,15 @@ namespace SparseOperationKit {
         }                                                                   \
     } while (0)
 
+#define CK_CUDA_MSG(cmd, msg)                                               \
+    do {                                                                    \
+        cudaError_t r = (cmd);                                              \
+        if (r != cudaSuccess) {                                             \
+            throw std::runtime_error(ErrorBase + std::string(msg) +         \
+                                     std::string(cudaGetErrorString(r)));   \
+        }                                                                   \
+    } while (0)
+
 #define CK_CURAND(cmd)                                   \
     do {                                                 \
         curandStatus_t r = (cmd);                        \

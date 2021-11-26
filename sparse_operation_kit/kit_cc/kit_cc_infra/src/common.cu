@@ -44,7 +44,6 @@ void check_numerics(const T* data, uint32_t size, cudaStream_t& stream) {
     const size_t block_size = 1024;
     const size_t grid_size = (size + block_size - 1) / block_size;
     check_numerics_kernel<<<grid_size, block_size, 0, stream>>>(data, size);
-    CK_CUDA(cudaStreamSynchronize(stream));
 }
 
 template void check_numerics(const float* data, uint32_t size, cudaStream_t& stream);
