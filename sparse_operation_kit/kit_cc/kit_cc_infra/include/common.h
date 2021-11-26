@@ -154,6 +154,9 @@ int32_t string2num(const std::string& str);
 bool file_exist(const std::string filename);
 void delete_file(const std::string filename);
 
+template <typename T>
+void check_numerics(const T* data, uint32_t size, cudaStream_t& stream);
+
 } // namespace SparseOperationKit
 
 

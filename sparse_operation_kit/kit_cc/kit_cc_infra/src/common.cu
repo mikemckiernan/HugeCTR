@@ -28,4 +28,25 @@ __global__ void reduce_sum(const size_t* nums, const size_t nums_len, size_t* re
     }
 }
 
+/*check the numerics is Inf or Nan*/
+template <typename T>
+__global__ void check_numerics_kernel(const T* data, uint32_t size) {
+    const uint32_t tid_base = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint32_t num_threads = blockDim.x * gridDim.x;
+    for (uint32_t tid = tid_base; tid < size; tid += num_threads) {
+        assert(!isnan(data[tid]) && "error: check_numerics faild, got Nan.");
+        assert(!isinf(data[tid]) && "error: check_numerics faild, got Inf.");
+    }
+}
+
+template <typename T>
+void check_numerics(const T* data, uint32_t size, cudaStream_t& stream) {
+    const size_t block_size = 1024;
+    const size_t grid_size = (size + block_size - 1) / block_size;
+    check_numerics_kernel<<<grid_size, block_size, 0, stream>>>(data, size);
+    CK_CUDA(cudaStreamSynchronize(stream));
+}
+
+template void check_numerics(const float* data, uint32_t size, cudaStream_t& stream);
+
 } // namespace SparseOperationKit
