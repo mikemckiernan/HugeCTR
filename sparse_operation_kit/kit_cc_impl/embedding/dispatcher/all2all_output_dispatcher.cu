@@ -188,6 +188,9 @@ public:
 
         // step 2: reorder embedding values
         {
+            CK_CUDA(cudaMemsetAsync(replica_output->GetPtrWithType<float>(),
+                                    0, replica_output->get_size_in_bytes(),
+                                    local_gpu->get_stream())); // TODO: merge it to reorderKernel
             const size_t smem_size = local_gpu->get_max_smem_size_per_sm();
             CK_CUDA(cudaFuncSetAttribute(reorderKernel<float>, 
                                          cudaFuncAttributeMaxDynamicSharedMemorySize, 
