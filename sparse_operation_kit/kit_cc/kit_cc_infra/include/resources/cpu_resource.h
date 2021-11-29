@@ -18,6 +18,7 @@
 #define CPU_RESOURCE_H
 
 #include "eigen3/unsupported/Eigen/CXX11/src/ThreadPool/SimpleThreadPool.h"
+#include "resources/mpi_context.h"
 #include "common.h"
 #include <memory>
 #include <mutex>
@@ -139,6 +140,8 @@ public:
 
     void sync_threadpool() const;
 
+    void sync_all_workers_via_mpi() const;
+
 private:
     CpuResource(const size_t local_gpu_cnt, 
                 const size_t global_gpu_cnt);
@@ -152,6 +155,7 @@ private:
     std::unique_ptr<Eigen::SimpleThreadPool> thread_pool_;
     // each GPU has a dedicated threadpool for launching kernels
     std::vector<std::unique_ptr<Eigen::SimpleThreadPool>> workers_;
+    MPIContext_t mpi_context_;
 };
 
 } // namespace SparseOperationKit

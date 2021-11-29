@@ -60,13 +60,15 @@ CpuResource::CpuResource(const size_t local_gpu_cnt,
 barrier_(std::make_shared<Barrier>(local_gpu_cnt)),
 blocking_call_oncer_(std::make_shared<BlockingCallOnce>(local_gpu_cnt)),
 mu_(), thread_pool_(new Eigen::SimpleThreadPool(local_gpu_cnt)),
-workers_(local_gpu_cnt)
+workers_(local_gpu_cnt), mpi_context_(nullptr)
 {
 #ifdef SOK_ASYNC
     for (size_t dev_id = 0; dev_id < local_gpu_count_; dev_id++) {
         workers_[dev_id].reset(new Eigen::SimpleThreadPool(GetWorkerThreadsCount()));
     }
 #endif
+    const size_t node_num = global_gpu_cnt / local_gpu_cnt;
+    mpi_context_.reset(MPIContext::create(/*ranks=*/node_num).release());
 }
 
 std::shared_ptr<CpuResource> CpuResource::Create(const size_t local_gpu_cnt, 
@@ -80,6 +82,10 @@ void CpuResource::sync_cpu_threads() const {
 
 void CpuResource::sync_threadpool() const {
     while (!thread_pool_->Done()) std::this_thread::yield();
+}
+
+void CpuResource::sync_all_workers_via_mpi() const {
+    mpi_context_->barrier();
 }
 
 } // namespace SparseOperationKit

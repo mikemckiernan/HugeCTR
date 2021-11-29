@@ -107,7 +107,6 @@ private:
     void create_gpu_resource(const size_t global_replica_id, const size_t num_replicas_in_sync,
                              const cudaStream_t& tf_stream);
     void enable_all_peer_access(const size_t global_replica_id);
-    void get_mpi_rank(const size_t global_replica_id);
 
     void sync_all_workers_via_mpi() const; // synchronize all CPU-process via MPI
 
@@ -126,8 +125,6 @@ private:
     std::vector<std::shared_ptr<GpuResource>> gpu_resources_;
     std::shared_ptr<CpuResource> cpu_resource_;
 
-    bool mpi_initialized_{false};
-    int32_t mpi_rank_{-1};
     // a mapping from local_replica_id to device_id
     std::vector<int32_t> visible_devices_;
     // a mapping from device_id to local_replica_id
