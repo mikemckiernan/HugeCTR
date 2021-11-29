@@ -81,8 +81,11 @@ namespace SparseOperationKit {
     do {                                                                            \
         auto retval = (cmd);                                                        \
         if (MPI_SUCCESS != retval) {                                                \
-            throw std::runtime_error(ErrorBase + "MPI failed due to error code" +   \
-                std::to_string(retval));                                            \
+            char estring[MPI_MAX_ERROR_STRING];                                     \
+            int estring_len = 0;                                                    \
+            MPI_Error_string(retval, estring, &estring_len);                        \
+            throw std::runtime_error(ErrorBase + "MPI failed due to " +             \
+                std::string(estring));                                              \
         }                                                                           \
     } while (0)
 
