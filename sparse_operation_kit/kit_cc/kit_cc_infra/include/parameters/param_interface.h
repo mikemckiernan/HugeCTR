@@ -48,6 +48,7 @@ public:
     virtual void let_user_dump_to_file(const std::string filepath);
     virtual void let_user_restore_from_file(const std::string filepath);
     virtual void let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>> &tensor_list);
+    virtual void set_hashtable(const size_t local_replica_id, std::shared_ptr<HashTable> hashtable);
 };
 
 } // namespace SparseOperationKit 

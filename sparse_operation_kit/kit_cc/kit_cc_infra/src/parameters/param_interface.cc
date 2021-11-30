@@ -42,4 +42,8 @@ std::shared_ptr<Tensor>& ParamInterface::get_tensor(const size_t local_replica_i
     return get_embedding_table_tensor(local_replica_id);
 }
 
+void ParamInterface::set_hashtable(const size_t local_replica_id, std::shared_ptr<HashTable> hashtable) {
+    throw std::runtime_error(ErrorBase + "Not implemented.");
+}
+
 } // namespace SparseOperationKit
