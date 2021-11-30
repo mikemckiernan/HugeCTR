@@ -74,6 +74,11 @@ should_free_mpi_rt_{false} {
             throw std::runtime_error(ErrorBase + "ranks is not equal to that of MPI_Comm_size.");
         CK_MPI(MPI_Comm_rank(my_comm_, &rank_id_));
         CK_MPI(MPI_Comm_set_errhandler(my_comm_, MPI_ERRORS_RETURN));
+        int32_t provided = MPI_THREAD_SINGLE;
+        CK_MPI(MPI_Query_thread(&provided));
+        if (provided < MPI_THREAD_MULTIPLE) 
+            throw std::runtime_error(ErrorBase + "MPI been initialized without multi-threading support"
+                " [MPI_THREAD_MULTIPLE], which will likely leads to seg fault.");
     }
 }
 
