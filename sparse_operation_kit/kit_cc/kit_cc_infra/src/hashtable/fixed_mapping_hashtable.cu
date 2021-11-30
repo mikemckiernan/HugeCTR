@@ -95,7 +95,7 @@ template class Divisive<int64_t, size_t>;
 template <typename KeyType, typename ValType>
 FixedMappingHashtable<KeyType, ValType>::FixedMappingHashtable(const size_t capacity,
                                     HashFunctor_t &hash_functor)
-: capacity_(capacity), hash_functor_(hash_functor_.release()) {}
+: capacity_(capacity), hash_functor_(hash_functor.release()) {}
 
 template <typename KeyType, typename ValType>
 std::shared_ptr<FixedMappingHashtable<KeyType, ValType>>
