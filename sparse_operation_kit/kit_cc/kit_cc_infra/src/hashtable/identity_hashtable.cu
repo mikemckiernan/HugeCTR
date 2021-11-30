@@ -68,6 +68,11 @@ size_t IdentityHashTable<KeyType, ValType>::get_size(cudaStream_t stream) const 
 }
 
 template <typename KeyType, typename ValType>
+size_t IdentityHashTable<KeyType, ValType>::get_capacity(cudaStream_t stream) const {
+    return capacity_;
+}
+
+template <typename KeyType, typename ValType>
 size_t IdentityHashTable<KeyType, ValType>::get_value_head(cudaStream_t stream) const {
     return this->get_size(stream);
 }

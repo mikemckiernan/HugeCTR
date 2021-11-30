@@ -30,13 +30,12 @@ struct HashFunctor {
     virtual void dump(void *d_keys, void *d_vals, size_t *d_dump_counter, cudaStream_t stream) const = 0;
 };
 
-using HashFunctor_t = std::unique_ptr<HashFunctor>;
-
 template <typename KeyType, typename ValType>
 class Divisive : public HashFunctor {
 public:
-    std::unique_ptr<Divisive<KeyType, ValType>> create(const ValType interval, const size_t capacity,
-                                                       const size_t global_replica_id);
+    static std::unique_ptr<Divisive<KeyType, ValType>> create(const ValType interval, 
+                                                              const size_t capacity,
+                                                              const size_t global_replica_id);
 
     void operator()(const void *d_keys, void *d_vals, const size_t len, cudaStream_t stream) override;
     void dump(void *d_keys, void *d_vals, size_t *d_dump_counter, cudaStream_t stream) const override;
@@ -51,29 +50,31 @@ private:
 
 } // namespace HashFunctors
 
+using HashFunctor_t = std::unique_ptr<HashFunctors::HashFunctor>;
 
 /*This hashtable use the HashFunctor as the hash function.*/
 template <typename KeyType, typename ValType>
 class FixedMappingHashtable : public HashTable {
 public:
     static std::shared_ptr<FixedMappingHashtable<KeyType, ValType>> create(const size_t capacity,
-                                                HashFunctors::HashFunctor_t& hash_functor);
+                                                                    HashFunctor_t& hash_functor);
 
     virtual size_t get_and_add_value_head(size_t counter_add, cudaStream_t stream) override;
     virtual void get(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) const override;
     virtual void get_insert(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) override;
     virtual void insert(const void *d_keys, const void *d_vals, size_t len, cudaStream_t stream) override;
     virtual size_t get_size(cudaStream_t stream) const override;
+    virtual size_t get_capacity(cudaStream_t stream) const override;
     virtual size_t get_value_head(cudaStream_t stream) const override;
     virtual void dump(void* d_key, void* d_val, size_t* d_dump_counter, cudaStream_t stream) const override;
     virtual bool identical_mapping() const override;
 
 private:
     explicit FixedMappingHashtable(const size_t capacity,
-                    HashFunctors::HashFunctor_t& hash_functor);
+                    HashFunctor_t& hash_functor);
 
     const size_t capacity_;
-    HashFunctors::HashFunctor_t hash_functor_;
+    HashFunctor_t hash_functor_;
 };
 
 } // namespace SparseOperationKit

@@ -94,13 +94,13 @@ template class Divisive<int64_t, size_t>;
 
 template <typename KeyType, typename ValType>
 FixedMappingHashtable<KeyType, ValType>::FixedMappingHashtable(const size_t capacity,
-                                    HashFunctors::HashFunctor_t &hash_functor)
+                                    HashFunctor_t &hash_functor)
 : capacity_(capacity), hash_functor_(hash_functor_.release()) {}
 
 template <typename KeyType, typename ValType>
 std::shared_ptr<FixedMappingHashtable<KeyType, ValType>>
 FixedMappingHashtable<KeyType, ValType>::create(const size_t capacity, 
-                        HashFunctors::HashFunctor_t &hash_functor) {
+                        HashFunctor_t &hash_functor) {
     return std::shared_ptr<FixedMappingHashtable<KeyType, ValType>>(
                     new FixedMappingHashtable(capacity, hash_functor));
 }
@@ -130,6 +130,12 @@ void FixedMappingHashtable<KeyType, ValType>::insert(const void *d_keys, const v
 
 template <typename KeyType, typename ValType>
 size_t FixedMappingHashtable<KeyType, ValType>::get_size(cudaStream_t stream) const {
+    // return its capacity
+    return capacity_;
+}
+
+template <typename KeyType, typename ValType>
+size_t FixedMappingHashtable<KeyType, ValType>::get_capacity(cudaStream_t stream) const {
     // return its capacity
     return capacity_;
 }
