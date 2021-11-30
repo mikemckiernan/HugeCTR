@@ -18,7 +18,7 @@
 #include "common/include/forward_functions.h"
 #include "common/include/backward_functions.h"
 #include "common/include/dumping_functions.h"
-#include "hashtable/fixed_mapping_hashtable.h"
+#include "hashtable/simple_hashtable.h"
 
 namespace SparseOperationKit {
 
@@ -45,7 +45,7 @@ public:
                 HashFunctor_t hash_func = HashFunctors::Divisive<int64_t, size_t>::create(
                     /*interval=*/global_gpu_count, /*capacity=*/capacity,
                     /*global_replica_id=*/resource_mgr_->cal_global_id_from_local_id(dev_id));
-                auto hashtable = FixedMappingHashtable<int64_t, size_t>::create(capacity, hash_func);
+                auto hashtable = SimpleHashtable<int64_t, size_t>::create(capacity, hash_func);
                 param->set_hashtable(dev_id, hashtable);
             }
         } // if identical_mapping

@@ -17,7 +17,7 @@
 #include "operation/operation_interface.h"
 #include "common/include/forward_functions.h"
 #include "common/include/dumping_functions.h"
-#include "hashtable/fixed_mapping_hashtable.h"
+#include "hashtable/simple_hashtable.h"
 
 namespace SparseOperationKit {
 
@@ -54,7 +54,7 @@ public:
             throw std::runtime_error("In this platform, sizeof(size_t) != sizeof(int64_t). "
                                      "It will cause unexpected behavoir when copy datas from "
                                      "size_t pointer to int64_t pointer.");
-                                     
+
         if (param->get_hashtable(0)->identical_mapping()) {
             // identical_mapping waste memory spaces, so that lookuper 
             // will set its wanted hashtable for param
@@ -65,7 +65,7 @@ public:
                 HashFunctor_t hash_func = HashFunctors::Divisive<int64_t, size_t>::create(
                     /*interval=*/global_gpu_count, /*capacity=*/capacity,
                     /*global_replica_id=*/resource_mgr_->cal_global_id_from_local_id(dev_id));
-                auto hashtable = FixedMappingHashtable<int64_t, size_t>::create(capacity, hash_func);
+                auto hashtable = SimpleHashtable<int64_t, size_t>::create(capacity, hash_func);
                 param->set_hashtable(dev_id, hashtable);
             }
         } // if identical_mapping

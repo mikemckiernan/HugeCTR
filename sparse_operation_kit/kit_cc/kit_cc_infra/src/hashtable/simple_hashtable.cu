@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "hashtable/fixed_mapping_hashtable.h"
+#include "hashtable/simple_hashtable.h"
 
 namespace SparseOperationKit {
 
@@ -93,69 +93,69 @@ template class Divisive<int64_t, size_t>;
 
 
 template <typename KeyType, typename ValType>
-FixedMappingHashtable<KeyType, ValType>::FixedMappingHashtable(const size_t capacity,
+SimpleHashtable<KeyType, ValType>::SimpleHashtable(const size_t capacity,
                                     HashFunctor_t &hash_functor)
 : capacity_(capacity), hash_functor_(hash_functor.release()) {}
 
 template <typename KeyType, typename ValType>
-std::shared_ptr<FixedMappingHashtable<KeyType, ValType>>
-FixedMappingHashtable<KeyType, ValType>::create(const size_t capacity, 
+std::shared_ptr<SimpleHashtable<KeyType, ValType>>
+SimpleHashtable<KeyType, ValType>::create(const size_t capacity, 
                         HashFunctor_t &hash_functor) {
-    return std::shared_ptr<FixedMappingHashtable<KeyType, ValType>>(
-                    new FixedMappingHashtable(capacity, hash_functor));
+    return std::shared_ptr<SimpleHashtable<KeyType, ValType>>(
+                    new SimpleHashtable(capacity, hash_functor));
 }
 
 template <typename KeyType, typename ValType>
-size_t FixedMappingHashtable<KeyType, ValType>::get_and_add_value_head(size_t counter_add, cudaStream_t stream) {
+size_t SimpleHashtable<KeyType, ValType>::get_and_add_value_head(size_t counter_add, cudaStream_t stream) {
     // no internal counter, so that always return 0;
     return 0ul;
 }
 
 template <typename KeyType, typename ValType>
-void FixedMappingHashtable<KeyType, ValType>::get(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) const {
+void SimpleHashtable<KeyType, ValType>::get(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) const {
     // delegate this job to hash_functor
     (*hash_functor_)(d_keys, d_vals, len, stream);
 }
 
 template <typename KeyType, typename ValType>
-void FixedMappingHashtable<KeyType, ValType>::get_insert(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) {
+void SimpleHashtable<KeyType, ValType>::get_insert(const void *d_keys, void *d_vals, size_t len, cudaStream_t stream) {
     return this->get(d_keys, d_vals, len, stream);
 }
 
 template <typename KeyType, typename ValType>
-void FixedMappingHashtable<KeyType, ValType>::insert(const void *d_keys, const void *d_vals, size_t len, cudaStream_t stream) {
+void SimpleHashtable<KeyType, ValType>::insert(const void *d_keys, const void *d_vals, size_t len, cudaStream_t stream) {
     // do nothing
     return;
 }
 
 template <typename KeyType, typename ValType>
-size_t FixedMappingHashtable<KeyType, ValType>::get_size(cudaStream_t stream) const {
+size_t SimpleHashtable<KeyType, ValType>::get_size(cudaStream_t stream) const {
     // return its capacity
     return capacity_;
 }
 
 template <typename KeyType, typename ValType>
-size_t FixedMappingHashtable<KeyType, ValType>::get_capacity(cudaStream_t stream) const {
+size_t SimpleHashtable<KeyType, ValType>::get_capacity(cudaStream_t stream) const {
     // return its capacity
     return capacity_;
 }
 
 template <typename KeyType, typename ValType>
-size_t FixedMappingHashtable<KeyType, ValType>::get_value_head(cudaStream_t stream) const {
+size_t SimpleHashtable<KeyType, ValType>::get_value_head(cudaStream_t stream) const {
     return this->get_size(stream);
 }
 
 template <typename KeyType, typename ValType>
-void FixedMappingHashtable<KeyType, ValType>::dump(void* d_key, void* d_val, size_t* d_dump_counter, cudaStream_t stream) const {
+void SimpleHashtable<KeyType, ValType>::dump(void* d_key, void* d_val, size_t* d_dump_counter, cudaStream_t stream) const {
     // delegate this job to hash_functor
     hash_functor_->dump(d_key, d_val, d_dump_counter, stream);
 }
 
 template <typename KeyType, typename ValType>
-bool FixedMappingHashtable<KeyType, ValType>::identical_mapping() const {
+bool SimpleHashtable<KeyType, ValType>::identical_mapping() const {
     return false;
 }
 
-template class FixedMappingHashtable<int64_t, size_t>;
+template class SimpleHashtable<int64_t, size_t>;
 
 } // namespace SparseOperationKit

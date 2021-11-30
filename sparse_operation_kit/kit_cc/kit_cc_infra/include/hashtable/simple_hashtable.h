@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef FIXED_MAPPING_HASHTABLE_H
-#define FIXED_MAPPING_HASHTABLE_H
+#ifndef SIMPLE_HASHTABLE_H
+#define SIMPLE_HASHTABLE_H
 
 #include "hashtable/hashtable.h"
 #include <memory>
@@ -54,9 +54,9 @@ using HashFunctor_t = std::unique_ptr<HashFunctors::HashFunctor>;
 
 /*This hashtable use the HashFunctor as the hash function.*/
 template <typename KeyType, typename ValType>
-class FixedMappingHashtable : public HashTable {
+class SimpleHashtable : public HashTable {
 public:
-    static std::shared_ptr<FixedMappingHashtable<KeyType, ValType>> create(const size_t capacity,
+    static std::shared_ptr<SimpleHashtable<KeyType, ValType>> create(const size_t capacity,
                                                                     HashFunctor_t& hash_functor);
 
     virtual size_t get_and_add_value_head(size_t counter_add, cudaStream_t stream) override;
@@ -70,7 +70,7 @@ public:
     virtual bool identical_mapping() const override;
 
 private:
-    explicit FixedMappingHashtable(const size_t capacity,
+    explicit SimpleHashtable(const size_t capacity,
                     HashFunctor_t& hash_functor);
 
     const size_t capacity_;
@@ -79,4 +79,4 @@ private:
 
 } // namespace SparseOperationKit
 
-#endif // FIXED_MAPPING_HASHTABLE_H
+#endif // SIMPLE_HASHTABLE_H
