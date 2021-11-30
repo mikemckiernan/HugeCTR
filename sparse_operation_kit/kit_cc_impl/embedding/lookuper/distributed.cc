@@ -18,6 +18,7 @@
 #include "common/include/forward_functions.h"
 #include "common/include/backward_functions.h"
 #include "common/include/dumping_functions.h"
+#include "hashtable/fixed_mapping_hashtable.h"
 
 namespace SparseOperationKit {
 
@@ -33,6 +34,21 @@ public:
         embedding_feature_tensors_.reserve(local_gpu_count);
         wgrad_tensors_.reserve(local_gpu_count);
         if (combiner_ == CombinerType::Mean) row_offset_allreduce_tensors_.reserve(local_gpu_count);
+
+        if (param->get_hashtable(0)->identical_mapping()) {
+            // identical_mapping waste memory spaces, so that lookuper 
+            // will set its wanted hashtable for param
+            const size_t global_gpu_count = resource_mgr_->get_global_gpu_count();
+            for (size_t dev_id = 0; dev_id < local_gpu_count; ++dev_id) {
+                auto stream = resource_mgr_->get_local_gpu(dev_id)->get_stream();
+                const size_t capacity = param->get_hashtable(dev_id)->get_capacity(stream);
+                HashFunctor_t hash_func = HashFunctors::Divisive<int64_t, size_t>::create(
+                    /*interval=*/global_gpu_count, /*capacity=*/capacity,
+                    /*global_replica_id=*/resource_mgr_->cal_global_id_from_local_id(dev_id));
+                auto hashtable = FixedMappingHashtable<int64_t, size_t>::create(capacity, hash_func);
+                param->set_hashtable(dev_id, hashtable);
+            }
+        } // if identical_mapping
     }
 
     void allocate_forward_spaces() override {
