@@ -59,15 +59,13 @@ public:
             // identical_mapping waste memory spaces, so that lookuper 
             // will set its wanted hashtable for param
             const size_t global_gpu_count = resource_mgr_->get_global_gpu_count();
-            for (size_t dev_id = 0; dev_id < local_gpu_count; ++dev_id) {
-                auto stream = resource_mgr_->get_local_gpu(dev_id)->get_stream();
-                const size_t capacity = param->get_hashtable(dev_id)->get_capacity(stream);
-                HashFunctor_t hash_func = HashFunctors::Divisive<int64_t, size_t>::create(
-                    /*interval=*/global_gpu_count, /*capacity=*/capacity,
-                    /*global_replica_id=*/resource_mgr_->cal_global_id_from_local_id(dev_id));
-                auto hashtable = SimpleHashtable<int64_t, size_t>::create(capacity, hash_func);
-                param->set_hashtable(dev_id, hashtable);
-            }
+            auto stream = resource_mgr_->get_local_gpu(0)->get_stream();
+            const size_t capacity = param->get_hashtable(0)->get_capacity(stream);
+            HashFunctor_t hash_func = HashFunctors::Divisive<int64_t, size_t>::create(
+                /*interval=*/global_gpu_count, /*capacity=*/capacity,
+                /*global_replica_id=*/resource_mgr_->cal_global_id_from_local_id(0));
+            auto hashtable = SimpleHashtable<int64_t, size_t>::create(capacity, hash_func);
+            param->set_hashtable(hashtable);
         } // if identical_mapping
     }
 

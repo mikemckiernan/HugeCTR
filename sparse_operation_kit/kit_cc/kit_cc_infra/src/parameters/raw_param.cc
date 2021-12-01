@@ -333,10 +333,12 @@ void RawParam::let_user_load_embedding_values(const std::vector<std::shared_ptr<
     user_->load_embedding_values(tensor_list);
 }
 
-void RawParam::set_hashtable(const size_t local_replica_id, std::shared_ptr<HashTable> hashtable) {
-    if (local_replica_id >= hashtables_.size()) 
-        throw std::runtime_error(ErrorBase + "local_replica_id out of range of hashtables.size().");
-    hashtables_[local_replica_id] = hashtable;
+void RawParam::set_hashtable(std::shared_ptr<BaseSimpleHashtable> hashtable) {
+    for (size_t local_replica_id = 0ul; local_replica_id < resource_mgr_->get_local_gpu_count(); ++local_replica_id) {
+        const size_t global_replica_id = resource_mgr_->cal_global_id_from_local_id(local_replica_id);
+        auto temp_hashtable = hashtable->clone(global_replica_id);
+        hashtables_[local_replica_id] = temp_hashtable;
+    }
 }
 
 } // namespace SparseOperationKit

@@ -58,7 +58,7 @@ public:
     void let_user_restore_from_file(const std::string filepath) override;
     void load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) override;
     void let_user_load_embedding_values(const std::vector<std::shared_ptr<Tensor>>& tensor_list) override;
-    void set_hashtable(const size_t local_replica_id, std::shared_ptr<HashTable> hashtables) override;
+    void set_hashtable(std::shared_ptr<BaseSimpleHashtable> hashtable) override;
     
 private:
     RawParam(const std::string& initializer, const bool use_hashtable, const std::vector<size_t> shape,
