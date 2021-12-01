@@ -87,6 +87,11 @@ void Divisive<KeyType, ValType>::dump(void *d_keys, void *d_vals,
                                                         interval_, capacity_, global_replica_id_);
 }
 
+template <typename KeyType, typename ValType>
+std::unique_ptr<HashFunctor> Divisive<KeyType, ValType>::clone(const size_t global_replica_id) {
+    return create(interval_, capacity_, global_replica_id);
+}
+
 template class Divisive<int64_t, size_t>;
 
 } // namespace HashFunctors
@@ -154,6 +159,12 @@ void SimpleHashtable<KeyType, ValType>::dump(void* d_key, void* d_val, size_t* d
 template <typename KeyType, typename ValType>
 bool SimpleHashtable<KeyType, ValType>::identical_mapping() const {
     return false;
+}
+
+template <typename KeyType, typename ValType>
+std::shared_ptr<BaseSimpleHashtable> SimpleHashtable<KeyType, ValType>::clone(const size_t global_replica_id) {
+    HashFunctor_t hash_func = hash_functor_->clone(global_replica_id);
+    return create(capacity_, hash_func);
 }
 
 template class SimpleHashtable<int64_t, size_t>;
