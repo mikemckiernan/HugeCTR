@@ -366,7 +366,7 @@ with tf.Session() as sess:
         loss_v = sess.run(loss)
         print("[SOK INFO]: Iteration: {}, loss: {}".format(step, loss_v))
 ```
-Please be noted that `sok_init_op` must be the first step in `sess.run`, even before variables initialization.
+**Please be noted that `sok_init_op` must be the first step in `sess.run`, even before variables initialization.**
 
 ***launch training program***
 You can use `horovodrun` or `mpiexec` to launch multiple processes in each machine for synchronized training. For example:
