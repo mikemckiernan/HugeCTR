@@ -54,7 +54,9 @@ class All2AllDenseEmbedding(tf.keras.layers.Layer):
             `replica_batchsize * slot_num * nnz_per_slot`.
     use_hashtable: boolean = True
             whether using `Hashtable` in ``EmbeddingVariable``, if `True`,
-            Hashtable will be created for dynamic insertion.
+            Hashtable will be created for dynamic insertion. Otherwise, the input keys
+            will be used as the index for embedding vector looking-up, so that input keys
+            must be in the range ``[0, max_vocabulary_size_per_gpu * gpu_num)``.
 
     Examples
     --------
