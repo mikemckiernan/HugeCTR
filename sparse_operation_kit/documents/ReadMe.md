@@ -21,6 +21,12 @@ $ cd documents/
 $ make html
 ```
 
++ If you don't want to build docs with version control, use the following commands:
+```shell
+$ cd documents/
+$ sphinx-build source/ build/
+```
+
 + Check HTML correctness
 ```shell
 $ cd documents/
