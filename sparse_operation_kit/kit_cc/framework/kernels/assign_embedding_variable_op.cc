@@ -152,7 +152,6 @@ REGISTER_KERNEL_BUILDER(Name("AssignEmbeddingVariable")
                         .Device(DEVICE_GPU)
                         .HostMemory("emb_var_handle")
                         .HostMemory("tf_var_handle")
-                        .HostMemory("initial_value")
                         .HostMemory("local_replica_id"),
                         AssignEmbeddingVariableOp<GPUDevice>);
 

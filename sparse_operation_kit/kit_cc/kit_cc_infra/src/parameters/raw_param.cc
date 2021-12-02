@@ -158,7 +158,7 @@ void RawParam::set_initial_value(const size_t local_replica_id,
     CK_CUDA(cudaMemcpyAsync(embedding_table->GetPtrWithType<float>(),
                             initial_value->GetPtrWithType<float>(),
                             initial_value->get_size_in_bytes(),
-                            cudaMemcpyHostToDevice,
+                            cudaMemcpyDefault,
                             local_gpu->get_stream()));
     CK_CUDA(cudaStreamSynchronize(local_gpu->get_stream()));
     
