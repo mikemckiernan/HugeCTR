@@ -55,7 +55,9 @@ class DistributedEmbedding(tf.keras.layers.Layer):
             to :math:`max\_feature\_num=slot\_num*max\_nnz`.
     use_hashtable: boolean = True
             whether using `Hashtable` in ``EmbeddingVariable``, if `True`,
-            Hashtable will be created for dynamic insertion.
+            Hashtable will be created for dynamic insertion. Otherwise, the input keys
+            will be used as the index for embedding vector looking-up, so that input keys
+            must be in the range ``[0, max_vocabulary_size_per_gpu * gpu_num)``.
 
     Examples
     --------
