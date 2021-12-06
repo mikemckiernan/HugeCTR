@@ -12,7 +12,7 @@ This document will walk you through simple demos to get you familiar with Sparse
 </div>
 
 ## Install SparseOperationKit ##
-Please refer to the [*Installation* section](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.1.0/intro_link.html#installation) to install SparseOperationKit to your system.
+Please refer to the [*Installation* section](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/intro_link.html#installation) to install SparseOperationKit to your system.
 
 ## Import SparseOperationKit ##
 ```python
@@ -120,7 +120,7 @@ with strategy.scope():
 
     dense_opt = tf.keras.optimizers.Adam(learning_rate=0.1)
 ```
-For a DNN model built with SOK, `sok.Init` must be used to conduct initilizations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/init.html#module-sparse_operation_kit.core.initialize).
+For a DNN model built with SOK, `sok.Init` must be used to conduct initilizations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/init.html#module-sparse_operation_kit.core.initialize).
 
 ***define training step***
 ```python
@@ -147,7 +147,7 @@ def _train_step(inputs, labels):
     return loss
 ```
 
-If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope).
+If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope).
 
 ***start training***
 ```python
@@ -233,7 +233,7 @@ else:
 
 dense_opt = tf.keras.optimizers.Adam(learning_rate=0.1)
 ```
-For a DNN model built with SOK, `sok.Init()` must be called to conduct initializations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/init.html#module-sparse_operation_kit.core.initialize).
+For a DNN model built with SOK, `sok.Init()` must be called to conduct initializations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/init.html#module-sparse_operation_kit.core.initialize).
 
 ***define training step***
 ```python
@@ -266,7 +266,7 @@ def _train_step(inputs, labels, first_batch):
 
     return loss
 ```
-If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope). 
+If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope). 
 
 ***start training***
 ```python
@@ -316,7 +316,7 @@ else:
     emb_opt = tf.keras.optimizers.Adam(learning_rate=0.1)
 dense_opt = tf.keras.optimizers.Adam(learning_rate=0.1)
 ```
-For a DNN model built with SOK, `sok.Init` must be used to conduct initilizations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/init.html#module-sparse_operation_kit.core.initialize).
+For a DNN model built with SOK, `sok.Init` must be used to conduct initilizations. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/init.html#module-sparse_operation_kit.core.initialize).
 
 ***define training step***
 ```python
@@ -347,7 +347,7 @@ def train_step(inputs, labels, training):
         
         return total_loss
 ```
-If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/v1.0.1/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope).
+If you are using native TensorFlow optimizers, such as `tf.keras.optimizers.Adam`, then `sok.OptimizerScope` must be used. Please see [its API document](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/api/utils/opt_scope.html#sparseoperationkit-optimizer-scope).
 
 ***start training***
 ```python
