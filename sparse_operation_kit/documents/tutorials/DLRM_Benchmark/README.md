@@ -14,8 +14,6 @@ python3 split_bin.py train_data.bin $DATA/train
 python3 split_bin.py test_data.bin $DATA/test
 ```
 
-! Internal only: The processed dataset can be obtained in /lustre/fsw/devtech/hpc-devtech/kunlunl/bin_dataset on selene.
-
 ## Environment
 
 ```bash
