@@ -193,7 +193,7 @@ strategy = tf.distribute.MultiWorkerMirroredStrategy()
 ```
 
 ***Other Steps***<br>
-The steps ***create model instance under MultiWorkerMirroredStrategy.scope***, ***define training step*** and ***start training*** are the same as which are described in [with tf.distribute.MirroredStrategy](#with-tf-distribute-mirroredstrategy). Please check that section.
+The steps ***create model instance under MultiWorkerMirroredStrategy.scope***, ***define training step*** and ***start training*** are the same as which are described in [with tf.distribute.MirroredStrategy](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/get_started/get_started.html#with-tf-distribute-mirroredstrategy). Please check that section.
 
 ***launch training program***<br>
 Because multiple CPU processes are used in each machine for synchronized training, therefore `MPI` can be used to launch this program. For example:
