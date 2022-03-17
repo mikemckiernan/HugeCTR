@@ -540,22 +540,6 @@ inference_ps_test:
       when: always
     - when: never
 
-inference_embedding_cache_test:
-  extends: .dlcluster_job
-  allow_failure: false
-  stage: test
-  needs:
-    - build_inference
-  script:
-    - export CONT=${INFER_IMAGE_VERSIONED}
-    - srun -N 1 -p dgx1v,dgx1v16g,dgx1v32g bash ./ci/integration_test/inference/embedding_cache_test.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|merge_request_event)$/
-      when: always
-    - if: $TEST_NEW_IMAGE == "1"
-      when: always
-    - when: never
-
 inference_embedding_cache_update_test:
   extends: .dlcluster_job
   allow_failure: false
@@ -648,6 +632,41 @@ dlrm_14node_check:
     WALLTIME: "00:15:00"
     DGXNNODES: 1
     TEST_CMD: ./ci/post_test/check_dlrm_14node.sub
+
+build_docs:
+  extends: .cluster_post_test_job
+  needs:
+    - build_train_inference
+  variables:
+    CONT: $TRAIN_INFER_IMAGE_VERSIONED
+  allow_failure: false
+  script:
+    - DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+        software-properties-common pandoc
+    - python3 -m pip install -r docs/requirements-doc.txt
+    - make -C docs html
+  artifacts:
+    paths:
+      - docs/build/html
+    expire_in: 30 minutes
+  rules:
+    - exists:
+        - /docs/source/conf.py
+
+pages:
+  extends: .cluster_post_test_job
+  image: gitlab-master.nvidia.com:5005/hwinf-scm/pages-runner
+  needs: 
+    - build_docs
+  script:
+    - rm -rf "public" || true
+    - mkdir "public" 
+    - (cd docs/build/html; tar cf - .) | (cd "public"; tar xvf -)
+    - ls -asl "public"
+    - echo "Pages should be available at ${CI_PAGES_URL}"
+  artifacts:
+    paths:
+      - public
 
 # rm_logs:
 #   extends: .cluster_test_job
