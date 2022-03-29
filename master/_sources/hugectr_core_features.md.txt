@@ -37,7 +37,7 @@ Mixed precision training is supported to help improve and reduce the memory thro
 
 <img src="user_guide_src/fig4_arithmetic_underflow.png" width="640px" align="center"/>
 
-<div align=center>Fig. 5: Arithmetic Underflow</div>
+<div align=center>Fig. 1: Arithmetic Underflow</div>
 
 <br></br>
 
@@ -56,7 +56,7 @@ For more information, refer to [Python Interface](../api/python_interface.md).
 
 <img src="user_guide_src/learning_rate_scheduling.png" width="439" height="282" align="center"/>
 
-<div align=center>Fig. 6: Learning Rate Scheduling</div>
+<div align=center>Fig. 2: Learning Rate Scheduling</div>
 
 <br></br>
 
@@ -69,9 +69,7 @@ This feature currently supports both single-node and multi-node training. It sup
 You can view the [HugeCTR Continuous Training](./notebooks/continuous_training.ipynb) example notebook to learn how to ue this feature with the Criteo dataset.
 The Criteo dataset is a common use case, but embedding training cache is not limited to this dataset.
 
-### See Also
-
-* Details of [HugeCTR Embedding Training Cache](hugectr_embedding_training_cache)
+For more information, see the details for [HugeCTR Embedding Training Cache](hugectr_embedding_training_cache).
 
 ## HugeCTR to ONNX Converter
 
@@ -86,9 +84,7 @@ A hierarchical storage mechanism has been implemented between the local SSDs and
 
 Try out our [hugectr_wdl_prediction.ipynb Notebook](./notebooks/hugectr_wdl_prediction.ipynb). For more information, refer to [Distributed Deployment](https://github.com/triton-inference-server/hugectr_backend/blob/main/docs/architecture.md#distributed-deployment-hierarchical-hugectr-parameter-server).
 
-### See Also
-
-* Details for [Hierarchical Parameter Server](hugectr_parameter_server.md)
+For more information, see the details for [Hierarchical Parameter Server](hugectr_parameter_server.md).
 
 ## Sparse Operation Kit
 

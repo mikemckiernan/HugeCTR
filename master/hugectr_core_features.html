@@ -44,15 +44,9 @@
 <li class="toctree-l2"><a class="reference internal" href="#multi-node-training">Multi-Node Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mixed-precision-training">Mixed Precision Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sgd-optimizer-and-learning-rate-scheduling">SGD Optimizer and Learning Rate Scheduling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#embedding-training-cache">Embedding Training Cache</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#embedding-training-cache">Embedding Training Cache</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#hugectr-to-onnx-converter">HugeCTR to ONNX Converter</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#hierarchical-parameter-server">Hierarchical Parameter Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id1">See Also</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#hierarchical-parameter-server">Hierarchical Parameter Server</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sparse-operation-kit">Sparse Operation Kit</a></li>
 </ul>
 </li>
@@ -142,7 +136,7 @@ are described in the following topics.</p>
 <h2>Mixed Precision Training<a class="headerlink" href="#mixed-precision-training" title="Permalink to this headline"></a></h2>
 <p>Mixed precision training is supported to help improve and reduce the memory throughput footprint. In this mode, TensorCores are used to boost performance for matrix multiplication-based layers, such as <code class="docutils literal notranslate"><span class="pre">FullyConnectedLayer</span></code> and <code class="docutils literal notranslate"><span class="pre">InteractionLayer</span></code>, on Volta, Turing, and Ampere architectures. For the other layers, including embeddings, the data type is changed to FP16 so that both memory bandwidth and capacity are saved. To enable mixed precision mode, specify the mixed_precision option in the configuration file. When <a class="reference external" href="https://arxiv.org/abs/1710.03740"><code class="docutils literal notranslate"><span class="pre">mixed_precision</span></code></a> is set, the full FP16 pipeline will be triggered. Loss scaling will be applied to avoid the arithmetic underflow (see Fig. 5). Mixed precision training can be enabled using the configuration file.</p>
 <a class="reference internal image-reference" href="_images/fig4_arithmetic_underflow.png"><img alt="_images/fig4_arithmetic_underflow.png" class="align-center" src="_images/fig4_arithmetic_underflow.png" style="width: 640px;" /></a>
-<div align=center>Fig. 5: Arithmetic Underflow</div>
+<div align=center>Fig. 1: Arithmetic Underflow</div>
 <p><br></br></p>
 </div>
 <div class="section" id="sgd-optimizer-and-learning-rate-scheduling">
@@ -157,7 +151,7 @@ are described in the following topics.</p>
 <p>Fig. 6 illustrates how these hyperparameters interact with the actual learning rate.</p>
 <p>For more information, refer to <a class="reference internal" href="api/python_interface.html"><span class="doc std std-doc">Python Interface</span></a>.</p>
 <a class="reference internal image-reference" href="_images/learning_rate_scheduling.png"><img alt="_images/learning_rate_scheduling.png" class="align-center" src="_images/learning_rate_scheduling.png" style="width: 439px; height: 282px;" /></a>
-<div align=center>Fig. 6: Learning Rate Scheduling</div>
+<div align=center>Fig. 2: Learning Rate Scheduling</div>
 <p><br></br></p>
 </div>
 <div class="section" id="embedding-training-cache">
@@ -166,12 +160,7 @@ are described in the following topics.</p>
 <p>This feature currently supports both single-node and multi-node training. It supports all embedding types and can be used with <a class="reference internal" href="api/python_interface.html#norm"><span class="std std-doc">Norm</span></a>, <a class="reference internal" href="api/python_interface.html#raw"><span class="std std-doc">Raw</span></a>, and <a class="reference internal" href="api/python_interface.html#parquet"><span class="std std-doc">Parquet</span></a> dataset formats. We revised our <code class="docutils literal notranslate"><span class="pre">criteo2hugectr</span></code> tool to support the key set extraction for the Criteo dataset.</p>
 <p>You can view the <a class="reference internal" href="notebooks/continuous_training.html"><span class="doc std std-doc">HugeCTR Continuous Training</span></a> example notebook to learn how to ue this feature with the Criteo dataset.
 The Criteo dataset is a common use case, but embedding training cache is not limited to this dataset.</p>
-<div class="section" id="see-also">
-<h3>See Also<a class="headerlink" href="#see-also" title="Permalink to this headline"></a></h3>
-<ul class="simple">
-<li><p>Details of <a class="reference internal" href="hugectr_embedding_training_cache.html"><span class="doc std std-doc">HugeCTR Embedding Training Cache</span></a></p></li>
-</ul>
-</div>
+<p>For more information, see the details for <a class="reference internal" href="hugectr_embedding_training_cache.html"><span class="doc std std-doc">HugeCTR Embedding Training Cache</span></a>.</p>
 </div>
 <div class="section" id="hugectr-to-onnx-converter">
 <h2>HugeCTR to ONNX Converter<a class="headerlink" href="#hugectr-to-onnx-converter" title="Permalink to this headline"></a></h2>
@@ -183,12 +172,7 @@ For more information, refer to the <code class="docutils literal notranslate"><s
 <h2>Hierarchical Parameter Server<a class="headerlink" href="#hierarchical-parameter-server" title="Permalink to this headline"></a></h2>
 <p>A hierarchical storage mechanism has been implemented between the local SSDs and CPU memory on the HugeCTR Hierarchical Parameter Server (POC). With this implementation, the embedding table no longer has to be stored within the local CPU memory. The distributed Redis cluster has been added as a CPU cache to store larger embedding tables and interact with the GPU embedding cache directly. To assist the Redis cluster with looking up missing embedding keys, the local RocksDB has been implemented to serve as a query engine to back up the complete embedding table on the local SSDs.</p>
 <p>Try out our <a class="reference internal" href="notebooks/hugectr_wdl_prediction.html"><span class="doc std std-doc">hugectr_wdl_prediction.ipynb Notebook</span></a>. For more information, refer to <a class="reference external" href="https://github.com/triton-inference-server/hugectr_backend/blob/main/docs/architecture.md#distributed-deployment-hierarchical-hugectr-parameter-server">Distributed Deployment</a>.</p>
-<div class="section" id="id1">
-<h3>See Also<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
-<ul class="simple">
-<li><p>Details for <a class="reference internal" href="hugectr_parameter_server.html"><span class="doc std std-doc">Hierarchical Parameter Server</span></a></p></li>
-</ul>
-</div>
+<p>For more information, see the details for <a class="reference internal" href="hugectr_parameter_server.html"><span class="doc std std-doc">Hierarchical Parameter Server</span></a>.</p>
 </div>
 <div class="section" id="sparse-operation-kit">
 <h2>Sparse Operation Kit<a class="headerlink" href="#sparse-operation-kit" title="Permalink to this headline"></a></h2>
