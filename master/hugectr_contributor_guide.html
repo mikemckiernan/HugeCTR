@@ -142,7 +142,7 @@ add your comments on the issue.</p>
 I have no name!@56a762eae3f8:/hugectr
 </pre></div>
 </div>
-<p>In <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/dockerfile.ctr">Merlin CTR Dockerfile</a>, <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/dockerfile.tri">Merlin Inference Dockerfile</a>, <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/dockerfile.tf">Merlin Tensorflow Dockerfile</a>, we provide a set of arguments to setup your HugeCTR development container:</p>
+<p>In <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/training/dockerfile.ctr">Merlin CTR Dockerfile</a>, <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/inference/dockerfile.ctr">Merlin Inference Dockerfile</a>, <a class="reference external" href="https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/training/dockerfile.tf">Merlin Tensorflow Dockerfile</a>, we provide a set of arguments to setup your HugeCTR development container:</p>
 <p>The arguments and configurations in this example can be used in all the three containers building:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>docker build --pull -t ${DST_IMAGE} -f ${DOCKER_FILE} --build-arg RELEASE=false --build-arg RMM_VER=vnightly --build-arg CUDF_VER=vnightly --build-arg NVTAB_VER=vnightly --build-arg HUGECTR_DEV_MODE=true --no-cache .
 </pre></div>
