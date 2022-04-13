@@ -41,13 +41,13 @@ const std::vector<long long> slot_size = {
     39884406, 39043,    17289,    7420,     20263,  3,     7120, 1543, 63,
     38532951, 2953546,  403346,   10,       2208,   11938, 155,  4,    976,
     14,       39979771, 25641295, 39664984, 585935, 12972, 108,  36};
-// const std::vector<long long> slot_size(26, 0);
 std::vector<bool> is_mhot(26, false);
 
 const int max_nnz = 5;
 const int slot_num = 26;
 const int label_dim = 1;
-const int dense_dim = 13;
+// const int dense_dim = 13;
+
 using LABEL_TYPE = float;
 using DENSE_TYPE = float;
 using CAT_TYPE = int64_t;
@@ -57,12 +57,43 @@ const std::string prefix("./data_reader_parquet_test_data/");
 const std::string file_list_name("data_reader_parquet_file_list.txt");
 using CVector = std::vector<std::unique_ptr<cudf::column>>;
 typedef long long T;
-// generate parquet files and return data in the form of `row-major` stored in vector<>
-void generate_parquet_input_files(int num_files, int sample_per_file, std::vector<bool>& is_mhot,
-                                  std::vector<LABEL_TYPE>& labels, std::vector<DENSE_TYPE>& denses,
+// row major to `extended-col-major`
+static void pack_dense_features(const DENSE_TYPE* input, const size_t samples,
+                                const size_t dense_dim, const std::vector<size_t>& dense_dim_array,
+                                std::vector<std::vector<DENSE_TYPE>>& out) {
+  if (dense_dim != std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0)) {
+    std::cerr << "dense packing error" << std::endl;
+  };
+
+  if (out.size() != dense_dim_array.size()) {
+    std::cerr << "dense packing error: dense dim != out dim" << std::endl;
+  };
+  for (auto& o : out) {
+    o.clear();
+  }
+  int64_t c_offset = 0;
+  for (size_t i = 0; i < dense_dim_array.size(); i++) {
+    for (size_t r0 = 0; r0 < samples; r0++) {
+      for (size_t c0 = 0; c0 < dense_dim_array[i]; c0++) {
+        out[i].push_back(input[r0 * dense_dim + c_offset + c0]);
+      }
+    }
+    c_offset += dense_dim_array[i];
+  }
+}
+// generate parquet files and return data in the form of `row-major` stored in
+// vector<>
+void generate_parquet_input_files(int num_files, int sample_per_file,
+                                  const std::vector<bool>& is_mhot, std::vector<LABEL_TYPE>& labels,
+                                  std::vector<DENSE_TYPE>& denses,
+                                  const std::vector<size_t>& dense_dim_array,
                                   std::vector<int32_t>& row_offsets,
                                   std::vector<CAT_TYPE>& sparse_values) {
   check_make_dir(prefix);
+
+  int dense_num = dense_dim_array.size();
+  const int dense_dim =
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   denses.resize(num_files * sample_per_file * dense_dim);
   row_offsets.resize(num_files * sample_per_file * slot_num, 0);
   size_t dense_feature_per_file = dense_dim * sample_per_file;
@@ -84,22 +115,54 @@ void generate_parquet_input_files(int num_files, int sample_per_file, std::vecto
                                          cudf::size_type(sample_per_file), std::move(dev_buffer));
       cols.emplace_back(std::move(pcol));
     }
-    // create dense vector
-    for (int i = 0; i < dense_dim; i++) {
-      std::vector<DENSE_TYPE> dense_vector(sample_per_file, 0);
-      for (int sample = 0; sample < sample_per_file; sample++) {
-        auto val = DENSE_TYPE(std::rand());
-        dense_vector[sample] = val;
-        denses[file_num * dense_feature_per_file + sample * dense_dim + i] = val;
-      };
 
-      rmm::device_buffer dev_buffer(dense_vector.data(), sizeof(DENSE_TYPE) * sample_per_file,
+    // create dense vector
+    std::vector<std::vector<DENSE_TYPE>> dense_vectors(dense_num);
+    std::vector<std::vector<int32_t>> dense_row_off(dense_num,
+                                                    std::vector<int32_t>(sample_per_file + 1, 0));
+    // dense_matrix shape : sample_per_file * dense_dim
+    for (int i = 0; i < dense_num; i++) {
+      // 0,1,2,3,4,5,6,7
+      int cur_dense_dim = dense_dim_array[i];
+      std::vector<DENSE_TYPE> dense_vector(sample_per_file, 0);
+      std::iota(dense_row_off[i].begin(), dense_row_off[i].end(), 0);
+      // 0,2,4,6,8,10,12,14
+      std::transform(std::begin(dense_row_off[i]), std::end(dense_row_off[i]),
+                     std::begin(dense_row_off[i]), [&](int x) { return x * cur_dense_dim; });
+    }
+    // dense_value
+    std::generate(denses.begin() + file_num * dense_feature_per_file,
+                  denses.begin() + (file_num + 1) * dense_feature_per_file, std::rand);
+
+    pack_dense_features(denses.data() + file_num * dense_feature_per_file, sample_per_file,
+                        dense_dim, dense_dim_array, dense_vectors);
+    for (int i = 0; i < dense_num; i++) {
+      size_t cur_dense_size = sample_per_file * dense_dim_array[i];
+      rmm::device_buffer dev_buffer(dense_vectors[i].data(), sizeof(DENSE_TYPE) * cur_dense_size,
                                     rmm::cuda_stream_default);
       auto pcol =
           std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
-                                         cudf::size_type(sample_per_file), std::move(dev_buffer));
+                                         cudf::size_type(cur_dense_size), std::move(dev_buffer));
       cols.emplace_back(std::move(pcol));
     }
+    // for (int i = 0; i < dense_dim; i++) {
+    //   for (int sample = 0; sample < sample_per_file; sample++) {
+    //     auto val = DENSE_TYPE(std::rand());
+    //     dense_vector[sample] = val;
+    //     denses[file_num * dense_feature_per_file + sample * dense_dim + i] =
+    //     val;
+    //   };
+
+    //   rmm::device_buffer dev_buffer(dense_vector.data(), sizeof(DENSE_TYPE) *
+    //   sample_per_file,
+    //                                 rmm::cuda_stream_default);
+    //   auto pcol =
+    //       std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
+    //                                      cudf::size_type(sample_per_file),
+    //                                      std::move(dev_buffer));
+    //   cols.emplace_back(std::move(pcol));
+    // }
+
     std::vector<std::vector<CAT_TYPE>> slot_vectors(slot_num);
     std::vector<std::vector<int32_t>> row_off(slot_num,
                                               std::vector<int32_t>(sample_per_file + 1, 0));
@@ -217,6 +280,9 @@ void generate_parquet_input_files(int num_files, int sample_per_file, std::vecto
 
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
+  std::vector<size_t> dense_dim_array(16, 1);
+  const int dense_dim =
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
   std::vector<LABEL_TYPE> denses;
   // dim is (total_sample + 1)
@@ -228,8 +294,8 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   int sample_per_file = 2048;
   int num_files = 3;
   // size_t total_samples = sample_per_file * num_files;
-  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, row_offsets,
-                               sparse_values);
+  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, dense_dim_array,
+                               row_offsets, sparse_values);
 
   int numprocs = 1;
   std::vector<std::vector<int>> vvgpu;
@@ -311,15 +377,16 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
         int slot_id = nnz_id % slot_num;
         // std::cout<< "idx:" << start<<" slot_id " <<slot_id
         // <<" slot_offset "<<slot_offset[slot_id]
-        // <<" read :"<< sparse_values[(nnz_offset + start) % total_nnz] <<" vs "<<keys[start] -
-        // slot_offset[slot_id]<<std::endl;
+        // <<" read :"<< sparse_values[(nnz_offset + start) % total_nnz] <<" vs
+        // "<<keys[start] - slot_offset[slot_id]<<std::endl;
         ASSERT_TRUE(sparse_values[(nnz_offset + start) % total_nnz] ==
                     keys[start] - slot_offset[slot_id])
             << "idx:" << start;
       }
     }
     // for (size_t nnz_id = 0; nnz_id < nnz; ++nnz_id) {
-    //   ASSERT_TRUE(sparse_values[(nnz_offset + nnz_id) % total_nnz] == keys[nnz_id])
+    //   ASSERT_TRUE(sparse_values[(nnz_offset + nnz_id) % total_nnz] ==
+    //   keys[nnz_id])
     //       << "idx:" << nnz_id;
     // }
     int label_dense_dim = label_dim + dense_dim;
@@ -356,9 +423,11 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   rmm::mr::set_current_device_resource(p_mr);
 }
 
-TEST(data_reader_group_test, data_reader_group_test_3files_1worker_iter) {
+TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
-
+  std::vector<size_t> dense_dim_array(13, 1);
+  const int dense_dim =
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
   std::vector<LABEL_TYPE> denses;
   std::vector<int32_t> row_offsets;
@@ -368,8 +437,8 @@ TEST(data_reader_group_test, data_reader_group_test_3files_1worker_iter) {
   is_mhot[5] = true;
   int sample_per_file = 2048;
   int num_files = 3;
-  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, row_offsets,
-                               sparse_values);
+  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, dense_dim_array,
+                               row_offsets, sparse_values);
 
   const int batchsize = 1024;
   int numprocs = 1;
@@ -440,7 +509,8 @@ TEST(data_reader_group_test, data_reader_group_test_3files_1worker_iter) {
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // std::cout << "label size " << label_size << " dense size " << dense_size << std::endl;
+      // std::cout << "label size " << label_size << " dense size " <<
+      // dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
       std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
@@ -500,9 +570,11 @@ TEST(data_reader_group_test, data_reader_group_test_3files_1worker_iter) {
 // batch 5 -> file 0 (worker 1, repeated)
 // batch 6 -> file 2 (worker 0)
 // batch 7 -> file 0 (worker 1,repeated)
-TEST(data_reader_test, data_reader_group_test_3files_3workers_iter) {
+TEST(data_reader_test, data_reader_parquet_group_test_3files_3workers_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
-  // store the reference dataset
+  std::vector<size_t> dense_dim_array(13, 1);
+  const int dense_dim =
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
   std::vector<LABEL_TYPE> denses;
   std::vector<int32_t> row_offsets;
@@ -513,8 +585,8 @@ TEST(data_reader_test, data_reader_group_test_3files_3workers_iter) {
   is_mhot[5] = true;
   int sample_per_file = 2048;
   int num_files = 3;
-  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, row_offsets,
-                               sparse_values);
+  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, dense_dim_array,
+                               row_offsets, sparse_values);
 
   const int batchsize = 1026;
   int numprocs = 1;
@@ -525,7 +597,8 @@ TEST(data_reader_test, data_reader_group_test_3files_3workers_iter) {
     vvgpu.push_back(device_list);
   }
 
-  //! assume num_files is a multiple of #workers so that each file is only confined to one worker
+  //! assume num_files is a multiple of #workers so that each file is only
+  //! confined to one worker
   ASSERT_TRUE(num_files % device_list.size() == 0);
   int files_per_worker = num_files / device_list.size();
 
@@ -601,8 +674,8 @@ TEST(data_reader_test, data_reader_group_test_3files_3workers_iter) {
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // std::cout << "label size ??? " << label_size << " dense size " << dense_size <<
-      // std::endl;
+      // std::cout << "label size ??? " << label_size << " dense size " <<
+      // dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
       std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
@@ -671,6 +744,9 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
                                  int epochs) {
   auto p_mr = rmm::mr::get_current_device_resource();
   // store the reference dataset
+  std::vector<size_t> dense_dim_array(13, 1);
+  const int dense_dim =
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
   std::vector<LABEL_TYPE> denses;
   std::vector<int32_t> row_offsets;
@@ -680,8 +756,8 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
   is_mhot[3] = true;
   is_mhot[5] = true;
   int sample_per_file = 2048;
-  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, row_offsets,
-                               sparse_values);
+  generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, dense_dim_array,
+                               row_offsets, sparse_values);
   int worker_num = device_list.size();
   int numprocs = 1;
   std::vector<std::vector<int>> vvgpu;
@@ -785,8 +861,8 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
         auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
         size_t label_size = label_tensor.get_num_elements();
         size_t dense_size = dense_tensor.get_num_elements();
-        // std::cout << "label size ??? " << label_size << " dense size " << dense_size <<
-        // std::endl;
+        // std::cout << "label size ??? " << label_size << " dense size " <<
+        // dense_size << std::endl;
         ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                     dense_size == batchsize_per_gpu * dense_dim);
         std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
@@ -860,16 +936,9 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
   rmm::mr::set_current_device_resource(p_mr);
 }
 
-TEST(data_reader_test, data_reader_group_test_3files_1worker_epoch) {
+TEST(data_reader_test, data_reader_parquet_group_test_3files_1worker_epoch) {
   data_reader_epoch_test_impl(3, 1026, {0}, 10);
 }
-TEST(data_reader_test, data_reader_group_test_3files_2worker_epoch) {
+TEST(data_reader_test, data_reader_parquet_group_test_3files_2worker_epoch) {
   data_reader_epoch_test_impl(3, 1026, {0, 1}, 10);
 }
-// TODO: currently num_files should be no less than num_workers
-// TEST(data_reader_test, data_reader_group_test_3files_4worker_epoch) {
-//   data_reader_epoch_test_impl(3, 1028, {0, 1, 2, 3}, 10);
-// }
-// TEST(data_reader_test, data_reader_group_test_1files_3worker_epoch) {
-//   data_reader_epoch_test_impl(1, 1026, {0, 1, 2}, 10);
-// }
