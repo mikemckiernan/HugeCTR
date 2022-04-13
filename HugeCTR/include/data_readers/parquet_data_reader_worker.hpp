@@ -70,6 +70,7 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   bool thread_resource_allocated_{false};  /**< Flag to set/allocate worker thread resources */
   std::unique_ptr<cudf::table> cached_df_; /**< Cached row_group from Parquet */
   Tensor2<int64_t> host_memory_pointer_staging_;
+  Tensor2<int64_t> host_memory_dense_dim_array_;
   /**< Pinned memory for async column dev ptr copy */
   Tensor2<T> host_pinned_csr_inc_; /**< Pinned memory to copy csr push_back values */
   long long row_group_size_;
@@ -129,7 +130,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             int i = 0;
             for (auto& c : cat_col_names) {
               tmp_col_index.insert(c.index);
-              // categorical_idx_parquet_col_.insert(std::make_pair(i, c.index));
+              // categorical_idx_parquet_col_.insert(std::make_pair(i,
+              // c.index));
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
               categorical_idx_parquet_col_.insert(std::make_pair(i, *it));
@@ -187,6 +189,10 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
                                      2 * params_.size() * slots_ + 2 * slots_);
     // pinned buffer for dense feature converter
     buff->reserve({num_of_pointer_staging}, &host_memory_pointer_staging_);
+
+    // pinned dense dim
+    buff->reserve({static_cast<size_t>(buffer_->label_dim + buffer_->dense_dim)},
+                  &host_memory_dense_dim_array_);
     buff->allocate();
 
     source_ = std::make_shared<ParquetFileSource>(worker_id, worker_num, file_list, repeat);
@@ -229,9 +235,10 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   void skip_read() { skip_read_ = true; }
 };
 
-//! Caution. For parquet worker in epoch mode, there's no filling empty samples logic
-// for sparse data. The length of output row_offset is (current_batch_size + 1) but not
-// batchsize + 1
+//! Caution. For parquet worker in epoch mode, there's no filling empty samples
+//! logic
+// for sparse data. The length of output row_offset is (current_batch_size + 1)
+// but not batchsize + 1
 template <class T>
 void ParquetDataReaderWorker<T>::read_a_batch() {
   // dense feature type must be float or a list of float
@@ -257,8 +264,8 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
     if (!source->is_open()) {
       read_new_file();
     }
-    // dense_buffers store only data for local gpus, clipped by batch_size_start_idx &
-    // batch_size_end_idx
+    // dense_buffers store only data for local gpus, clipped by
+    // batch_size_start_idx & batch_size_end_idx
     const int dense_start = buffer_->batch_size_start_idx;  // dense buffer
     const int dense_end = buffer_->batch_size_end_idx;      // dense buffer
     int batch_size = buffer_->batch_size;
@@ -325,9 +332,11 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
         // read_next_file if needed
         if (current_record_index_ >= records_in_file_) {
           try {
-            read_new_file();  // set current_record_index_ to zero; can throw EOF
+            read_new_file();  // set current_record_index_ to zero; can throw
+                              // EOF
 
-            // we merge last slice to next file, so need to move current_record_index_ forward
+            // we merge last slice to next file, so need to move
+            // current_record_index_ forward
             current_record_index_ += row_group_carry_forward_;
             if (row_group_carry_forward_ > 0)
               records_in_file_ += row_group_carry_forward_;
@@ -359,7 +368,8 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
         current_batch_size = batch_size;
       }
       buffer_->current_batch_size = current_batch_size;
-      // PinnedBuffer extend on unique_ptr cant realloc properly and safely (cudaContext)
+      // PinnedBuffer extend on unique_ptr cant realloc properly and safely
+      // (cudaContext)
       if (!host_memory_pointer_staging_.allocated()) {
         HCTR_OWN_THROW(Error_t::UnspecificError,
                        "Parquet reader worker:Please allocate Pinned Buffer first");
@@ -367,8 +377,10 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       size_t device_staging_dense_size = dense_end - dense_start;
       device_staging_dense_size *= ((size_t)label_dense_dim * sizeof(dtype_dense));
       std::vector<cudf::column_view> dense_columns_view_ref;
-      std::vector<size_t> dense_width_dim;
-      for (int k = 0; k < label_dense_dim; k++) {
+      std::vector<int64_t> dense_width_dim;
+      const int num_dense = dense_idx_to_parquet_col_.size();
+      int dense_dim_check = 0;
+      for (int k = 0; k < num_dense; k++) {
         cudf::column_view column = data_view.column(dense_idx_to_parquet_col_[k]);
         cudf::type_id type_of_column = column.type().id();
         // vec float column
@@ -380,16 +392,16 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
 
           HCTR_LOG(INFO, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
                    size_df);
-          HCTR_OWN_THROW(Error_t::WrongInput, "Parquet reader: Not support vec dense yet");
+          // HCTR_OWN_THROW(Error_t::WrongInput, "Parquet reader: Not support vec dense yet");
 
           /* on the premise that all elements are fixed-length.
            *  Thus dense_width = dense_scalar_num / size_df
            */
-          if (!(dense_scalar_num % size_df)) {
+          if ((dense_scalar_num % size_df)) {
             HCTR_OWN_THROW(Error_t::WrongInput,
                            "Parquet reader: Length of Vector dense column isn't fixed");
           }
-          const size_t dense_width = dense_scalar_num / size_df;
+          const int64_t dense_width = dense_scalar_num / size_df;
           // if the vector dense is not of float type
           if (value_view.type().id() != cudf::type_to_id<dtype_dense>()) {
             HCTR_OWN_THROW(Error_t::WrongInput,
@@ -397,23 +409,38 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
           }
           dense_columns_view_ref.emplace_back(std::move(value_view));
           dense_width_dim.push_back(dense_width);
+          dense_dim_check += static_cast<int>(dense_width);
         }
         // scalar dense feature
         else if (type_of_column == cudf::type_to_id<dtype_dense>()) {
           dense_columns_view_ref.emplace_back(std::move(column));
-          dense_width_dim.push_back(1);
+          dense_width_dim.push_back(1l);
+          dense_dim_check += 1;
 
         } else {
           HCTR_OWN_THROW(Error_t::WrongInput,
-                         "Parquet reader: Vector Dense KeyType Must be float or List[float]");
+                         "Parquet reader: Vector Dense KeyType Must be float "
+                         "or List[float]");
         }
       }
-
+      if (!host_memory_dense_dim_array_.allocated()) {
+        HCTR_OWN_THROW(Error_t::UnspecificError,
+                       "Parquet reader: Allocate pinned mem for "
+                       "host_memory_dense_dim_array_ first");
+      }
+      if (dense_dim_check != label_dense_dim) {
+        HCTR_OWN_THROW(Error_t::WrongInput,
+                       "Parquet reader: Dense dim of given file and configured "
+                       "dense dim doesn't match ");
+      }
+      std::memcpy(reinterpret_cast<void*>(host_memory_dense_dim_array_.get_ptr()),
+                  reinterpret_cast<void*>(dense_width_dim.data()),
+                  dense_width_dim.size() * sizeof(int64_t));
       int offset_start = std::min(dense_start, current_batch_size);
       int offset_end = std::min(dense_end, current_batch_size);
       int samples_to_be_transposed = offset_end - offset_start;
       std::vector<dtype_dense*> dense_column_data_ptr;
-      for (int k = 0; k < label_dense_dim; k++) {
+      for (int k = 0; k < num_dense; k++) {
         dtype_dense* column_ptr =
             const_cast<dtype_dense*>(dense_columns_view_ref[k].data<dtype_dense>());
         column_ptr =
@@ -424,11 +451,13 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       }
 
       std::deque<rmm::device_buffer> rmm_resources;
-      convert_parquet_dense_columns(dense_column_data_ptr, label_dense_dim,
-                                    samples_to_be_transposed, dense_start, dense_end,
-                                    reinterpret_cast<dtype_dense*>(dst_dense_tensor.get_ptr()),
-                                    host_memory_pointer_staging_.get_ptr(), rmm_resources,
-                                    memory_resource_.get(), dense_stream_);
+      convert_parquet_dense_columns(
+          dense_column_data_ptr, num_dense,
+          reinterpret_cast<int64_t*>(host_memory_dense_dim_array_.get_ptr()), label_dense_dim,
+          samples_to_be_transposed, dense_start, dense_end,
+          reinterpret_cast<dtype_dense*>(dst_dense_tensor.get_ptr()),
+          host_memory_pointer_staging_.get_ptr(), rmm_resources, memory_resource_.get(),
+          dense_stream_);
       const int num_csr_buffers = param_num;
       auto dst_sparse_tensors = buffer_->device_sparse_buffers;
       // device output pointer
@@ -463,8 +492,9 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
 
         /*
           slots input data: value, row_offset
-          for m-hot slots , row_offset = column::child(0).data , value = column::child(1).data
-          for s-hot row_offset = nullptr, value = column.data()
+          for m-hot slots , row_offset = column::child(0).data , value =
+          column::child(1).data for s-hot row_offset = nullptr, value =
+          column.data()
         */
         std::vector<T*> cat_column_data_ptr;
         std::vector<int32_t*> cat_column_row_offset_ptr;
@@ -477,9 +507,9 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
             cudf::column_view row_offset_view = cat_columns_view_ref[k].child(0);
             cudf::column_view value_view = cat_columns_view_ref[k].child(1);
             if (cudf::size_of(value_view.type()) != sizeof(T)) {
-              HCTR_OWN_THROW(
-                  Error_t::WrongInput,
-                  "Parquet worker : cat m-hot KeyType does not match Parquet column type");
+              HCTR_OWN_THROW(Error_t::WrongInput,
+                             "Parquet worker : cat m-hot KeyType does not "
+                             "match Parquet column type");
             }
             if (row_offset_view.type().id() != cudf::type_to_id<int32_t>()) {
               HCTR_OWN_THROW(Error_t::WrongInput,
@@ -498,7 +528,8 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
             cat_column_row_offset_ptr.push_back(nullptr);
           } else {
             HCTR_OWN_THROW(Error_t::WrongInput,
-                           "Parquet worker : cat m-hot KeyType does not match Parquet column type");
+                           "Parquet worker : cat m-hot KeyType does not match "
+                           "Parquet column type");
           }
         }
         T* dev_slot_offset_ptr = reinterpret_cast<T*>((size_t)slot_offset_device_buf_->data() +
@@ -506,7 +537,8 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
         int64_t* pinned_staging_buffer_param = reinterpret_cast<int64_t*>(
             (size_t)pinned_staging_buffer + pinned_buffer_offset_count * sizeof(int64_t));
         {
-          // optimize converter in the future when slots nnz for current param_id is fixed
+          // optimize converter in the future when slots nnz for current
+          // param_id is fixed
           pinned_buffer_offset_count += convert_parquet_cat_columns(
               cat_column_data_ptr, cat_column_row_offset_ptr, view_offset_, param_num, param_id,
               param.max_nnz, slot_count, current_batch_size, resource_manager_->get_process_id(),

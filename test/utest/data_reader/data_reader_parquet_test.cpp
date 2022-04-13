@@ -61,7 +61,8 @@ typedef long long T;
 static void pack_dense_features(const DENSE_TYPE* input, const size_t samples,
                                 const size_t dense_dim, const std::vector<size_t>& dense_dim_array,
                                 std::vector<std::vector<DENSE_TYPE>>& out) {
-  if (static_cast<int>(dense_dim) != static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0))) {
+  if (static_cast<int>(dense_dim) !=
+      static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0))) {
     std::cerr << "dense packing error" << std::endl;
   };
 
@@ -167,23 +168,6 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
         cols.emplace_back(std::move(pcol));
       }
     }
-    // for (int i = 0; i < dense_dim; i++) {
-    //   for (int sample = 0; sample < sample_per_file; sample++) {
-    //     auto val = DENSE_TYPE(std::rand());
-    //     dense_vector[sample] = val;
-    //     denses[file_num * dense_feature_per_file + sample * dense_dim + i] =
-    //     val;
-    //   };
-
-    //   rmm::device_buffer dev_buffer(dense_vector.data(), sizeof(DENSE_TYPE) *
-    //   sample_per_file,
-    //                                 rmm::cuda_stream_default);
-    //   auto pcol =
-    //       std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
-    //                                      cudf::size_type(sample_per_file),
-    //                                      std::move(dev_buffer));
-    //   cols.emplace_back(std::move(pcol));
-    // }
 
     std::vector<std::vector<CAT_TYPE>> slot_vectors(slot_num);
     std::vector<std::vector<int32_t>> row_off(slot_num,
@@ -273,21 +257,21 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
   metadata << "], ";
 
   metadata << "\"conts\": [";
-  for (int i = label_dim; i < (label_dim + dense_dim - 1); i++) {
+  for (int i = label_dim; i < (label_dim + dense_num - 1); i++) {
     metadata << "{\"col_name\": \"C" << i << "\", "
              << "\"index\":" << i << "}, ";
   }
-  metadata << "{\"col_name\": \"C" << (label_dim + dense_dim - 1) << "\", "
-           << "\"index\":" << (label_dim + dense_dim - 1) << "} ";
+  metadata << "{\"col_name\": \"C" << (label_dim + dense_num - 1) << "\", "
+           << "\"index\":" << (label_dim + dense_num - 1) << "} ";
   metadata << "], ";
 
   metadata << "\"cats\": [";
-  for (int i = label_dim + dense_dim; i < (label_dim + dense_dim + slot_num - 1); i++) {
+  for (int i = label_dim + dense_num; i < (label_dim + dense_num + slot_num - 1); i++) {
     metadata << "{\"col_name\": \"C" << i << "\", "
              << "\"index\":" << i << "}, ";
   }
-  metadata << "{\"col_name\": \"C" << (label_dim + dense_dim + slot_num - 1) << "\", "
-           << "\"index\":" << (label_dim + dense_dim + slot_num - 1) << "} ";
+  metadata << "{\"col_name\": \"C" << (label_dim + dense_num + slot_num - 1) << "\", "
+           << "\"index\":" << (label_dim + dense_num + slot_num - 1) << "} ";
   metadata << "] ";
   metadata << "}";
 
@@ -299,7 +283,8 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
   std::vector<size_t> dense_dim_array(10, 1);
-  dense_dim_array[0] = 3;
+  dense_dim_array[0] = 1;
+  dense_dim_array[1] = 3;
   dense_dim_array[2] = 4;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
