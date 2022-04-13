@@ -61,7 +61,7 @@ typedef long long T;
 static void pack_dense_features(const DENSE_TYPE* input, const size_t samples,
                                 const size_t dense_dim, const std::vector<size_t>& dense_dim_array,
                                 std::vector<std::vector<DENSE_TYPE>>& out) {
-  if (dense_dim != std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0)) {
+  if (static_cast<int>(dense_dim) != static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0))) {
     std::cerr << "dense packing error" << std::endl;
   };
 
