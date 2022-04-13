@@ -262,7 +262,6 @@ class ParquetFileSource : public Source {
           parquet_args.set_num_rows(-1);
           parquet_args.set_timestamp_type(cudf::data_type(cudf::type_id::EMPTY));
           curr_row_group_++;
-          // auto tbl_w_metadata = cudf_io::read_parquet(parquet_args, mr);
           cached_row_group_table_ = std::make_unique<cudf_io::table_with_metadata>(
               cudf_io::read_parquet(parquet_args, mr));
           row_group_size_ = cached_row_group_table_.get()->tbl->num_rows();

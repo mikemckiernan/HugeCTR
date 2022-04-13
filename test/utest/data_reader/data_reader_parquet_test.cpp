@@ -136,14 +136,36 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
 
     pack_dense_features(denses.data() + file_num * dense_feature_per_file, sample_per_file,
                         dense_dim, dense_dim_array, dense_vectors);
+    constexpr size_t bitmask_bits = cudf::detail::size_in_bits<cudf::bitmask_type>();
+    size_t bits = (sample_per_file + bitmask_bits - 1) / bitmask_bits;
+    std::vector<cudf::bitmask_type> null_mask(bits, 0);
+
     for (int i = 0; i < dense_num; i++) {
       size_t cur_dense_size = sample_per_file * dense_dim_array[i];
       rmm::device_buffer dev_buffer(dense_vectors[i].data(), sizeof(DENSE_TYPE) * cur_dense_size,
                                     rmm::cuda_stream_default);
-      auto pcol =
-          std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
-                                         cudf::size_type(cur_dense_size), std::move(dev_buffer));
-      cols.emplace_back(std::move(pcol));
+      if (dense_dim_array[i] > 1) {
+        rmm::device_buffer dev_buffer_1(dense_row_off[i].data(),
+                                        sizeof(int32_t) * dense_row_off[i].size(),
+                                        rmm::cuda_stream_default);
+        auto child =
+            std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
+                                           cudf::size_type(cur_dense_size), std::move(dev_buffer));
+        auto row_off = std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<int32_t>()},
+                                                      cudf::size_type(dense_row_off[i].size()),
+                                                      std::move(dev_buffer_1));
+        auto null_mask_df =
+            rmm::device_buffer(null_mask.data(), null_mask.size() * sizeof(cudf::bitmask_type),
+                               rmm::cuda_stream_default);
+        cols.emplace_back(cudf::make_lists_column(
+            sample_per_file, std::move(row_off), std::move(child), cudf::UNKNOWN_NULL_COUNT,
+            std::move(null_mask_df), rmm::cuda_stream_default));
+      } else {
+        auto pcol =
+            std::make_unique<cudf::column>(cudf::data_type{cudf::type_to_id<DENSE_TYPE>()},
+                                           cudf::size_type(cur_dense_size), std::move(dev_buffer));
+        cols.emplace_back(std::move(pcol));
+      }
     }
     // for (int i = 0; i < dense_dim; i++) {
     //   for (int sample = 0; sample < sample_per_file; sample++) {
@@ -181,10 +203,6 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
         }
       }
     }
-
-    constexpr size_t bitmask_bits = cudf::detail::size_in_bits<cudf::bitmask_type>();
-    size_t bits = (sample_per_file + bitmask_bits - 1) / bitmask_bits;
-    std::vector<cudf::bitmask_type> null_mask(bits, 0);
 
     // construct columns for all slots
     for (int i = 0; i < slot_num; i++) {
@@ -280,7 +298,9 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
 
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
-  std::vector<size_t> dense_dim_array(16, 1);
+  std::vector<size_t> dense_dim_array(10, 1);
+  dense_dim_array[0] = 3;
+  dense_dim_array[2] = 4;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;

@@ -129,7 +129,7 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             int i = 0;
             for (auto& c : cat_col_names) {
               tmp_col_index.insert(c.index);
-              categorical_idx_parquet_col_.insert(std::make_pair(i, c.index));
+              // categorical_idx_parquet_col_.insert(std::make_pair(i, c.index));
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
               categorical_idx_parquet_col_.insert(std::make_pair(i, *it));
@@ -251,7 +251,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
     thread_resource_allocated_ = true;
   }
   int current_batch_size = 0;
-
+  std::vector<std::string> column_names{};
   try {
     auto source = parquet_file_source();
     if (!source->is_open()) {
@@ -275,6 +275,10 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       while (elements_to_read > 0) {
         if (!cached_df_ || (row_group_size_ == row_group_index_)) {
           auto tbl_w_metadata = source->read(-1, memory_resource_.get());
+          // get column name from read_parquet()
+          if (column_names.empty()) {
+            column_names.swap(tbl_w_metadata.metadata.column_names);
+          }
           if (row_group_carry_forward_ > 0 && table_view_for_concat.size() > 0) {
             std::vector<cudf::table_view> table_views_for_concat{table_view_for_concat[0],
                                                                  tbl_w_metadata.tbl->view()};
@@ -343,7 +347,14 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       }
 
       cudf::table_view data_view = cached_df_->view();
-      size_t size_df = data_view.size();
+
+      HCTR_LOG_S(INFO, ROOT) << "parquet data column names: " << std::endl;
+      for (const auto name : column_names) {
+        std::cout << name << " ";
+      }
+      HCTR_LOG_S(INFO, ROOT) << std::endl;
+
+      size_t size_df = data_view.num_rows();
       if (current_batch_size == 0) {
         current_batch_size = batch_size;
       }
@@ -356,41 +367,45 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       size_t device_staging_dense_size = dense_end - dense_start;
       device_staging_dense_size *= ((size_t)label_dense_dim * sizeof(dtype_dense));
       std::vector<cudf::column_view> dense_columns_view_ref;
-      std::vector<size_t> dense_width_dim ;
+      std::vector<size_t> dense_width_dim;
       for (int k = 0; k < label_dense_dim; k++) {
-        cudf::column_view& column = data_view.column(dense_idx_to_parquet_col_[k]);
+        cudf::column_view column = data_view.column(dense_idx_to_parquet_col_[k]);
         cudf::type_id type_of_column = column.type().id();
         // vec float column
         if (type_of_column == cudf::type_to_id<cudf::list_view>()) {
-          // underlying data 
-          cudf::column_view& value_view = column.child(1);
+          // underlying data
+          cudf::column_view value_view = column.child(1);
           const size_t dense_scalar_num = value_view.size();
-          cudf::column_view row_offset_view = cat_columns_view_ref[k].child(0);
+          cudf::column_view row_offset_view = column.child(0);
 
-          HCTR_LOG(INFO, ROOT, "%d dense;value_size %zu, sizedf %zu\n",k,dense_scalar_num,size_df);
-          // on the premise that all elements are fixed-length. Thus dense_width = dense_scalar_num / size_df
-          if(! (dense_scalar_num % size_df ) ){
+          HCTR_LOG(INFO, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
+                   size_df);
+          HCTR_OWN_THROW(Error_t::WrongInput, "Parquet reader: Not support vec dense yet");
+
+          /* on the premise that all elements are fixed-length.
+           *  Thus dense_width = dense_scalar_num / size_df
+           */
+          if (!(dense_scalar_num % size_df)) {
             HCTR_OWN_THROW(Error_t::WrongInput,
-                       "Parquet reader: Length of Vector dense column isn't fixed");
+                           "Parquet reader: Length of Vector dense column isn't fixed");
           }
           const size_t dense_width = dense_scalar_num / size_df;
           // if the vector dense is not of float type
-          if (value_view.type().id() !=cudf::type_to_id<dtype_dense>() ) {
+          if (value_view.type().id() != cudf::type_to_id<dtype_dense>()) {
             HCTR_OWN_THROW(Error_t::WrongInput,
-                       "Parquet reader: Vector Dense KeyType Must be List[float]");
+                           "Parquet reader: Vector Dense KeyType Must be List[float]");
           }
           dense_columns_view_ref.emplace_back(std::move(value_view));
           dense_width_dim.push_back(dense_width);
         }
         // scalar dense feature
-        else if(type_of_column == cudf::type_to_id<cudf::dtype_dense>()){
+        else if (type_of_column == cudf::type_to_id<dtype_dense>()) {
           dense_columns_view_ref.emplace_back(std::move(column));
           dense_width_dim.push_back(1);
 
-        }
-        else{
+        } else {
           HCTR_OWN_THROW(Error_t::WrongInput,
-                     "Parquet reader: Vector Dense KeyType Must be float or List[float]");
+                         "Parquet reader: Vector Dense KeyType Must be float or List[float]");
         }
       }
 
