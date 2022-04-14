@@ -295,9 +295,9 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   auto p_mr = rmm::mr::get_current_device_resource();
   // following dense_dim has included dense_label
   std::vector<size_t> dense_dim_array(10, 1);
-  // dense_dim_array[0] = 1;
-  // dense_dim_array[1] = 3;
-  // dense_dim_array[2] = 4;
+  dense_dim_array[0] = 1;
+  dense_dim_array[1] = 3;
+  dense_dim_array[3] = 4;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
