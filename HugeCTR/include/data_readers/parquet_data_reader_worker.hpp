@@ -397,14 +397,14 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
           const size_t dense_scalar_num = value_view.size();
           cudf::column_view row_offset_view = column.child(0);
 
-          HCTR_LOG(INFO, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
-                   size_df);
           // HCTR_OWN_THROW(Error_t::WrongInput, "Parquet reader: Not support vec dense yet");
 
           /* on the premise that all elements are fixed-length.
            *  Thus dense_width = dense_scalar_num / size_df
            */
           if ((dense_scalar_num % size_df)) {
+            HCTR_LOG(INFO, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
+                     size_df);
             HCTR_OWN_THROW(Error_t::WrongInput,
                            "Parquet reader: Length of Vector dense column isn't fixed");
           }
@@ -456,8 +456,9 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
             const_cast<dtype_dense*>(dense_columns_view_ref[k].data<dtype_dense>());
         column_ptr =
             // only proceed dense for local gpu
-            reinterpret_cast<dtype_dense*>((size_t)column_ptr + sizeof(dtype_dense) * view_offset_ +
-                                           sizeof(dtype_dense) * offset_start);
+            reinterpret_cast<dtype_dense*>((size_t)column_ptr + sizeof(dtype_dense) *
+                                                                    (view_offset_ + offset_start) *
+                                                                    dense_width_dim[k]);
         dense_column_data_ptr.push_back(column_ptr);
       }
 
@@ -469,6 +470,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
           reinterpret_cast<dtype_dense*>(dst_dense_tensor.get_ptr()),
           host_memory_pointer_staging_.get_ptr(), rmm_resources, memory_resource_.get(),
           dense_stream_);
+      // HCTR_LOG_S(INFO, WORLD) << "convert_parquet_dense_columns OK" << std::endl;
       const int num_csr_buffers = param_num;
       auto dst_sparse_tensors = buffer_->device_sparse_buffers;
       // device output pointer
