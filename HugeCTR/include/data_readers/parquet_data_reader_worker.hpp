@@ -89,17 +89,18 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   }
 
   void read_new_file() {
+    HCTR_LOG_S(INFO, ROOT) << "start read_new_file" << std::endl;
     std::set<int> tmp_col_index;
     auto source = parquet_file_source();
-    for (int i = 0; i < MAX_TRY; i++) {
+    for (int t = 0; t < MAX_TRY; t++) {
       Error_t err = source->next_source();
+
       if (err == Error_t::Success) {
         auto metadata = source->get_file_metadata();
 
         if (metadata.get_metadata_status()) {
           auto label_col_names = metadata.get_label_names();
           auto dense_col_names = metadata.get_cont_names();
-
           if (dense_idx_to_parquet_col_.size() !=
               (label_col_names.size() + dense_col_names.size())) {
             int i = 0;
@@ -121,7 +122,6 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
               i++;
             }
           }
-
           tmp_col_index.clear();
 
           auto cat_col_names = metadata.get_cat_names();
@@ -130,8 +130,6 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             int i = 0;
             for (auto& c : cat_col_names) {
               tmp_col_index.insert(c.index);
-              // categorical_idx_parquet_col_.insert(std::make_pair(i,
-              // c.index));
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
               categorical_idx_parquet_col_.insert(std::make_pair(i, *it));
@@ -147,6 +145,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
         return;
       } else if (err == Error_t::EndOfFile) {
         throw internal_runtime_error(Error_t::EndOfFile, "EndOfFile");
+      } else {
+        HCTR_OWN_THROW(Error_t::BrokenFile, "failed to read a file");
       }
     }
     HCTR_OWN_THROW(Error_t::BrokenFile, "failed to read a file");
@@ -190,7 +190,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
     // pinned buffer for dense feature converter
     buff->reserve({num_of_pointer_staging}, &host_memory_pointer_staging_);
 
-    // pinned dense dim
+    // pinned dense dim , can't know dense_dim_array in advance
+    // label_dim + dense_dim > label_num + dense_num
     buff->reserve({static_cast<size_t>(buffer_->label_dim + buffer_->dense_dim)},
                   &host_memory_dense_dim_array_);
     buff->allocate();
@@ -207,6 +208,7 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
       else
         HCTR_OWN_THROW(Error_t::DataCheckError, "Slot offset value exceed the key type range");
     }
+    // HCTR_LOG_S(INFO, ROOT) << "Parquet Worker Ctor OK" << std::endl;
   }
 
   ~ParquetDataReaderWorker() {
@@ -264,6 +266,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
     if (!source->is_open()) {
       read_new_file();
     }
+
     // dense_buffers store only data for local gpus, clipped by
     // batch_size_start_idx & batch_size_end_idx
     const int dense_start = buffer_->batch_size_start_idx;  // dense buffer
@@ -374,13 +377,11 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
         HCTR_OWN_THROW(Error_t::UnspecificError,
                        "Parquet reader worker:Please allocate Pinned Buffer first");
       }
-      size_t device_staging_dense_size = dense_end - dense_start;
-      device_staging_dense_size *= ((size_t)label_dense_dim * sizeof(dtype_dense));
       std::vector<cudf::column_view> dense_columns_view_ref;
       std::vector<int64_t> dense_width_dim;
-      const int num_dense = dense_idx_to_parquet_col_.size();
+      const int num_label_dense = dense_idx_to_parquet_col_.size();
       int dense_dim_check = 0;
-      for (int k = 0; k < num_dense; k++) {
+      for (int k = 0; k < num_label_dense; k++) {
         cudf::column_view column = data_view.column(dense_idx_to_parquet_col_[k]);
         cudf::type_id type_of_column = column.type().id();
         // vec float column
@@ -440,7 +441,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       int offset_end = std::min(dense_end, current_batch_size);
       int samples_to_be_transposed = offset_end - offset_start;
       std::vector<dtype_dense*> dense_column_data_ptr;
-      for (int k = 0; k < num_dense; k++) {
+      for (int k = 0; k < num_label_dense; k++) {
         dtype_dense* column_ptr =
             const_cast<dtype_dense*>(dense_columns_view_ref[k].data<dtype_dense>());
         column_ptr =
@@ -452,7 +453,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
 
       std::deque<rmm::device_buffer> rmm_resources;
       convert_parquet_dense_columns(
-          dense_column_data_ptr, num_dense,
+          dense_column_data_ptr, num_label_dense,
           reinterpret_cast<int64_t*>(host_memory_dense_dim_array_.get_ptr()), label_dense_dim,
           samples_to_be_transposed, dense_start, dense_end,
           reinterpret_cast<dtype_dense*>(dst_dense_tensor.get_ptr()),

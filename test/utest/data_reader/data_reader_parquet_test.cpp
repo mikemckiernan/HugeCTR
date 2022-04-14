@@ -45,7 +45,7 @@ std::vector<bool> is_mhot(26, false);
 
 const int max_nnz = 5;
 const int slot_num = 26;
-const int label_dim = 1;
+const int label_dim = 2;
 // const int dense_dim = 13;
 
 using LABEL_TYPE = float;
@@ -96,6 +96,7 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   denses.resize(num_files * sample_per_file * dense_dim);
+  labels.resize(num_files * sample_per_file * label_dim);
   row_offsets.resize(num_files * sample_per_file * slot_num, 0);
   size_t dense_feature_per_file = dense_dim * sample_per_file;
   for (int file_num = 0; file_num < num_files; file_num++) {
@@ -103,10 +104,12 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
     // create label vector
     for (int i = 0; i < label_dim; i++) {
       std::vector<LABEL_TYPE> label_vector(sample_per_file, 0);
+      int r = 0;
       for (auto& c : label_vector) {
         auto val = LABEL_TYPE(std::rand() % 2);
         c = val;  // 0,1 value
-        labels.push_back(val);
+        labels[file_num * sample_per_file * label_dim + r * label_dim + i] = val;
+        r++;
       }
 
       rmm::device_buffer dev_buffer(label_vector.data(), sizeof(LABEL_TYPE) * sample_per_file,
@@ -228,6 +231,12 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
     cudf::io::write_parquet(writer_args);
   }
 
+  // for (int sample = 0; sample < 10; sample++) {
+  //   for (int d = 0; d < label_dim; d++) {
+  //     HCTR_LOG_S(INFO,WORLD) << "sample " << sample << " label " << d << " "
+  //               << labels[sample * label_dim + d] << std::endl;
+  //   }
+  // }
   std::ofstream output_file_stream;
   output_file_stream.open(file_list_name, std::ofstream::out);
   output_file_stream << num_files << std::endl;
@@ -250,10 +259,12 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
            << "\"num_rows\":" << sample_per_file << "} ";
   metadata << "], ";
   metadata << "\"labels\": [";
-  for (int i = 0; i < label_dim; i++) {
-    metadata << "{\"col_name\": \"label\", "
-             << "\"index\":" << i << "} ";
+  for (int i = 0; i < label_dim - 1; i++) {
+    metadata << "{\"col_name\": \"label" << i << "\", "
+             << "\"index\":" << i << "}, ";
   }
+  metadata << "{\"col_name\": \"label" << (label_dim - 1) << "\", "
+           << "\"index\":" << (label_dim - 1) << "} ";
   metadata << "], ";
 
   metadata << "\"conts\": [";
@@ -282,14 +293,15 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
 
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
+  // following dense_dim has included dense_label
   std::vector<size_t> dense_dim_array(10, 1);
-  dense_dim_array[0] = 1;
-  dense_dim_array[1] = 3;
-  dense_dim_array[2] = 4;
+  // dense_dim_array[0] = 1;
+  // dense_dim_array[1] = 3;
+  // dense_dim_array[2] = 4;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
-  std::vector<LABEL_TYPE> denses;
+  std::vector<DENSE_TYPE> denses;
   // dim is (total_sample + 1)
   std::vector<int32_t> row_offsets;
   std::vector<CAT_TYPE> sparse_values;
@@ -301,7 +313,6 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   // size_t total_samples = sample_per_file * num_files;
   generate_parquet_input_files(num_files, sample_per_file, is_mhot, labels, denses, dense_dim_array,
                                row_offsets, sparse_values);
-
   int numprocs = 1;
   std::vector<std::vector<int>> vvgpu;
   std::vector<int> device_list = {0};
@@ -354,7 +365,7 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   ParquetDataReaderWorker<T> data_reader(0, 1, gpu_resource_group->get_local_gpu(0), &loop_flag,
                                          thread_buffer, file_list_name, true, params, slot_offset,
                                          0, gpu_resource_group);
-
+  HCTR_LOG_S(INFO, ROOT) << "data_reader Create OK" << std::endl;
   int iter = 7;
   size_t sample_offset = 0;
   size_t nnz_offset = 0;
@@ -380,7 +391,7 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
       for (T start = row_offset_read_a_batch[nnz_id]; start < row_offset_read_a_batch[nnz_id + 1];
            start++) {
         int slot_id = nnz_id % slot_num;
-        // std::cout<< "idx:" << start<<" slot_id " <<slot_id
+        // HCTR_LOG_S(INFO,WORLD)<< "idx:" << start<<" slot_id " <<slot_id
         // <<" slot_offset "<<slot_offset[slot_id]
         // <<" read :"<< sparse_values[(nnz_offset + start) % total_nnz] <<" vs
         // "<<keys[start] - slot_offset[slot_id]<<std::endl;
@@ -404,17 +415,25 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
                               cudaMemcpyDeviceToHost));
     for (int sample = 0; sample < batch_current_worker; ++sample) {
       // use != for float, because there's no computation
-      if (dense[sample * label_dense_dim] !=
-          labels[(sample_offset + sample + batch_start) % (total_samples)]) {
-        std::cout << "sample " << sample << " label error " << std::endl;
-        exit(-1);
+      for (int d = 0; d < label_dim; d++) {
+        if (dense[sample * label_dense_dim + d] !=
+            labels[((sample_offset + sample + batch_start) * label_dim + d) %
+                   (total_samples * label_dim)]) {
+          HCTR_LOG_S(INFO, WORLD)
+              << "sample " << sample << " label " << d << " error "
+              << "correct vs error:"
+              << labels[((sample_offset + sample + batch_start) * label_dim + d) %
+                        (total_samples * label_dim)]
+              << ":" << dense[sample * label_dense_dim + d] << std::endl;
+          exit(-1);
+        }
       }
 
       for (int d = 0; d < dense_dim; d++) {
-        if (dense[sample * label_dense_dim + d + 1] !=
+        if (dense[sample * label_dense_dim + d + label_dim] !=
             denses[((sample_offset + sample + batch_start) * dense_dim + d) %
                    (total_samples * dense_dim)]) {
-          std::cout << "sample " << i << " dense error " << std::endl;
+          HCTR_LOG_S(INFO, WORLD) << "sample " << i << " dense error " << std::endl;
         }
       }
     }
@@ -505,7 +524,7 @@ TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter)
   size_t total_nnz = std::accumulate(row_offsets.begin(), row_offsets.end(), 0);
   size_t total_samples = num_files * sample_per_file;
   for (int i = 0; i < iter; i++) {
-    // std::cout << "iter " << i << std::endl;
+    // HCTR_LOG_S(INFO,WORLD) << "iter " << i << std::endl;
     long long current_batchsize = data_reader.read_a_batch_to_device();
     ASSERT_TRUE(current_batchsize == batchsize);
     for (size_t gpu = 0; gpu < local_gpu_count; ++gpu) {
@@ -514,7 +533,7 @@ TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter)
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // std::cout << "label size " << label_size << " dense size " <<
+      // HCTR_LOG_S(INFO,WORLD) << "label size " << label_size << " dense size " <<
       // dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
@@ -528,7 +547,12 @@ TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter)
 
       int batch_starting = gpu * batchsize_per_gpu;
       for (size_t sample = 0; sample < batchsize_per_gpu; sample++) {
-        ASSERT_TRUE(labels[sample + batch_starting + sample_offset] == label_read[sample]);
+        for (int d = 0; d < label_dim; d++) {
+          ASSERT_TRUE(labels[(sample + batch_starting + sample_offset) * label_dim + d] ==
+                      label_read[sample * label_dim + d]);
+        }
+        // ASSERT_TRUE(labels[sample + batch_starting + sample_offset] ==
+        // label_read[sample]);
         for (int d = 0; d < dense_dim; d++) {
           ASSERT_TRUE(denses[(sample + batch_starting + sample_offset) * dense_dim + d] ==
                       dense_read[sample * dense_dim + d]);
@@ -679,7 +703,7 @@ TEST(data_reader_test, data_reader_parquet_group_test_3files_3workers_iter) {
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // std::cout << "label size ??? " << label_size << " dense size " <<
+      // HCTR_LOG_S(INFO,WORLD) << "label size ??? " << label_size << " dense size " <<
       // dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
@@ -850,7 +874,7 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
     total_nnz_files += cur_file_nnz;
   }
   for (int e = 0; e < epochs; e++) {
-    std::cout << "epoch " << e << std::endl;
+    HCTR_LOG_S(INFO, WORLD) << "epoch " << e << std::endl;
     data_reader.set_source(file_list_name);
     std::vector<int> round_per_worker(worker_num, 0);
     for (int i = 0;; i++) {
@@ -858,15 +882,15 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
       if (current_batchsize == 0) break;
       int worker_id = iter_worker_map[i];
       int round = round_per_worker[worker_id];
-      std::cout << "iter " << i << " batchsize " << current_batchsize << " from worker "
-                << worker_id << " round " << round << std::endl;
+      HCTR_LOG_S(INFO, WORLD) << "iter " << i << " batchsize " << current_batchsize
+                              << " from worker " << worker_id << " round " << round << std::endl;
       for (size_t gpu = 0; gpu < local_gpu_count; ++gpu) {
         auto sparse_tensor = SparseTensor<T>::stretch_from(sparse_tensorbag[gpu]);
         auto label_tensor = Tensor2<LABEL_TYPE>::stretch_from(label_tensorbag[gpu]);
         auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
         size_t label_size = label_tensor.get_num_elements();
         size_t dense_size = dense_tensor.get_num_elements();
-        // std::cout << "label size ??? " << label_size << " dense size " <<
+        // HCTR_LOG_S(INFO,WORLD) << "label size ??? " << label_size << " dense size " <<
         // dense_size << std::endl;
         ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                     dense_size == batchsize_per_gpu * dense_dim);
