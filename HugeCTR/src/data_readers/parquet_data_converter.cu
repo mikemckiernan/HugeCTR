@@ -52,9 +52,75 @@ __device__ __forceinline__ T *upper_bound(T *start, T *end, T target) {
 }
 
 __device__ __forceinline__ unsigned int abs(unsigned int x) { return x; }
+__global__ void debug_kernel(size_t len, int64_t *array) {
+  unsigned int id = threadIdx.x;
+  if (!id) {
+    printf("dense_dim array:\n");
+    for (int i = 0; i < len; i++) {
+      printf("%d: %lld\n", i, array[i]);
+    }
+  }
+}
+
+// reserved in case all dense are scalar
+template <typename T>
+__global__ void dense_data_converter_kernel_scalar_(int64_t *dense_data_column_ptrs,
+                                                    const int label_dense_dim, int batch_size,
+                                                    T *dense_data_out_ptrs) {
+  // 8 warps/block
+  int tile_w = 32;  // 32x32 tile
+  int smem_pitch = 33;
+  __shared__ T smem_staging_ptr[8 * 32 * 33];
+
+  int start_idx = threadIdx.x + (blockDim.x * blockIdx.x);
+
+  // outer loop on label_dense_dim
+  for (int i = 0; i < label_dense_dim; i += warpSize) {
+    // stage 32x32 tile - stage 32 columns of data
+    // warpSize drives the row dim to 32
+    for (int j = 0; j < tile_w; j++) {
+      // warp does one column at a time
+      int col = i + j;
+      if (col < label_dense_dim) {
+        int64_t addr = dense_data_column_ptrs[col];
+        T *data = reinterpret_cast<T *>(addr);
+        if (start_idx < batch_size) {
+          smem_staging_ptr[threadIdx.x * smem_pitch + j] = data[start_idx];
+        }
+      }
+    }
+    __syncthreads();
+
+    // write out
+
+    int out_row_idx = __shfl_sync(0xffffffff, start_idx, 0);
+    // each warp writes out 32 rows and whatever active columns in j(32)
+    if ((__mylaneid() + i) < label_dense_dim) {
+      // activate threads
+
+      // blockStrided warp over 32 rows write out
+      int warp_id = threadIdx.x / warpSize;
+      int smem_row = warp_id * warpSize;
+
+      // warpsize doing tile_h
+      for (int j = 0; j < warpSize; j++) {
+        if ((j + out_row_idx) < batch_size) {
+          int curr_out_row = j + out_row_idx;
+          int local_id = curr_out_row % (batch_size);
+          T *data = dense_data_out_ptrs;
+
+          data[(local_id * label_dense_dim) + __mylaneid() + i] =
+              smem_staging_ptr[(smem_row + j) * smem_pitch + __mylaneid()];
+        }
+      }
+    }
+    __syncthreads();
+  }
+}
 
 template <typename T>
-__global__ void dense_data_converter_kernel__(int64_t *dense_data_column_ptrs,
+__global__ void dense_data_converter_kernel__(int64_t *dense_data_column_ptrs, const int num_dense,
+                                              const int64_t *dense_dim_array,
                                               const int label_dense_dim, int batch_size,
                                               T *dense_data_out_ptrs) {
   // 8 warps/block
@@ -65,7 +131,7 @@ __global__ void dense_data_converter_kernel__(int64_t *dense_data_column_ptrs,
   int start_idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
   // outer loop on label_dense_dim
-  for (int i = 0; i < label_dense_dim; i += warpSize) {
+  for (int i = 0; i < num_dense; i += warpSize) {
     // stage 32x32 tile - stage 32 columns of data
     // warpSize drives the row dim to 32
     for (int j = 0; j < tile_w; j++) {
@@ -243,7 +309,7 @@ void __global__ value_kernel_without_shared_mem__(int64_t *row_offsets_src, int6
  * @param num_dense number of dense values (lable_num + dense_num); the dense_num_array size
  * @param label_dense_dim number of dense values (lable_dim + dense_dim);label_dense_num =
  * sum(dense_dim_array_ptr)
- * @param dense_dim_array_ptr pointer to GPU memory for dense_dim_array_ptr
+ * @param dense_dim_array_device_ptr pointer to GPU memory for dense_dim_array_ptr
  * @param batch_size batch size to load (current_batch_size)
  * @param batch_start sample start to load for local gpus
  * @param batch_end sample end to to load for local gpus
@@ -255,12 +321,14 @@ void __global__ value_kernel_without_shared_mem__(int64_t *row_offsets_src, int6
  */
 template <typename T>
 void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, const int num_dense,
-                                   int64_t *dense_dim_array_ptr, const int label_dense_dim,
+                                   int64_t *dense_dim_array_device_ptr, const int label_dense_dim,
                                    int batch_size, int batch_start, int batch_end,
                                    T *dense_data_buffers, int64_t *dev_ptr_staging,
                                    std::deque<rmm::device_buffer> &rmm_resources,
                                    rmm::mr::device_memory_resource *mr, cudaStream_t task_stream) {
   int samples_to_interleaved = batch_size;
+
+  // debug_kernel<<<1, 1>>>(num_dense, dense_dim_array_device_ptr);
   // HCTR_LOG_S(INFO, WORLD) << "samples_to_interleaved " << samples_to_interleaved<<std::endl;
   if (!samples_to_interleaved) return;
   size_t size_of_col_ptrs = dense_column_data_ptr.size() * sizeof(T *);
@@ -276,13 +344,20 @@ void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, cons
   // size_t smem_size = 48 * 1024 * 1024;
   dim3 block(256, 1, 1);
   dim3 grid((samples_to_interleaved - 1) / block.x + 1, 1, 1);
-
-  // fill empty sample dense features
   HCTR_LIB_THROW(cudaMemsetAsync(
       dense_data_buffers, 0, sizeof(T) * label_dense_dim * (batch_end - batch_start), task_stream));
-  dense_data_converter_kernel__<T>
-      <<<grid, block, 0, task_stream>>>((int64_t *)dev_in_column_ptr.data(), label_dense_dim,
-                                        samples_to_interleaved, dense_data_buffers);
+  // all dense columns' type is scalar
+  if (num_dense == label_dense_dim) {
+    dense_data_converter_kernel_scalar_<T>
+        <<<grid, block, 0, task_stream>>>((int64_t *)dev_in_column_ptr.data(), label_dense_dim,
+                                          samples_to_interleaved, dense_data_buffers);
+  } else {
+    dense_data_converter_kernel__<T><<<grid, block, 0, task_stream>>>(
+        (int64_t *)dev_in_column_ptr.data(), num_dense, dense_dim_array_device_ptr, label_dense_dim,
+        samples_to_interleaved, dense_data_buffers);
+  }
+  // fill empty sample dense features
+
   HCTR_LIB_THROW(cudaGetLastError());
   return;
 }

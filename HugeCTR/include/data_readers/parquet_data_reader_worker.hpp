@@ -70,7 +70,10 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   bool thread_resource_allocated_{false};  /**< Flag to set/allocate worker thread resources */
   std::unique_ptr<cudf::table> cached_df_; /**< Cached row_group from Parquet */
   Tensor2<int64_t> host_memory_pointer_staging_;
+
+  // temp tensor for dense_dim_array
   Tensor2<int64_t> host_memory_dense_dim_array_;
+  Tensor2<int64_t> device_memory_dense_dim_array_;
   /**< Pinned memory for async column dev ptr copy */
   Tensor2<T> host_pinned_csr_inc_; /**< Pinned memory to copy csr push_back values */
   long long row_group_size_;
@@ -195,7 +198,11 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
     buff->reserve({static_cast<size_t>(buffer_->label_dim + buffer_->dense_dim)},
                   &host_memory_dense_dim_array_);
     buff->allocate();
-
+    std::shared_ptr<GeneralBuffer2<CudaAllocator>> buff_gpu =
+        GeneralBuffer2<CudaAllocator>::create();
+    buff_gpu->reserve({static_cast<size_t>(buffer_->label_dim + buffer_->dense_dim)},
+                      &device_memory_dense_dim_array_);
+    buff_gpu->allocate();
     source_ = std::make_shared<ParquetFileSource>(worker_id, worker_num, file_list, repeat);
 
     // assert((int)slot_offset_.size() == slots_);
@@ -360,11 +367,10 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
 
       cudf::table_view data_view = cached_df_->view();
 
-      HCTR_LOG_S(INFO, ROOT) << "parquet data column names: " << std::endl;
+      HCTR_LOG_S(DEBUG, ROOT) << "parquet data column names: " << std::endl;
       for (const auto name : column_names) {
-        std::cout << name << " ";
+        HCTR_LOG_S(DEBUG, ROOT) << name << std::endl;
       }
-      HCTR_LOG_S(INFO, ROOT) << std::endl;
 
       size_t size_df = data_view.num_rows();
       if (current_batch_size == 0) {
@@ -437,6 +443,10 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
       std::memcpy(reinterpret_cast<void*>(host_memory_dense_dim_array_.get_ptr()),
                   reinterpret_cast<void*>(dense_width_dim.data()),
                   dense_width_dim.size() * sizeof(int64_t));
+      HCTR_LIB_THROW(cudaMemcpyAsync(
+          reinterpret_cast<void*>(device_memory_dense_dim_array_.get_ptr()),
+          reinterpret_cast<void*>(host_memory_dense_dim_array_.get_ptr()),
+          sizeof(int64_t) * dense_width_dim.size(), cudaMemcpyHostToDevice, dense_stream_));
       int offset_start = std::min(dense_start, current_batch_size);
       int offset_end = std::min(dense_end, current_batch_size);
       int samples_to_be_transposed = offset_end - offset_start;
