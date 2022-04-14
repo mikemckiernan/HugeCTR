@@ -228,7 +228,7 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
     std::string filepath = prefix + std::to_string(file_num) + std::string(".parquet");
     cudf::io::parquet_writer_options writer_args =
         cudf_io::parquet_writer_options::builder(cudf::io::sink_info{filepath}, input_table.view());
-    // cudf::io::write_parquet(writer_args);
+    cudf::io::write_parquet(writer_args);
   }
 
   std::ofstream output_file_stream;
@@ -451,6 +451,7 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
 TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
   std::vector<size_t> dense_dim_array(13, 1);
+  dense_dim_array[3] = 6;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
