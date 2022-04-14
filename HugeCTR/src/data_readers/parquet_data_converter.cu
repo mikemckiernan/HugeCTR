@@ -123,54 +123,20 @@ __global__ void dense_data_converter_kernel__(int64_t *dense_data_column_ptrs, c
                                               const int64_t *dense_dim_array,
                                               const int label_dense_dim, int batch_size,
                                               T *dense_data_out_ptrs) {
-  // 8 warps/block
-  int tile_w = 32;  // 32x32 tile
-  int smem_pitch = 33;
-  __shared__ T smem_staging_ptr[8 * 32 * 33];
-
   int start_idx = threadIdx.x + (blockDim.x * blockIdx.x);
-
-  // outer loop on label_dense_dim
-  for (int i = 0; i < num_dense; i += warpSize) {
-    // stage 32x32 tile - stage 32 columns of data
-    // warpSize drives the row dim to 32
-    for (int j = 0; j < tile_w; j++) {
-      // warp does one column at a time
-      int col = i + j;
-      if (col < label_dense_dim) {
-        int64_t addr = dense_data_column_ptrs[col];
-        T *data = reinterpret_cast<T *>(addr);
-        if (start_idx < batch_size) {
-          smem_staging_ptr[threadIdx.x * smem_pitch + j] = data[start_idx];
-        }
-      }
+  int thread_strides = gridDim.x * blockDim.x;
+  T *data_out = reinterpret_cast<T *>(dense_data_out_ptrs);
+  unsigned int dense_id_offset = 0;
+  for (int i = 0; i < num_dense; i++) {
+    int64_t addr = dense_data_column_ptrs[i];
+    T *data_in = reinterpret_cast<T *>(addr);
+    for (int row_idx = start_idx; row_idx < batch_size * dense_dim_array[i];
+         row_idx += thread_strides) {
+      int sample_id = row_idx / dense_dim_array[i];
+      int dense_id_sample = row_idx % dense_dim_array[i] + dense_id_offset;
+      data_out[sample_id * label_dense_dim + dense_id_sample] = data_in[row_idx];
     }
-    __syncthreads();
-
-    // write out
-
-    int out_row_idx = __shfl_sync(0xffffffff, start_idx, 0);
-    // each warp writes out 32 rows and whatever active columns in j(32)
-    if ((__mylaneid() + i) < label_dense_dim) {
-      // activate threads
-
-      // blockStrided warp over 32 rows write out
-      int warp_id = threadIdx.x / warpSize;
-      int smem_row = warp_id * warpSize;
-
-      // warpsize doing tile_h
-      for (int j = 0; j < warpSize; j++) {
-        if ((j + out_row_idx) < batch_size) {
-          int curr_out_row = j + out_row_idx;
-          int local_id = curr_out_row % (batch_size);
-          T *data = dense_data_out_ptrs;
-
-          data[(local_id * label_dense_dim) + __mylaneid() + i] =
-              smem_staging_ptr[(smem_row + j) * smem_pitch + __mylaneid()];
-        }
-      }
-    }
-    __syncthreads();
+    dense_id_offset += dense_dim_array[i];
   }
 }
 
@@ -329,7 +295,6 @@ void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, cons
   int samples_to_interleaved = batch_size;
 
   // debug_kernel<<<1, 1>>>(num_dense, dense_dim_array_device_ptr);
-  // HCTR_LOG_S(INFO, WORLD) << "samples_to_interleaved " << samples_to_interleaved<<std::endl;
   if (!samples_to_interleaved) return;
   size_t size_of_col_ptrs = dense_column_data_ptr.size() * sizeof(T *);
   std::memcpy(dev_ptr_staging, dense_column_data_ptr.data(), size_of_col_ptrs);
@@ -342,16 +307,19 @@ void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, cons
   // 32x32 tile per warp -> 4096 bytes/warp
   // 12 warps -> 384 threads/block
   // size_t smem_size = 48 * 1024 * 1024;
-  dim3 block(256, 1, 1);
-  dim3 grid((samples_to_interleaved - 1) / block.x + 1, 1, 1);
+
   HCTR_LIB_THROW(cudaMemsetAsync(
       dense_data_buffers, 0, sizeof(T) * label_dense_dim * (batch_end - batch_start), task_stream));
   // all dense columns' type is scalar
   if (num_dense == label_dense_dim) {
+    dim3 block(256, 1, 1);
+    dim3 grid((samples_to_interleaved - 1) / block.x + 1, 1, 1);
     dense_data_converter_kernel_scalar_<T>
         <<<grid, block, 0, task_stream>>>((int64_t *)dev_in_column_ptr.data(), label_dense_dim,
                                           samples_to_interleaved, dense_data_buffers);
   } else {
+    dim3 block(256, 1, 1);
+    dim3 grid((samples_to_interleaved - 1) / block.x + 1, 1, 1);
     dense_data_converter_kernel__<T><<<grid, block, 0, task_stream>>>(
         (int64_t *)dev_in_column_ptr.data(), num_dense, dense_dim_array_device_ptr, label_dense_dim,
         samples_to_interleaved, dense_data_buffers);

@@ -228,15 +228,9 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
     std::string filepath = prefix + std::to_string(file_num) + std::string(".parquet");
     cudf::io::parquet_writer_options writer_args =
         cudf_io::parquet_writer_options::builder(cudf::io::sink_info{filepath}, input_table.view());
-    cudf::io::write_parquet(writer_args);
+    // cudf::io::write_parquet(writer_args);
   }
 
-  // for (int sample = 0; sample < 10; sample++) {
-  //   for (int d = 0; d < label_dim; d++) {
-  //     HCTR_LOG_S(INFO,WORLD) << "sample " << sample << " label " << d << " "
-  //               << labels[sample * label_dim + d] << std::endl;
-  //   }
-  // }
   std::ofstream output_file_stream;
   output_file_stream.open(file_list_name, std::ofstream::out);
   output_file_stream << num_files << std::endl;
@@ -365,7 +359,6 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   ParquetDataReaderWorker<T> data_reader(0, 1, gpu_resource_group->get_local_gpu(0), &loop_flag,
                                          thread_buffer, file_list_name, true, params, slot_offset,
                                          0, gpu_resource_group);
-  HCTR_LOG_S(INFO, ROOT) << "data_reader Create OK" << std::endl;
   int iter = 7;
   size_t sample_offset = 0;
   size_t nnz_offset = 0;
@@ -419,13 +412,13 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
         if (dense[sample * label_dense_dim + d] !=
             labels[((sample_offset + sample + batch_start) * label_dim + d) %
                    (total_samples * label_dim)]) {
-          HCTR_LOG_S(INFO, WORLD)
+          HCTR_LOG_S(ERROR, WORLD)
               << "sample " << sample << " label " << d << " error "
               << "correct vs error:"
               << labels[((sample_offset + sample + batch_start) * label_dim + d) %
                         (total_samples * label_dim)]
               << ":" << dense[sample * label_dense_dim + d] << std::endl;
-          exit(-1);
+          HCTR_OWN_THROW(Error_t::DataCheckError, "Label check error");
         }
       }
 
@@ -433,7 +426,15 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
         if (dense[sample * label_dense_dim + d + label_dim] !=
             denses[((sample_offset + sample + batch_start) * dense_dim + d) %
                    (total_samples * dense_dim)]) {
-          HCTR_LOG_S(INFO, WORLD) << "sample " << i << " dense error " << std::endl;
+          HCTR_LOG_S(ERROR, WORLD)
+              << "sample " << i << " dense " << d << " error "
+              << "correct vs error:"
+              << denses[((sample_offset + sample + batch_start) * dense_dim + d) %
+                        (total_samples * dense_dim)]
+              << ":" << dense[sample * label_dense_dim + d + label_dim]
+
+              << std::endl;
+          HCTR_OWN_THROW(Error_t::DataCheckError, "dense check error");
         }
       }
     }
@@ -533,8 +534,8 @@ TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter)
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // HCTR_LOG_S(INFO,WORLD) << "label size " << label_size << " dense size " <<
-      // dense_size << std::endl;
+      // HCTR_LOG_S(INFO,WORLD) << "label size " << label_size << " dense size "
+      // << dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
       std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
@@ -703,8 +704,6 @@ TEST(data_reader_test, data_reader_parquet_group_test_3files_3workers_iter) {
       auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
       size_t label_size = label_tensor.get_num_elements();
       size_t dense_size = dense_tensor.get_num_elements();
-      // HCTR_LOG_S(INFO,WORLD) << "label size ??? " << label_size << " dense size " <<
-      // dense_size << std::endl;
       ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                   dense_size == batchsize_per_gpu * dense_dim);
       std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
@@ -890,8 +889,8 @@ void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector
         auto dense_tensor = Tensor2<DENSE_TYPE>::stretch_from(dense_tensorbag[gpu]);
         size_t label_size = label_tensor.get_num_elements();
         size_t dense_size = dense_tensor.get_num_elements();
-        // HCTR_LOG_S(INFO,WORLD) << "label size ??? " << label_size << " dense size " <<
-        // dense_size << std::endl;
+        // HCTR_LOG_S(INFO,WORLD) << "label size ??? " << label_size << " dense
+        // size " << dense_size << std::endl;
         ASSERT_TRUE(label_size == batchsize_per_gpu * label_dim &&
                     dense_size == batchsize_per_gpu * dense_dim);
         std::unique_ptr<LABEL_TYPE[]> label_read(new LABEL_TYPE[label_size]);
