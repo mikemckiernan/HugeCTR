@@ -57,7 +57,7 @@ class Metadata {
   std::vector<Cols> get_cont_names() { return this->cont_names_; }
   std::vector<Cols> get_label_names() { return this->label_names_; }
   FileStats get_file_stats(std::string file_name) {
-    FileStats fs;
+    FileStats fs{0};
     try {
       fs = this->file_stats_.at(file_name);
     } catch (const std::runtime_error& rt_err) {
