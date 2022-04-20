@@ -185,8 +185,8 @@ class ParquetFileSource : public Source {
           file_metadata_.get_parquet_metadata(metadata_file_name);
         file_total_rows_ =
             (long long)(file_metadata_.get_file_stats(get_filename(file_name_)).num_rows);
-        HCTR_LOG_S(INFO, WORLD) << "file_name_ " << file_name_ << " file_total_rows_ "
-                                << file_total_rows_ << std::endl;
+        HCTR_LOG_S(DEBUG, WORLD) << "file_name_ " << file_name_ << " file_total_rows_ "
+                                 << file_total_rows_ << std::endl;
       } else {
         HCTR_LOG_S(ERROR, WORLD) << "Parquet files not found - check file extensions "
                                  << HCTR_LOCATION() << std::endl;

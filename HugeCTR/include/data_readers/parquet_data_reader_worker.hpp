@@ -70,6 +70,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   bool thread_resource_allocated_{false};  /**< Flag to set/allocate worker thread resources */
   std::unique_ptr<cudf::table> cached_df_; /**< Cached row_group from Parquet */
   Tensor2<int64_t> host_memory_pointer_staging_;
+  // read from parquet table
+  std::vector<std::string> column_names_{};
 
   // temp tensor for dense_dim_array
   Tensor2<int64_t> host_memory_dense_dim_array_;
@@ -92,7 +94,7 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   }
 
   void read_new_file() {
-    HCTR_LOG_S(INFO, ROOT) << "start read_new_file" << std::endl;
+    HCTR_LOG_S(DEBUG, ROOT) << "start read_new_file" << std::endl;
     std::set<int> tmp_col_index;
     auto source = parquet_file_source();
     for (int t = 0; t < MAX_TRY; t++) {
@@ -110,6 +112,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             dense_idx_to_parquet_col_.clear();
             tmp_col_index.clear();
             for (auto& c : label_col_names) {
+              // HCTR_LOG_S(INFO, WORLD)
+              //     << "label " << c.col_name << " index " << c.index << std::endl;
               tmp_col_index.insert(c.index);
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
@@ -118,6 +122,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             }
             tmp_col_index.clear();
             for (auto& c : dense_col_names) {
+              // HCTR_LOG_S(INFO, WORLD)
+              //     << "dense " << c.col_name << " index " << c.index << std::endl;
               tmp_col_index.insert(c.index);
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
@@ -132,6 +138,8 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
             categorical_idx_parquet_col_.clear();
             int i = 0;
             for (auto& c : cat_col_names) {
+              // HCTR_LOG_S(INFO, WORLD) << "cat " << c.col_name << " index " << c.index <<
+              // std::endl;
               tmp_col_index.insert(c.index);
             }
             for (auto it = tmp_col_index.begin(); it != tmp_col_index.end(); it++) {
@@ -267,7 +275,6 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
     thread_resource_allocated_ = true;
   }
   int current_batch_size = 0;
-  std::vector<std::string> column_names{};
   try {
     auto source = parquet_file_source();
     if (!source->is_open()) {
@@ -293,8 +300,13 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
         if (!cached_df_ || (row_group_size_ == row_group_index_)) {
           auto tbl_w_metadata = source->read(-1, memory_resource_.get());
           // get column name from read_parquet()
-          if (column_names.empty()) {
-            column_names.swap(tbl_w_metadata.metadata.column_names);
+          if (column_names_.empty()) {
+            column_names_.swap(tbl_w_metadata.metadata.column_names);
+            HCTR_LOG_S(DEBUG, ROOT)
+                << "parquet data column names:() " << column_names_.size() << std::endl;
+            for (const auto name : column_names_) {
+              HCTR_LOG_S(DEBUG, ROOT) << name << std::endl;
+            }
           }
           if (row_group_carry_forward_ > 0 && table_view_for_concat.size() > 0) {
             std::vector<cudf::table_view> table_views_for_concat{table_view_for_concat[0],
@@ -367,11 +379,6 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
 
       cudf::table_view data_view = cached_df_->view();
 
-      HCTR_LOG_S(DEBUG, ROOT) << "parquet data column names: " << std::endl;
-      for (const auto name : column_names) {
-        HCTR_LOG_S(DEBUG, ROOT) << name << std::endl;
-      }
-
       size_t size_df = data_view.num_rows();
       if (current_batch_size == 0) {
         current_batch_size = batch_size;
@@ -403,7 +410,7 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
            *  Thus dense_width = dense_scalar_num / size_df
            */
           if ((dense_scalar_num % size_df)) {
-            HCTR_LOG(INFO, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
+            HCTR_LOG(ERROR, WORLD, "%d dense;value_size %zu, sizedf %zu\n", k, dense_scalar_num,
                      size_df);
             HCTR_OWN_THROW(Error_t::WrongInput,
                            "Parquet reader: Length of Vector dense column isn't fixed");
@@ -429,6 +436,9 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
                          "Parquet reader: Vector Dense KeyType Must be float "
                          "or List[float]");
         }
+        // HCTR_LOG_S(INFO, WORLD) << "dense(include label) dim " << k <<" "<<
+        // dense_width_dim.back()
+        //                         << std::endl;
       }
       if (!host_memory_dense_dim_array_.allocated()) {
         HCTR_OWN_THROW(Error_t::UnspecificError,
@@ -470,7 +480,6 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
           reinterpret_cast<dtype_dense*>(dst_dense_tensor.get_ptr()),
           host_memory_pointer_staging_.get_ptr(), rmm_resources, memory_resource_.get(),
           dense_stream_);
-      // HCTR_LOG_S(INFO, WORLD) << "convert_parquet_dense_columns OK" << std::endl;
       const int num_csr_buffers = param_num;
       auto dst_sparse_tensors = buffer_->device_sparse_buffers;
       // device output pointer

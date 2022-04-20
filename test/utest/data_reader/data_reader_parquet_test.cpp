@@ -55,6 +55,8 @@ using CAT_TYPE = int64_t;
 const Check_t CHK = Check_t::None;
 const std::string prefix("./data_reader_parquet_test_data/");
 const std::string file_list_name("data_reader_parquet_file_list.txt");
+// const std::string prefix("./data_reader_parquet_test_data/train");
+// const std::string file_list_name("./data_reader_parquet_test_data/train/file_list");
 using CVector = std::vector<std::unique_ptr<cudf::column>>;
 typedef long long T;
 // row major to `extended-col-major`
@@ -287,11 +289,11 @@ void generate_parquet_input_files(int num_files, int sample_per_file,
 
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
-  // following dense_dim has included dense_label
-  std::vector<size_t> dense_dim_array(10, 1);
-  dense_dim_array[0] = 1;
-  dense_dim_array[1] = 3;
-  dense_dim_array[3] = 4;
+  // following dense_dim has excluded label
+  std::vector<size_t> dense_dim_array(9, 1);
+  dense_dim_array[0] = 2;
+  dense_dim_array[2] = 3;
+  dense_dim_array[7] = 2;
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
   std::vector<LABEL_TYPE> labels;
@@ -299,9 +301,9 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
   // dim is (total_sample + 1)
   std::vector<int32_t> row_offsets;
   std::vector<CAT_TYPE> sparse_values;
-  is_mhot[0] = true;
-  is_mhot[3] = true;
-  is_mhot[5] = true;
+  // is_mhot[0] = true;
+  // is_mhot[3] = true;
+  // is_mhot[5] = true;
   int sample_per_file = 2048;
   int num_files = 3;
   // size_t total_samples = sample_per_file * num_files;
@@ -449,7 +451,7 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter) 
 }
 TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter_large_dense) {
   auto p_mr = rmm::mr::get_current_device_resource();
-  // following dense_dim has included dense_label
+  // following dense_dim has excluded label
   std::vector<size_t> dense_dim_array(1025, 1);
   dense_dim_array[0] = 1;
   dense_dim_array[1] = 3;
@@ -614,6 +616,7 @@ TEST(data_reader_parquet_worker, data_reader_parquet_worker_single_worker_iter_l
 
 TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
+  // following dense_dim has excluded label
   std::vector<size_t> dense_dim_array(13, 1);
   dense_dim_array[3] = 6;
   const int dense_dim =
@@ -767,6 +770,7 @@ TEST(data_reader_group_test, data_reader_parquet_group_test_3files_1worker_iter)
 // batch 7 -> file 0 (worker 1,repeated)
 TEST(data_reader_test, data_reader_parquet_group_test_3files_3workers_iter) {
   auto p_mr = rmm::mr::get_current_device_resource();
+  // following dense_dim has excluded label
   std::vector<size_t> dense_dim_array(13, 1);
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
@@ -936,7 +940,7 @@ TEST(data_reader_test, data_reader_parquet_group_test_3files_3workers_iter) {
 void data_reader_epoch_test_impl(int num_files, const int batchsize, std::vector<int> device_list,
                                  int epochs) {
   auto p_mr = rmm::mr::get_current_device_resource();
-  // store the reference dataset
+  // following dense_dim has excluded label
   std::vector<size_t> dense_dim_array(13, 1);
   const int dense_dim =
       static_cast<int>(std::accumulate(dense_dim_array.begin(), dense_dim_array.end(), 0));
