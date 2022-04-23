@@ -94,7 +94,7 @@ class ParquetDataReaderWorker : public IDataReaderWorker {
   }
 
   void read_new_file() {
-    HCTR_LOG_S(DEBUG, ROOT) << "start read_new_file" << std::endl;
+    // HCTR_LOG_S(DEBUG, ROOT) << "start read_new_file" << std::endl;
     std::set<int> tmp_col_index;
     auto source = parquet_file_source();
     for (int t = 0; t < MAX_TRY; t++) {
@@ -302,11 +302,11 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
           // get column name from read_parquet()
           if (column_names_.empty()) {
             column_names_.swap(tbl_w_metadata.metadata.column_names);
-            HCTR_LOG_S(DEBUG, ROOT)
-                << "parquet data column names:() " << column_names_.size() << std::endl;
-            for (const auto name : column_names_) {
-              HCTR_LOG_S(DEBUG, ROOT) << name << std::endl;
-            }
+            // HCTR_LOG_S(DEBUG, ROOT)
+            //     << "parquet data column names:() " << column_names_.size() << std::endl;
+            // for (const auto name : column_names_) {
+            //   HCTR_LOG_S(DEBUG, ROOT) << name << std::endl;
+            // }
           }
           if (row_group_carry_forward_ > 0 && table_view_for_concat.size() > 0) {
             std::vector<cudf::table_view> table_views_for_concat{table_view_for_concat[0],
