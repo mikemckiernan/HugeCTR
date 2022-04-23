@@ -52,15 +52,6 @@ __device__ __forceinline__ T *upper_bound(T *start, T *end, T target) {
 }
 
 __device__ __forceinline__ unsigned int abs(unsigned int x) { return x; }
-__global__ void debug_kernel(size_t len, int64_t *array) {
-  unsigned int id = threadIdx.x;
-  if (!id) {
-    printf("dense_dim array:\n");
-    for (int i = 0; i < len; i++) {
-      printf("%d: %lld\n", i, array[i]);
-    }
-  }
-}
 
 // reserved in case all dense are scalar
 template <typename T>
@@ -294,13 +285,13 @@ void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, cons
                                    rmm::mr::device_memory_resource *mr, cudaStream_t task_stream) {
   int samples_to_interleaved = batch_size;
 
-  // debug_kernel<<<1, 1>>>(num_dense, dense_dim_array_device_ptr);
   if (!samples_to_interleaved) return;
   size_t size_of_col_ptrs = dense_column_data_ptr.size() * sizeof(T *);
   std::memcpy(dev_ptr_staging, dense_column_data_ptr.data(), size_of_col_ptrs);
 
   rmm_resources.emplace_back(size_of_col_ptrs, task_stream, mr);
   rmm::device_buffer &dev_in_column_ptr = rmm_resources.back();
+  // fill empty sample dense features
   HCTR_LIB_THROW(cudaMemcpyAsync(dev_in_column_ptr.data(), dev_ptr_staging, size_of_col_ptrs,
                                  cudaMemcpyHostToDevice, task_stream));
   // assuming 48KB smem/SM
@@ -324,8 +315,6 @@ void convert_parquet_dense_columns(std::vector<T *> &dense_column_data_ptr, cons
         (int64_t *)dev_in_column_ptr.data(), num_dense, dense_dim_array_device_ptr, label_dense_dim,
         samples_to_interleaved, dense_data_buffers);
   }
-  // fill empty sample dense features
-
   HCTR_LIB_THROW(cudaGetLastError());
   return;
 }
@@ -359,7 +348,6 @@ size_t convert_parquet_cat_columns(
     int64_t *dev_ptr_staging, T *dev_slot_offset_ptr, std::deque<rmm::device_buffer> &rmm_resources,
     rmm::mr::device_memory_resource *mr, cudaStream_t task_stream) {
   size_t pinned_staging_elements_used = 0;
-  // return 0;
   size_t size_of_col_ptrs = cat_column_data_ptr.size() * sizeof(int64_t *);
 
   // prepare for value input
