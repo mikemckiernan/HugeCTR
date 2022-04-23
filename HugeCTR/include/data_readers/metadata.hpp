@@ -62,7 +62,8 @@ class Metadata {
       fs = this->file_stats_.at(file_name);
     } catch (const std::runtime_error& rt_err) {
       HCTR_LOG_S(ERROR, WORLD) << "getting file" << file_name << " stats error" << std::endl;
-      HCTR_LOG_S(ERROR, WORLD) << rt_err.what() << std::endl;
+      HCTR_OWN_THROW(Error_t::BrokenFile, "failed to get file stats");
+      throw;
     }
     return fs;
   }
