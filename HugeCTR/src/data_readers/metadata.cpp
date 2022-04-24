@@ -38,7 +38,12 @@ void Metadata::get_parquet_metadata(std::string file_name) {
     auto fstats = config.find("file_stats").value();
     for (unsigned int i = 0; i < fstats.size(); i++) {
       FileStats fs;
+      // may has slash
       std::string fname = (std::string)fstats[i].find("file_name").value();
+      std::size_t found = fname.find_last_of("/\\");
+      if (found != std::string::npos) {
+        fname = fname.substr(found + 1);
+      }
       fs.num_rows = long(fstats[i].find("num_rows").value());
       file_stats_.insert({fname, fs});
     }
