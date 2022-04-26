@@ -22,7 +22,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Contributing to HugeCTR" href="../hugectr_contributor_guide.html" />
+    <link rel="next" title="Additional Resources" href="../additional_resources.html" />
     <link rel="prev" title="HugeCTR Python Interface" href="python_interface.html" /> 
 </head>
 
@@ -53,7 +53,6 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Layer Classes and Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../hugectr_contributor_guide.html">Contributing to HugeCTR</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../additional_resources.html">Additional Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../release_notes.html">Release Notes</a></li>
 </ul>
@@ -399,16 +398,20 @@ Input and Output Shapes:</p></li>
 <div class="section" id="concat-layer">
 <h3>Concat Layer<a class="headerlink" href="#concat-layer" title="Permalink to this headline"></a></h3>
 <p>The Concat layer concatenates a list of inputs.</p>
-<p>Parameters: None</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">axis</span></code>:  Integer, the dimension to concat for the <code class="docutils literal notranslate"><span class="pre">Concat</span></code> layer. If the input is N-dimensional, 0 &lt;= axis &lt; N. The default value is 1.</p></li>
+</ul>
 <p>Input and Output Shapes:</p>
 <ul class="simple">
-<li><p>input: Nx(batch_size, *) where 2&lt;=N&lt;=4 and * represents any number of elements</p></li>
-<li><p>output: (batch_size, total_num_elems) where total_num_elems is the summation of N input elements</p></li>
+<li><p>input: 3D: {(batch_size, num_feas_0, num_elems_0), (batch_size, num_feas + 1, num_elems_1), …} or 2D: {(batch_size, num_elems_0), (batch_size, num_elems_1), …}</p></li>
+<li><p>output: 3D and axis=1: (batch_size, num_feas_0+num_feas_1+…, num_elems). 3D and axis=2: (batch_size, num_feas, num_elems_0+num_elems_1+…). 2D: (batch_size, num_elems_0+num_elems_1+…)</p></li>
 </ul>
 <p>Example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">Concat</span><span class="p">,</span>
                             <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;reshape3&quot;</span><span class="p">,</span><span class="s2">&quot;weight_multiply2&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;concat2&quot;</span><span class="p">]))</span>
+                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;concat2&quot;</span><span class="p">],</span>
+                            <span class="n">axis</span> <span class="o">=</span> <span class="mi">2</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -884,7 +887,7 @@ Produce x - y in element wise manner.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="python_interface.html" class="btn btn-neutral float-left" title="HugeCTR Python Interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../hugectr_contributor_guide.html" class="btn btn-neutral float-right" title="Contributing to HugeCTR" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../additional_resources.html" class="btn btn-neutral float-right" title="Additional Resources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

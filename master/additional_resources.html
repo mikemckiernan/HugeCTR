@@ -23,7 +23,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="HugeCTR Talks and Blogs" href="hugectr_talks_blogs.html" />
-    <link rel="prev" title="Contributing to HugeCTR" href="hugectr_contributor_guide.html" /> 
+    <link rel="prev" title="HugeCTR Layer Classes and Methods" href="api/hugectr_layer_book.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,10 +49,10 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/index.html">Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/multi-modal-data/index.html">Multi-modal Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hugectr_contributor_guide.html">Contributing to HugeCTR</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Additional Resources</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="hugectr_talks_blogs.html">Talks and Blogs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html">FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hugectr_talks_blogs.html">HugeCTR Talks and Blogs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="QAList.html">Questions and Answers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hugectr_contributor_guide.html">Contributing to HugeCTR</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a></li>
@@ -81,49 +81,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="additional-resources">
+  <div class="tex2jax_ignore mathjax_ignore section" id="additional-resources">
 <h1>Additional Resources<a class="headerlink" href="#additional-resources" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="hugectr_talks_blogs.html"><span class="doc std std-doc">Talks and Blogs</span></a></p></li>
+<li><p><a class="reference internal" href="QAList.html"><span class="doc std std-doc">Frequently Asked Questions</span></a></p></li>
+<li><p><a class="reference internal" href="hugectr_contributor_guide.html"><span class="doc std std-doc">Contributing to HugeCTR</span></a></p></li>
+</ul>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="hugectr_talks_blogs.html">Talks and Blogs</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="hugectr_talks_blogs.html#talks">Talks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="hugectr_talks_blogs.html#blogs">Blogs</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="QAList.html">FAQ</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#who-are-the-target-users-of-hugectr">1. Who are the target users of HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#which-models-can-be-supported-in-hugectr">2. Which models can be supported in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-tensorflow">3. Does HugeCTR support TensorFlow?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-multiple-nodes-ctr-training">4. Does HugeCTR support multiple nodes CTR training?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-to-deal-with-the-huge-embedding-table-that-cannot-be-stored-in-a-single-gpu-memory">5. How to deal with the huge embedding table that cannot be stored in a single GPU memory?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#which-gpus-are-supported-in-hugectr">6. Which GPUs are supported in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#must-we-use-the-dgx-family-such-as-dgx-a100-to-run-hugectr">7. Must we use the DGX family such as DGX A100 to run HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#can-hugectr-run-without-infiniband">8. Can HugeCTR run without InfiniBand?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#is-there-any-requirement-of-cpu-configuration-for-hugectr-execution">9. Is there any requirement of CPU configuration for HugeCTR execution?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#what-is-the-specific-format-of-files-as-input-in-hugectr">10. What is the specific format of files as input in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-python-interface">11.	 Does HugeCTR support Python interface?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-do-synchronous-training-with-multiple-gpus-and-nodes-otherwise-does-it-do-asynchronous-training">12. Does HugeCTR do synchronous training with multiple GPUs (and nodes)? Otherwise, does it do asynchronous training?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-stream-training">13. Does HugeCTR support stream training?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#what-is-a-slot-in-hugectr">14. What is a “slot” in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#what-are-the-differences-between-localizedslotembedding-and-distributedslotembedding">15. What are the differences between LocalizedSlotEmbedding and DistributedSlotEmbedding?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#for-multi-node-is-datareader-required-to-read-the-same-batch-of-data-on-each-node-for-each-step">16. For multi-node，is DataReader required to read the same batch of data on each node for each step?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#as-model-parallelism-in-embedding-layers-how-does-it-get-all-the-embedding-lookup-features-from-multi-node-multi-gpu">17. As model parallelism in embedding layers, how does it get all the embedding lookup features from multi-node / multi-gpu?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-to-set-data-clauses-if-there-are-two-embeddings-needed">18. How to set data clauses, if there are two embeddings needed?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-to-save-and-load-models-in-hugectr">19. How to save and load models in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#could-the-post-training-model-from-hugectr-be-imported-into-other-frameworks-such-as-tensorflow-for-inference-deployment">20. Could the post training model from HugeCTR be imported into other frameworks such as TensorFlow for inference deployment?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-overlap-between-different-slots">21. Does HugeCTR support overlap between different slots?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#what-if-there-s-no-value-in-a-slot">22. What if there’s no value in a slot?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-can-i-benchmark-my-network">23. How can I benchmark my network?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-to-set-workspace-size-per-gpu-in-mb-and-slot-size-array">24. How to set workspace_size_per_gpu_in_mb and slot_size_array?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#is-nvlink-required-in-hugectr">25. Is nvlink required in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#is-dgx-the-only-gpu-server-that-is-required-in-hugectr">26. Is DGX the only GPU server that is required in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#id1">27. Can HugeCTR run without InfiniBand?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#does-hugectr-support-loading-pretrained-embeddings-in-other-formats">28. Does HugeCTR support loading pretrained embeddings in other formats?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#how-to-construct-the-model-graph-with-branch-topology-in-hugectr">29. How to construct the model graph with branch topology in HugeCTR?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="QAList.html#what-is-the-good-practice-of-configuring-the-embedding-vector-size">30. What is the good practice of configuring the embedding vector size?</a></li>
-</ul>
-</li>
-</ul>
 </div>
 </div>
 
@@ -131,7 +96,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="hugectr_contributor_guide.html" class="btn btn-neutral float-left" title="Contributing to HugeCTR" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/hugectr_layer_book.html" class="btn btn-neutral float-left" title="HugeCTR Layer Classes and Methods" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="hugectr_talks_blogs.html" class="btn btn-neutral float-right" title="HugeCTR Talks and Blogs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
