@@ -18,7 +18,7 @@
 
 + **HPS performance optimization**: We use better method to  determine partition number in database backends in HPS.
 
-+ **Bug fixing**: HugeCTR input layer now can take dense_dim greater than 1000.
++ **Issues Fixed**: HugeCTR input layer now can take dense_dim greater than 1000.
 
 ## What's New in Version 3.4.1
 + **Support mixed precision inference for dataset with multiple labels**: We enable FP16 for the `Softmax` layer and support mixed precision for multi-label inference. For more information, please refer to [Inference API](https://nvidia-merlin.github.io/HugeCTR/master/api/python_interface.html#inference-api).
@@ -42,7 +42,7 @@
 
 + **Python Script and documentation demonstrating how to analyze model files**: In this release, we provide a script to retrieve vocabulary information from model file. Please find more details on the README in the [tools/model_analyzer](https://github.com/NVIDIA-Merlin/HugeCTR/tree/v3.4.1/tools/model_analyzer) directory of the repository.
 
-+ **Bug Fixing**:
++ **Issues fixed**:
     + Mirror strategy bug in SOK (see in https://github.com/NVIDIA-Merlin/HugeCTR/issues/291)  
     + Can't import sparse operation kit in nvcr.io/nvidia/merlin/merlin-tensorflow-training:22.04 (see in https://github.com/NVIDIA-Merlin/HugeCTR/issues/296)
     + HPS: Fixed access violation that can occur during initialization when not configuring a volatile DB.
