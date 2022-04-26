@@ -346,18 +346,20 @@ In the JSON file, you can find the batch norm parameters as shown below:
 
 The Concat layer concatenates a list of inputs.
 
-Parameters: None
+Parameters: 
+* `axis`:  Integer, the dimension to concat for the `Concat` layer. If the input is N-dimensional, 0 <= axis < N. The default value is 1.
 
 Input and Output Shapes:
 
-* input: Nx(batch_size, *) where 2<=N<=4 and * represents any number of elements
-* output: (batch_size, total_num_elems) where total_num_elems is the summation of N input elements
+* input: 3D: {(batch_size, num_feas_0, num_elems_0), (batch_size, num_feas + 1, num_elems_1), ...} or 2D: {(batch_size, num_elems_0), (batch_size, num_elems_1), ...}
+* output: 3D and axis=1: (batch_size, num_feas_0+num_feas_1+..., num_elems). 3D and axis=2: (batch_size, num_feas, num_elems_0+num_elems_1+...). 2D: (batch_size, num_elems_0+num_elems_1+...)
 
 Example:
 ```python
 model.add(hugectr.DenseLayer(layer_type = hugectr.Layer_t.Concat,
                             bottom_names = ["reshape3","weight_multiply2"],
-                            top_names = ["concat2"]))
+                            top_names = ["concat2"],
+                            axis = 2))
 ```
 
 ### Reshape Layer
