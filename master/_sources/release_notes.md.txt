@@ -1,4 +1,61 @@
 # Release Notes
+
+## What's New in Version 3.6
+
++ **Concat 3D Layer**:
+In previous releases, the `Concat` layer could handle two-dimensional (2D) input tensors only.
+Now, the input can be three-dimensional (3D) and you can concatenate the inputs along axis 1 or 2.
+For more information, see the API documentation for the [Concat Layer](https://nvidia-merlin.github.io/HugeCTR/v3.6/api/hugectr_layer_book.html#concat-layer).
+
++ **Dense Column List Support in Parquet DataReader**:
+In previous releases, HugeCTR assumes each dense feature has a single value and it must be the scalar data type `float32`.
+Now, you can mix `float32` or `list[float32]` for dense columns.
+This enhancement means that each dense feature can have more than one value.
+For more information, see the API documentation for the [Parquet](https://nvidia-merlin.github.io/HugeCTR/v3.6/api/python_interface.html#parquet) dataset format.
+
++ **Evaluation Metric Enhancements**:
+In previous releases, HugeCTR computes AUC for binary classification only.
+Now, HugeCTR supports AUC for multi-label classification.
+The implementation is inspired by [sklearn.metrics.roc_auc_score](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html) and performs the unweighted macro-averaging strategy that is the default for scikit-learn.
+You can specify a value for the `label_dim` parameter of the input layer to enable multi-label classification and HugeCTR will compute the multi-label AUC.
+
++ **Log Output Format Change**:
+The default log format now includes milliseconds.
+
++ **Documentation Enhancements**:
+  + These release notes are included in the documentation and are available at <https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html>.
+  + The [Configuration](https://nvidia-merlin.github.io/HugeCTR/master/hugectr_parameter_server.html#configuration) section of the Hierarchical Parameter Server information is updated with more information about the parameters in the configuration file.
+  + The example notebooks that demonstrate how to work with multi-modal data are reorganized in the navigation.
+    The notebooks are now available under the heading [Multi-Modal Example Notebooks](https://nvidia-merlin.github.io/HugeCTR/v3.6/notebooks/multi-modal-data/index.html).
+    This change is intended to make it easier to find the notebooks.
+  + The documentation in the [sparse_operation_kit](https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/sparse_operation_kit) directory of the repository on GitHub is updated with several clarifications about SOK.
+
++ **Issues Fixed**:
+  + The `dlrm_kaggle_fp32.py` file in the [`samples/dlrm/`](https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/samples/dlrm) directory of the repository is updated to show the correct number of samples.
+    The `num_samples` value is now set to `36672493`.
+    This fixes GitHub issue [301](https://github.com/NVIDIA-Merlin/HugeCTR/issues/301).
+  + Hierarchical Parameter Server (HPS) would produce a runtime error when the GPU cache was turned off.
+    This issue is now fixed.
+
++ **Known Issues**:
+  + HugeCTR uses NCCL to share data between ranks and NCCL can require shared system memory for IPC and pinned (page-locked) system memory resources.
+    If you use NCCL inside a container, increase these resources by specifying the following arguments when you start the container:
+
+    ```shell
+      -shm-size=1g -ulimit memlock=-1
+    ```
+
+    See also the NCCL [known issue](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting.html#sharing-data) and the GitHub [issue](https://github.com/NVIDIA-Merlin/HugeCTR/issues/243).
+  + `KafkaProducers` startup succeeds even if the target Kafka broker is unresponsive.
+    To avoid data loss in conjunction with streaming-model updates from Kafka, you have to make sure that a sufficient number of Kafka brokers are running, operating properly, and are reachable from the node where you run HugeCTR.
+  + The number of data files in the file list should be greater than or equal to the number of data reader workers.
+    Otherwise, different workers are mapped to the same file and data loading does not progress as expected.
+  + Joint loss training with a regularizer is not supported.
+  + The Criteo 1 TB click logs dataset that is used with many HugeCTR sample programs and notebooks is currently unavailable.
+    Until the dataset becomes downloadable again, you can run those samples based on our synthetic dataset generator.
+    For more information, see the [Getting Started](https://github.com/NVIDIA-Merlin/HugeCTR#getting-started) section of the repository README file.
+
+
 ## What's New in Version 3.5
 + **HPS interface encapsulation and exporting as library**: We encapsulate the Hierarchical Parameter Server(HPS) interfaces and deliver it as a standalone library. Besides, we prodvide HPS Python APIs and demonstrate the usage with a notebook. For more information, please refer to [Hierarchical Parameter Server](https://nvidia-merlin.github.io/HugeCTR/master/hugectr_parameter_server.html) and [HPS Demo](notebooks/hps_demo.ipynb).
 

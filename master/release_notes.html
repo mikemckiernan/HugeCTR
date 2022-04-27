@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="additional_resources.html">Additional Resources</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-s-new-in-version-3-6">What’s New in Version 3.6</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-s-new-in-version-3-5">What’s New in Version 3.5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-s-new-in-version-3-4-1">What’s New in Version 3.4.1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-s-new-in-version-3-4">What’s New in Version 3.4</a></li>
@@ -91,6 +92,65 @@
              
   <div class="tex2jax_ignore mathjax_ignore section" id="release-notes">
 <h1>Release Notes<a class="headerlink" href="#release-notes" title="Permalink to this headline"></a></h1>
+<div class="section" id="what-s-new-in-version-3-6">
+<h2>What’s New in Version 3.6<a class="headerlink" href="#what-s-new-in-version-3-6" title="Permalink to this headline"></a></h2>
+<ul>
+<li><p><strong>Concat 3D Layer</strong>:
+In previous releases, the <code class="docutils literal notranslate"><span class="pre">Concat</span></code> layer could handle two-dimensional (2D) input tensors only.
+Now, the input can be three-dimensional (3D) and you can concatenate the inputs along axis 1 or 2.
+For more information, see the API documentation for the <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/api/hugectr_layer_book.html#concat-layer">Concat Layer</a>.</p></li>
+<li><p><strong>Dense Column List Support in Parquet DataReader</strong>:
+In previous releases, HugeCTR assumes each dense feature has a single value and it must be the scalar data type <code class="docutils literal notranslate"><span class="pre">float32</span></code>.
+Now, you can mix <code class="docutils literal notranslate"><span class="pre">float32</span></code> or <code class="docutils literal notranslate"><span class="pre">list[float32]</span></code> for dense columns.
+This enhancement means that each dense feature can have more than one value.
+For more information, see the API documentation for the <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/api/python_interface.html#parquet">Parquet</a> dataset format.</p></li>
+<li><p><strong>Evaluation Metric Enhancements</strong>:
+In previous releases, HugeCTR computes AUC for binary classification only.
+Now, HugeCTR supports AUC for multi-label classification.
+The implementation is inspired by <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html">sklearn.metrics.roc_auc_score</a> and performs the unweighted macro-averaging strategy that is the default for scikit-learn.
+You can specify a value for the <code class="docutils literal notranslate"><span class="pre">label_dim</span></code> parameter of the input layer to enable multi-label classification and HugeCTR will compute the multi-label AUC.</p></li>
+<li><p><strong>Log Output Format Change</strong>:
+The default log format now includes milliseconds.</p></li>
+<li><p><strong>Documentation Enhancements</strong>:</p>
+<ul class="simple">
+<li><p>These release notes are included in the documentation and are available at <a class="reference external" href="https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html">https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html</a>.</p></li>
+<li><p>The <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/master/hugectr_parameter_server.html#configuration">Configuration</a> section of the Hierarchical Parameter Server information is updated with more information about the parameters in the configuration file.</p></li>
+<li><p>The example notebooks that demonstrate how to work with multi-modal data are reorganized in the navigation.
+The notebooks are now available under the heading <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/notebooks/multi-modal-data/index.html">Multi-Modal Example Notebooks</a>.
+This change is intended to make it easier to find the notebooks.</p></li>
+<li><p>The documentation in the <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/sparse_operation_kit">sparse_operation_kit</a> directory of the repository on GitHub is updated with several clarifications about SOK.</p></li>
+</ul>
+</li>
+<li><p><strong>Issues Fixed</strong>:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">dlrm_kaggle_fp32.py</span></code> file in the <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/samples/dlrm"><code class="docutils literal notranslate"><span class="pre">samples/dlrm/</span></code></a> directory of the repository is updated to show the correct number of samples.
+The <code class="docutils literal notranslate"><span class="pre">num_samples</span></code> value is now set to <code class="docutils literal notranslate"><span class="pre">36672493</span></code>.
+This fixes GitHub issue <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR/issues/301">301</a>.</p></li>
+<li><p>Hierarchical Parameter Server (HPS) would produce a runtime error when the GPU cache was turned off.
+This issue is now fixed.</p></li>
+</ul>
+</li>
+<li><p><strong>Known Issues</strong>:</p>
+<ul>
+<li><p>HugeCTR uses NCCL to share data between ranks and NCCL can require shared system memory for IPC and pinned (page-locked) system memory resources.
+If you use NCCL inside a container, increase these resources by specifying the following arguments when you start the container:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>  -shm-size<span class="o">=</span>1g -ulimit <span class="nv">memlock</span><span class="o">=</span>-1
+</pre></div>
+</div>
+<p>See also the NCCL <a class="reference external" href="https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/troubleshooting.html#sharing-data">known issue</a> and the GitHub <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR/issues/243">issue</a>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">KafkaProducers</span></code> startup succeeds even if the target Kafka broker is unresponsive.
+To avoid data loss in conjunction with streaming-model updates from Kafka, you have to make sure that a sufficient number of Kafka brokers are running, operating properly, and are reachable from the node where you run HugeCTR.</p></li>
+<li><p>The number of data files in the file list should be greater than or equal to the number of data reader workers.
+Otherwise, different workers are mapped to the same file and data loading does not progress as expected.</p></li>
+<li><p>Joint loss training with a regularizer is not supported.</p></li>
+<li><p>The Criteo 1 TB click logs dataset that is used with many HugeCTR sample programs and notebooks is currently unavailable.
+Until the dataset becomes downloadable again, you can run those samples based on our synthetic dataset generator.
+For more information, see the <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR#getting-started">Getting Started</a> section of the repository README file.</p></li>
+</ul>
+</li>
+</ul>
+</div>
 <div class="section" id="what-s-new-in-version-3-5">
 <h2>What’s New in Version 3.5<a class="headerlink" href="#what-s-new-in-version-3-5" title="Permalink to this headline"></a></h2>
 <ul class="simple">
