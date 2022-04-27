@@ -78,13 +78,23 @@ The HugeCTR to Open Neural Network Exchange (ONNX) converter (hugectr2onnx) is a
 After training with our HugeCTR Python APIs, you can get the files for dense models, sparse models, and graph configurations, which are required as inputs when using the `hugectr2onnx.converter.convert` API. Each HugeCTR layer will correspond to one or several ONNX operators, and the trained model weights will be loaded as initializers in the ONNX graph. You can convert both dense and sparse models or only dense models.
 For more information, refer to the `onnx_converter` directory of the HugeCTR [repository](https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/onnx_converter) on GitHub and the [hugectr2onnx_demo.ipynb](./notebooks/hugectr2onnx_demo.ipynb) sample notebook.
 
+## HDFS Support
+
+HugeCTR supports interactions with HDFS during training, e.g. loading and dumping models and optimizer states from HDFS.
+
+If you are using the [Merlin NGC container](https://catalog.ngc.nvidia.com/containers), you can build hadoop by runnin this [script](https://github.com/NVIDIA-Merlin/Merlin/blob/main/docker/training/build-hadoop.sh). If you want to build [HugeCTR from scratch](https://nvidia-merlin.github.io/HugeCTR/master/hugectr_user_guide.html#building-hugectr-from-scratch), you should make sure that Hadoop is correctly built in your system and specify `-DENABLE_HDFS=ON` during cmake.
+
+After HDFS is successfully enabled, you are able to use our [Python API](https://nvidia-merlin.github.io/HugeCTR/master/api/python_interface.html#data-source-api) to train with HDFS. An end-to-end demo notebook can be found at [here](https://github.com/NVIDIA-Merlin/HugeCTR/blob/master/notebooks/training_with_hdfs.ipynb).
+
+
+
 ## Hierarchical Parameter Server
 
-HugeCTR Inference Hierarchical Parameter Server implemented a hierarchical storage mechanism between local SSDs and CPU memory, which breaks the convention that the embedding table must be stored in local CPU memory. Distributed Database layer allows utilizing Redis cluster deployments, to store and retrieve embeddings in/from the RAM memory available in your cluster. The Persistent Database layer links HugeCTR with a persistent database. Each node that has such a persistent storage layer configured retains a separate copy of all embeddings in its locally available non-volatile memory. 
+HugeCTR Hierarchical Parameter Server (HPS), an industry-leading distributed recommendation inference framework,that combines a high-performance GPU embedding cache with an hierarchical storage architecture, to realize low-latency retrieval ofembeddings for online model inference tasks. Among other things, our HPS features (1) redundant hierarchical storage, (2) a novelGPU-enabled high-bandwidth cache to accelerate parallel embedding lookup, (3) online training support and (4) light-weight APIs forintegration into existing large-scale recommendation workflow.
 
 Try out our [hugectr_wdl_prediction.ipynb Notebook](../notebooks/hugectr_wdl_prediction.ipynb). For more information, refer to [Distributed Deployment](https://github.com/triton-inference-server/hugectr_backend/blob/main/docs/architecture.md#distributed-deployment-with-hierarchical-hugectr-parameter-server).
 
-For more information, see the details for [Hierarchical Parameter Server](hugectr_parameter_server.md).
+For more information about Hierrachical Parameter Server, see the details for [HPS Backend](https://github.com/triton-inference-server/hugectr_backend/blob/main/hps_backend/docs/architecture.md) and [HPS Database Backend](hugectr_parameter_server.md).
 
 ## Sparse Operation Kit
 
