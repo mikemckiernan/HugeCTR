@@ -277,13 +277,13 @@ To make results comparable, we execute the `sync && sysctl vm.drop_caches=3` com
 
 The effective bandwidth (embedding size / reading or writing time) of reading and writing along with the hit rate are shown in Fig. 5 and Fig. 6, respectively.
 
-<img src="/user_guide_src/hc_read.png" width="450px" align="center"/>
+<img src="user_guide_src/hc_read.png" width="450px" align="center"/>
 
 <div align="center">Fig. 5: Bandwidth and hit rate for reading operations.</div>
 
 <br></br>
 
-<img src="/user_guide_src/hc_write.png" width="450px" align="center"/>
+<img src="user_guide_src/hc_write.png" width="450px" align="center"/>
 
 <div align="center">Fig. 6: Bandwidth and hit rate for writing operations.</div>
 
