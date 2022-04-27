@@ -525,10 +525,13 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
             if (type_of_column == cudf::type_to_id<cudf::list_view>()) {
               cudf::column_view row_offset_view = cat_columns_view_ref[k].child(0);
               cudf::column_view value_view = cat_columns_view_ref[k].child(1);
-              if (cudf::size_of(value_view.type()) != sizeof(T)) {
-                HCTR_OWN_THROW(Error_t::WrongInput,
-                               "Parquet worker : cat m-hot KeyType does not "
-                               "match Parquet column type");
+              cudf::type_id val_id = value_view.type().id();
+              if (val_id != cudf::type_to_id<int32_t>() && val_id != cudf::type_to_id<int64_t>() &&
+                  val_id != cudf::type_to_id<uint32_t>() &&
+                  val_id != cudf::type_to_id<uint64_t>()) {
+                HCTR_OWN_THROW(
+                    Error_t::WrongInput,
+                    "Parquet worker : cat m-hot KeyType should be uint64/int64/int32/uint32");
               }
               if (row_offset_view.type().id() != cudf::type_to_id<int32_t>()) {
                 HCTR_OWN_THROW(Error_t::WrongInput,
@@ -540,15 +543,18 @@ void ParquetDataReaderWorker<T>::read_a_batch() {
               cat_column_data_ptr.push_back(column_ptr);
             }
             // s-hot
-            else if (cudf::size_of(cat_columns_view_ref[k].type()) == sizeof(T)) {
+            else if (type_of_column == cudf::type_to_id<int32_t>() ||
+                     type_of_column == cudf::type_to_id<int64_t>() ||
+                     type_of_column == cudf::type_to_id<uint32_t>() ||
+                     type_of_column == cudf::type_to_id<uint64_t>()) {
               T* column_ptr = const_cast<T*>(cat_columns_view_ref[k].data<T>());
               column_ptr = reinterpret_cast<T*>((size_t)column_ptr);
               cat_column_data_ptr.push_back(column_ptr);
               cat_column_row_offset_ptr.push_back(nullptr);
             } else {
-              HCTR_OWN_THROW(Error_t::WrongInput,
-                             "Parquet worker : cat m-hot KeyType does not match "
-                             "Parquet column type");
+              HCTR_OWN_THROW(
+                  Error_t::WrongInput,
+                  "Parquet worker : cat s-hot KeyType should be uint64/int64/int32/uint32");
             }
           }
           T* dev_slot_offset_ptr = reinterpret_cast<T*>((size_t)slot_offset_device_buf_->data() +

@@ -80,7 +80,7 @@ void concat_3d_layer_general_test(size_t batch_size, std::vector<int> slot_num,
                                   std::vector<int> vec_size, int axis) {
   std::shared_ptr<GeneralBuffer2<CudaAllocator>> buff = GeneralBuffer2<CudaAllocator>::create();
   int num = vec_size.size();
-  assert(item.size() == slot_num.size());
+  // assert(item.size() == slot_num.size());
   Tensors2<T> in_tensors;
   size_t out_slot_num = 0;
   size_t out_vector_size = 0;
