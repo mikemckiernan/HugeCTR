@@ -144,11 +144,11 @@ The value to set depends on the vocabulary size per GPU, the embedding vector si
 Refer to the embedding workspace calculator in the [tools](https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/tools) directory of the HugeCTR repository on GitHub.
 Use the calculator to calculate the vocabulary size per GPU and workspace_size per GPU for different embedding types, embedding vector size, and optimizer type.
 
-In practice, we usually set it larger than the real size because of the non-uniform distribution of the keys.
+In practice, we usually set the values larger than the real size because of the non-uniform distribution of the keys.
 
-`slot_size_array` has 2 usages.
-It can be used as a replacement for `workspace_size_per_gpu_in_mb` to avoid wasting memory that is caused by imbalanced vocabulary size.
-It can also be used as a reference to add an offset for keys in a different slot.
+The `slot_size_array` argument has 2 usages.
+You can use it as a replacement for `workspace_size_per_gpu_in_mb` to avoid wasting memory that is caused by imbalanced vocabulary size.
+You can also use it as a reference to add an offset for keys in a different slot.
 
 When you specify `slot_size_array` to avoid wasting memory, set each value in the array to the maximum key value in each slot.
 Refer to the following equation:

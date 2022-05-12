@@ -228,10 +228,10 @@ Thirdly, run with <code class="docutils literal notranslate"><span class="pre">.
 The value to set depends on the vocabulary size per GPU, the embedding vector size, and the optimizer type.
 Refer to the embedding workspace calculator in the <a class="reference external" href="https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/tools">tools</a> directory of the HugeCTR repository on GitHub.
 Use the calculator to calculate the vocabulary size per GPU and workspace_size per GPU for different embedding types, embedding vector size, and optimizer type.</p>
-<p>In practice, we usually set it larger than the real size because of the non-uniform distribution of the keys.</p>
-<p><code class="docutils literal notranslate"><span class="pre">slot_size_array</span></code> has 2 usages.
-It can be used as a replacement for <code class="docutils literal notranslate"><span class="pre">workspace_size_per_gpu_in_mb</span></code> to avoid wasting memory that is caused by imbalanced vocabulary size.
-It can also be used as a reference to add an offset for keys in a different slot.</p>
+<p>In practice, we usually set the values larger than the real size because of the non-uniform distribution of the keys.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">slot_size_array</span></code> argument has 2 usages.
+You can use it as a replacement for <code class="docutils literal notranslate"><span class="pre">workspace_size_per_gpu_in_mb</span></code> to avoid wasting memory that is caused by imbalanced vocabulary size.
+You can also use it as a reference to add an offset for keys in a different slot.</p>
 <p>When you specify <code class="docutils literal notranslate"><span class="pre">slot_size_array</span></code> to avoid wasting memory, set each value in the array to the maximum key value in each slot.
 Refer to the following equation:</p>
 <p><span class="math notranslate nohighlight">\(slot\_size\_array[k] = \max\limits_i slot^k_i + 1\)</span></p>
