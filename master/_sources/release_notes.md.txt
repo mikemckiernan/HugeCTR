@@ -13,6 +13,10 @@ Now, you can mix `float32` or `list[float32]` for dense columns.
 This enhancement means that each dense feature can have more than one value.
 For more information, see the API documentation for the [Parquet](https://nvidia-merlin.github.io/HugeCTR/v3.6/api/python_interface.html#parquet) dataset format.
 
++ **Support for HDFS is Re-enabled in Merlin Containers**:
+Support for HDFS in Merlin containers is an optional dependency now.
+For more information, see [HDFS Support](https://nvidia-merlin.github.io/HugeCTR/v3.6/hugectr_core_features.html#hdfs-support).
+
 + **Evaluation Metric Enhancements**:
 In previous releases, HugeCTR computes AUC for binary classification only.
 Now, HugeCTR supports AUC for multi-label classification.
@@ -23,7 +27,7 @@ You can specify a value for the `label_dim` parameter of the input layer to enab
 The default log format now includes milliseconds.
 
 + **Documentation Enhancements**:
-  + These release notes are included in the documentation and are available at <https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html>.
+  + These release notes are included in the documentation and are available at <https://nvidia-merlin.github.io/HugeCTR/v3.6/release_notes.html>.
   + The [Configuration](https://nvidia-merlin.github.io/HugeCTR/master/hugectr_parameter_server.html#configuration) section of the Hierarchical Parameter Server information is updated with more information about the parameters in the configuration file.
   + The example notebooks that demonstrate how to work with multi-modal data are reorganized in the navigation.
     The notebooks are now available under the heading [Multi-Modal Example Notebooks](https://nvidia-merlin.github.io/HugeCTR/v3.6/notebooks/multi-modal-data/index.html).

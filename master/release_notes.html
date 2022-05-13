@@ -104,6 +104,9 @@ In previous releases, HugeCTR assumes each dense feature has a single value and 
 Now, you can mix <code class="docutils literal notranslate"><span class="pre">float32</span></code> or <code class="docutils literal notranslate"><span class="pre">list[float32]</span></code> for dense columns.
 This enhancement means that each dense feature can have more than one value.
 For more information, see the API documentation for the <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/api/python_interface.html#parquet">Parquet</a> dataset format.</p></li>
+<li><p><strong>Support for HDFS is Re-enabled in Merlin Containers</strong>:
+Support for HDFS in Merlin containers is an optional dependency now.
+For more information, see <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/hugectr_core_features.html#hdfs-support">HDFS Support</a>.</p></li>
 <li><p><strong>Evaluation Metric Enhancements</strong>:
 In previous releases, HugeCTR computes AUC for binary classification only.
 Now, HugeCTR supports AUC for multi-label classification.
@@ -113,7 +116,7 @@ You can specify a value for the <code class="docutils literal notranslate"><span
 The default log format now includes milliseconds.</p></li>
 <li><p><strong>Documentation Enhancements</strong>:</p>
 <ul class="simple">
-<li><p>These release notes are included in the documentation and are available at <a class="reference external" href="https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html">https://nvidia-merline.github.io/HugeCTR/v3.6/release_notes.html</a>.</p></li>
+<li><p>These release notes are included in the documentation and are available at <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/release_notes.html">https://nvidia-merlin.github.io/HugeCTR/v3.6/release_notes.html</a>.</p></li>
 <li><p>The <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/master/hugectr_parameter_server.html#configuration">Configuration</a> section of the Hierarchical Parameter Server information is updated with more information about the parameters in the configuration file.</p></li>
 <li><p>The example notebooks that demonstrate how to work with multi-modal data are reorganized in the navigation.
 The notebooks are now available under the heading <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/v3.6/notebooks/multi-modal-data/index.html">Multi-Modal Example Notebooks</a>.
