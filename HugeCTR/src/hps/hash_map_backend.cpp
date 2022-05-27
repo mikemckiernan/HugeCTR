@@ -189,7 +189,7 @@ size_t HashMapBackend<TPartition>::contains(const std::string& table_name, const
     hit_count += part.find(*keys) != part.end();
   }
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Found %d / %d keys.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Found %d / %d keys.\n", get_name(),
            table_name.c_str(), hit_count, num_keys);
   return hit_count;
 }
@@ -217,7 +217,7 @@ bool HashMapBackend<TPartition>::insert(const std::string& table_name, const siz
     values += value_size;
   }
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Inserted %d / %d pairs.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Inserted %d / %d pairs.\n", get_name(),
            table_name.c_str(), num_inserts, num_pairs);
   return true;
 }
@@ -244,7 +244,7 @@ size_t HashMapBackend<TPartition>::fetch(const std::string& table_name, const si
     HCTR_HASH_MAP_BACKEND_FETCH_(*k, k - keys);
   }
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
            table_name.c_str(), hit_count, num_keys);
   return hit_count;
 }
@@ -272,7 +272,7 @@ size_t HashMapBackend<TPartition>::fetch(const std::string& table_name, const si
     HCTR_HASH_MAP_BACKEND_FETCH_(keys[*indices], *indices);
   }
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
            table_name.c_str(), hit_count, num_indices);
   return hit_count;
 }
@@ -292,7 +292,7 @@ size_t HashMapBackend<TPartition>::evict(const std::string& table_name) {
   const size_t hit_count = part.size();
   tables_.erase(table_name);
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table %s erased (%d pairs).\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table %s erased (%d pairs).\n", get_name(),
            table_name.c_str(), hit_count);
   return hit_count;
 }
@@ -317,7 +317,7 @@ size_t HashMapBackend<TPartition>::evict(const std::string& table_name, const si
     hit_count += part.erase(*keys);
   }
 
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table %s. %d / %d pairs erased.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table %s. %d / %d pairs erased.\n", get_name(),
            table_name.c_str(), hit_count, num_keys);
   return hit_count;
 }
@@ -399,7 +399,7 @@ size_t ParallelHashMapBackend<TPartition>::contains(const std::string& table_nam
     hit_count = static_cast<size_t>(joint_hit_count);
   }
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Found %d / %d keys.\n", get_name(), hit_count, num_keys);
+  HCTR_LOG(TRACE, WORLD, "%s backend. Found %d / %d keys.\n", get_name(), hit_count, num_keys);
 #endif
   return hit_count;
 }
@@ -450,7 +450,7 @@ bool ParallelHashMapBackend<TPartition>::insert(const std::string& table_name,
     num_inserts = static_cast<size_t>(joint_num_inserts);
   }
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Inserted %d / %d pairs.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Inserted %d / %d pairs.\n", get_name(),
            table_name.c_str(), num_inserts, num_pairs);
 #endif
   return true;
@@ -499,7 +499,7 @@ size_t ParallelHashMapBackend<TPartition>::fetch(const std::string& table_name,
     hit_count = static_cast<size_t>(joint_hit_count);
   }
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
            table_name.c_str(), hit_count, num_keys);
 #endif
   return hit_count;
@@ -551,7 +551,7 @@ size_t ParallelHashMapBackend<TPartition>::fetch(const std::string& table_name,
     hit_count = static_cast<size_t>(joint_hit_count);
   }
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table: %s. Fetched %d / %d values.\n", get_name(),
            table_name.c_str(), hit_count, num_indices);
 #endif
   return hit_count;
@@ -576,7 +576,7 @@ size_t ParallelHashMapBackend<TPartition>::evict(const std::string& table_name) 
   }
   tables_.erase(table_name);
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table %s erased (%d pairs).\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table %s erased (%d pairs).\n", get_name(),
            table_name.c_str(), hit_count);
 #endif
   return hit_count;
@@ -622,7 +622,7 @@ size_t ParallelHashMapBackend<TPartition>::evict(const std::string& table_name,
     hit_count = static_cast<size_t>(joint_hit_count);
   }
 #ifdef ENABLE_INFERENCE
-  HCTR_LOG(DEBUG, WORLD, "%s backend. Table %s. %d / %d pairs erased.\n", get_name(),
+  HCTR_LOG(TRACE, WORLD, "%s backend. Table %s. %d / %d pairs erased.\n", get_name(),
            table_name.c_str(), hit_count, num_keys);
 #endif
   return hit_count;
