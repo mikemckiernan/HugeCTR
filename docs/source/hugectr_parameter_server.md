@@ -159,8 +159,15 @@ hugectr.inference.InferenceParams()
 
 * `embedding_table_names`: List[String], this configuration item needs to be filled with the name of each embedded table, which will be used to name the data partition and data table in the hierarchical database backend. The default value is `["sparse_embedding1", "sparse_embedding2", ...]`
 
+* `network_file`: String, The model network structure with json format, which is exported after model training, used for the initialization of the network structure of the dense part of the model. There is NO default value and it should be specified by users.
+
+* `label_dim`: Int, each model may contain a varying size of prediction result, such as a multi-task model. This item so the user needs to configure the value of Maximum(the size of prediction result in each sample) in this item, which determines the pre-allocated memory size on the host and device. The default value is `1`.
+
+* `slot_num`: Int, each model may contain a fixed size of feature fields. This item so the user needs to configure the value of feature fields(the number of slots) in this item, which determines the pre-allocated memory size on the host and device. The default value is `10`.
+
 **JSON(ps.json) Example:**
 ```text
+"supportlonglong": true,
 "models":[
         {
             "model":"wdl",
@@ -172,14 +179,22 @@ hugectr.inference.InferenceParams()
             "deployed_device_list":[0],
             "max_batch_size":64,
             "default_value_for_each_table":[0.0,0.0],
+            "maxnum_des_feature_per_sample":26,
+            "maxnum_catfeature_query_per_table_per_sample":[2,26],
+            "embedding_vecsize_per_table":[1,15],
+            "embedding_table_names":["table1","table2"],
+            "refresh_delay":0,
+            "refresh_interval":0,
             "hit_rate_threshold":0.9,
             "gpucacheper":0.1,
             "gpucache":true,
-            "cache_refresh_percentage_per_iteration": 0.2
+            "cache_refresh_percentage_per_iteration": 0.1,
+            "label_dim": 1,
+            "slot_num":10
         }
     ] 
 ```
-
+* `supportlonglong`: Boolean, this value should be set to `True` when you need to use I64 input key, which is 是、ame meaning as the **i64_input_key**.  The default value is `True`.
 
 ### **Volatile Database Configurations**
 We provide various volatile database implementations. Generally speaking, two categories can be distinguished.

@@ -172,7 +172,8 @@ InferenceParams::InferenceParams(
     const float refresh_interval,
     const std::vector<size_t>& maxnum_catfeature_query_per_table_per_sample,
     const std::vector<size_t>& embedding_vecsize_per_table,
-    const std::vector<std::string>& embedding_table_names)
+    const std::vector<std::string>& embedding_table_names, const std::string& network_file,
+    const size_t label_dim, const size_t slot_num)
     : model_name(model_name),
       max_batchsize(max_batchsize),
       hit_rate_threshold(hit_rate_threshold),
@@ -201,7 +202,10 @@ InferenceParams::InferenceParams(
       refresh_interval(refresh_interval),
       maxnum_catfeature_query_per_table_per_sample(maxnum_catfeature_query_per_table_per_sample),
       embedding_vecsize_per_table(embedding_vecsize_per_table),
-      embedding_table_names(embedding_table_names) {
+      embedding_table_names(embedding_table_names),
+      network_file(network_file),
+      label_dim(label_dim),
+      slot_num(slot_num) {
   if (this->default_value_for_each_table.size() != this->sparse_model_files.size()) {
     HCTR_LOG(
         WARNING, ROOT,

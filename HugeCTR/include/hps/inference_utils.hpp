@@ -241,6 +241,9 @@ struct InferenceParams {
   std::vector<size_t> maxnum_catfeature_query_per_table_per_sample;
   std::vector<size_t> embedding_vecsize_per_table;
   std::vector<std::string> embedding_table_names;
+  std::string network_file;
+  size_t label_dim;
+  size_t slot_num;
 
   InferenceParams(const std::string& model_name, size_t max_batchsize, float hit_rate_threshold,
                   const std::string& dense_model_file,
@@ -248,7 +251,7 @@ struct InferenceParams {
                   bool use_gpu_embedding_cache, float cache_size_percentage, bool i64_input_key,
                   bool use_mixed_precision = false, float scaler = 1.0,
                   bool use_algorithm_search = true, bool use_cuda_graph = true,
-                  int number_of_worker_buffers_in_pool = 2,
+                  int number_of_worker_buffers_in_pool = 1,
                   int number_of_refresh_buffers_in_pool = 1,
                   float cache_refresh_percentage_per_iteration = 0.1,
                   const std::vector<int>& deployed_devices = {0},
@@ -258,11 +261,12 @@ struct InferenceParams {
                   const PersistentDatabaseParams& persistent_db = {},
                   const UpdateSourceParams& update_source = {},
                   // HPS required parameters
-                  int maxnum_des_feature_per_sample = 20, float refresh_delay = 0.0f,
+                  int maxnum_des_feature_per_sample = 26, float refresh_delay = 0.0f,
                   float refresh_interval = 0.0f,
                   const std::vector<size_t>& maxnum_catfeature_query_per_table_per_sample = {26},
                   const std::vector<size_t>& embedding_vecsize_per_table = {128},
-                  const std::vector<std::string>& embedding_table_names = {""});
+                  const std::vector<std::string>& embedding_table_names = {""},
+                  const std::string& network_file = "", size_t label_dim = 1, size_t slot_num = 10);
 };
 
 struct parameter_server_config {
