@@ -427,8 +427,8 @@ void InferencePybind(pybind11::module& m) {
                                                                      "VolatileDatabaseParams")
       .def(pybind11::init<DatabaseType_t,
                           // Backend specific.
-                          const std::string&, const std::string&, const std::string&,
-                          DatabaseHashMapAlgorithm_t, size_t, size_t, size_t,
+                          const std::string&, const std::string&, const std::string&, size_t,
+                          size_t, size_t, size_t,
                           // Overflow handling related.
                           bool, size_t, DatabaseOverflowPolicy_t, double,
                           // Caching behavior related.
@@ -439,8 +439,8 @@ void InferencePybind(pybind11::module& m) {
            // Backend specific.
            pybind11::arg("address") = "127.0.0.1:7000", pybind11::arg("user_name") = "default",
            pybind11::arg("password") = "",
-           pybind11::arg("algorithm") = DatabaseHashMapAlgorithm_t::PHM,
            pybind11::arg("num_partitions") = std::min(16u, std::thread::hardware_concurrency()),
+           pybind11::arg("allocation_rate") = 256 * 1024 * 1024,
            pybind11::arg("max_get_batch_size") = 10'000,
            pybind11::arg("max_set_batch_size") = 10'000,
            // Overflow handling related.

@@ -25,9 +25,6 @@ namespace HugeCTR {
 std::ostream& operator<<(std::ostream& os, const DatabaseType_t value) {
   return os << hctr_enum_to_c_str(value);
 }
-std::ostream& operator<<(std::ostream& os, const DatabaseHashMapAlgorithm_t value) {
-  return os << hctr_enum_to_c_str(value);
-}
 std::ostream& operator<<(std::ostream& os, const DatabaseOverflowPolicy_t value) {
   return os << hctr_enum_to_c_str(value);
 }
@@ -48,7 +45,7 @@ bool VolatileDatabaseParams::operator==(const VolatileDatabaseParams& p) const {
   return type == p.type &&
          // Backend specific.
          address == p.address && user_name == p.user_name && password == p.password &&
-         algorithm == p.algorithm && num_partitions == p.num_partitions &&
+         num_partitions == p.num_partitions && allocation_rate == p.allocation_rate &&
          max_get_batch_size == p.max_get_batch_size && max_set_batch_size == p.max_set_batch_size &&
          // Overflow handling related.
          refresh_time_after_fetch == p.refresh_time_after_fetch &&
@@ -90,8 +87,8 @@ VolatileDatabaseParams::VolatileDatabaseParams(
     const DatabaseType_t type,
     // Backend specific.
     const std::string& address, const std::string& user_name, const std::string& password,
-    const DatabaseHashMapAlgorithm_t algorithm, const size_t num_partitions,
-    const size_t max_get_batch_size, const size_t max_set_batch_size,
+    const size_t num_partitions, const size_t allocation_rate, const size_t max_get_batch_size,
+    const size_t max_set_batch_size,
     // Overflow handling related.
     const bool refresh_time_after_fetch, const size_t overflow_margin,
     const DatabaseOverflowPolicy_t overflow_policy, const double overflow_resolution_target,
@@ -104,8 +101,8 @@ VolatileDatabaseParams::VolatileDatabaseParams(
       address(address),
       user_name(user_name),
       password(password),
-      algorithm(algorithm),
       num_partitions(num_partitions),
+      allocation_rate(allocation_rate),
       max_get_batch_size(max_get_batch_size),
       max_set_batch_size(max_set_batch_size),
       // Overflow handling related.
@@ -298,10 +295,11 @@ parameter_server_config::parameter_server_config(const std::string& hps_json_con
 
     params.password = get_value_from_json_soft<std::string>(volatile_db, "password", "");
 
-    params.algorithm = get_hps_hashmap_algo(volatile_db, "algorithm");
-
     params.num_partitions = get_value_from_json_soft<size_t>(
         volatile_db, "num_partitions", std::min(16u, std::thread::hardware_concurrency()));
+
+    params.allocation_rate =
+        get_value_from_json_soft<size_t>(volatile_db, "allocation_rate", 256 * 1024 * 1024);
 
     params.max_get_batch_size =
         get_value_from_json_soft<size_t>(volatile_db, "max_get_batch_size", 10'000);
@@ -680,30 +678,6 @@ UpdateSourceType_t get_hps_updatesource_type(const nlohmann::json& json, const s
     }
 
   return HugeCTR::UpdateSourceType_t::KafkaMessageQueue;
-}
-
-DatabaseHashMapAlgorithm_t get_hps_hashmap_algo(const nlohmann::json& json, const std::string key) {
-  if (json.find(key) == json.end()) {
-    return DatabaseHashMapAlgorithm_t::PHM;
-  }
-  std::string tmp = get_value_from_json<std::string>(json, key);
-  HugeCTR::DatabaseHashMapAlgorithm_t enum_value;
-  std::unordered_set<const char*> names;
-
-  enum_value = HugeCTR::DatabaseHashMapAlgorithm_t::STL;
-  names = {hctr_enum_to_c_str(enum_value)};
-  for (const char* name : names)
-    if (tmp == name) {
-      return enum_value;
-    }
-
-  enum_value = HugeCTR::DatabaseHashMapAlgorithm_t::PHM;
-  names = {hctr_enum_to_c_str(enum_value)};
-  for (const char* name : names)
-    if (tmp == name) {
-      return enum_value;
-    }
-  return DatabaseHashMapAlgorithm_t::PHM;
 }
 
 DatabaseOverflowPolicy_t get_hps_overflow_policy(const nlohmann::json& json,
