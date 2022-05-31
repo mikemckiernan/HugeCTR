@@ -93,6 +93,8 @@ target_link_libraries(huge_ctr_inference PUBLIC cudart cublas curand cudnn nccl 
 
 target_link_libraries(huge_ctr_inference PUBLIC huge_ctr_hps)
 
+target_link_libraries(huge_ctr_inference PUBLIC /usr/local/cuda/lib64/stubs/libcuda.so)
+
 target_compile_features(huge_ctr_inference PUBLIC cxx_std_17)
 
 set_target_properties(huge_ctr_inference PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

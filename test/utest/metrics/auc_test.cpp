@@ -354,14 +354,18 @@ TEST(auc_test, fp32_2gpu_random_multilabel) {
 
 // Multi-label performance tests
 
-#define SINGLE_NODE_CLASS_TEST(batch, num_batches, num_classes, name)                            \
-  TEST(auc_test, name) {                                                                         \
-    auc_test<float>({0, 1, 2, 3, 4, 5, 6, 7}, batch, num_batches * batch * 8, gen_random<float>, \
-                    1, num_classes);                                                             \
+const size_t batch_size = 100 * 1000;
+const size_t num_batches = 10;
+
+const size_t num_gpus = 8;
+std::vector<int> device_list{0, 1, 2, 3, 4, 5, 6, 7};
+
+#define SINGLE_NODE_CLASS_TEST(num_classes, name)                                     \
+  TEST(auc_test, name) {                                                              \
+    auc_test<float>(device_list, batch_size, num_batches * batch_size * num_gpus,     \
+                    gen_random<float>, 1, num_classes);                               \
   }
 
-// const size_t batch = 100 * 1000;
-// const size_t num_batches = 10;
-// SINGLE_NODE_CLASS_TEST(batch, num_batches, 1, fp32_8gpu_1)
-// SINGLE_NODE_CLASS_TEST(batch, num_batches, 10, fp32_8gpu_10)
-// SINGLE_NODE_CLASS_TEST(batch, num_batches, 100, fp32_8gpu_100)
+// SINGLE_NODE_CLASS_TEST(1, fp32_8gpu_1)
+// SINGLE_NODE_CLASS_TEST(10, fp32_8gpu_10)
+// SINGLE_NODE_CLASS_TEST(100, fp32_8gpu_100)
