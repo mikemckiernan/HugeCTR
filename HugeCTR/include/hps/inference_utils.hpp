@@ -39,10 +39,6 @@ enum class DatabaseType_t {
   RedisCluster,
   RocksDB,
 };
-enum class DatabaseHashMapAlgorithm_t {
-  STL,
-  PHM,
-};
 enum class DatabaseOverflowPolicy_t {
   EvictOldest,
   EvictRandom,
@@ -69,17 +65,6 @@ constexpr const char* hctr_enum_to_c_str(const DatabaseType_t value) {
       return "<unknown DatabaseType_t value>";
   }
 }
-constexpr const char* hctr_enum_to_c_str(const DatabaseHashMapAlgorithm_t value) {
-  // Remark: Dependent functions assume lower-case, and underscore separated.
-  switch (value) {
-    case DatabaseHashMapAlgorithm_t::STL:
-      return "stl";
-    case DatabaseHashMapAlgorithm_t::PHM:
-      return "phm";
-    default:
-      return "<unknown DatabaseHashMapAlgorithm_t value>";
-  }
-}
 constexpr const char* hctr_enum_to_c_str(const DatabaseOverflowPolicy_t value) {
   // Remark: Dependent functions assume lower-case, and underscore separated.
   switch (value) {
@@ -104,12 +89,10 @@ constexpr const char* hctr_enum_to_c_str(const UpdateSourceType_t value) {
 }
 
 std::ostream& operator<<(std::ostream& os, DatabaseType_t value);
-std::ostream& operator<<(std::ostream& os, DatabaseHashMapAlgorithm_t value);
 std::ostream& operator<<(std::ostream& os, DatabaseOverflowPolicy_t value);
 std::ostream& operator<<(std::ostream& os, UpdateSourceType_t value);
 DatabaseType_t get_hps_database_type(const nlohmann::json& json, const std::string key);
 UpdateSourceType_t get_hps_updatesource_type(const nlohmann::json& json, const std::string key);
-DatabaseHashMapAlgorithm_t get_hps_hashmap_algo(const nlohmann::json& json, const std::string key);
 DatabaseOverflowPolicy_t get_hps_overflow_policy(const nlohmann::json& json, const std::string key);
 
 struct VolatileDatabaseParams {
@@ -119,8 +102,8 @@ struct VolatileDatabaseParams {
   std::string address;    // hostname[:port][[;hostname[:port]]...]
   std::string user_name;  // "default" = Standard user for Redis!
   std::string password;
-  DatabaseHashMapAlgorithm_t algorithm;  // Only used with HashMap type backends.
   size_t num_partitions;
+  size_t allocation_rate;  // Only used with HashMap type backends.
   size_t max_get_batch_size;
   size_t max_set_batch_size;
 
@@ -142,9 +125,9 @@ struct VolatileDatabaseParams {
       // Backend specific.
       const std::string& address = "127.0.0.1:7000", const std::string& user_name = "default",
       const std::string& password = "",
-      DatabaseHashMapAlgorithm_t algorithm = DatabaseHashMapAlgorithm_t::PHM,
       size_t num_partitions = std::min(16u, std::thread::hardware_concurrency()),
-      size_t max_get_batch_size = 10'000, size_t max_set_batch_size = 10'000,
+      size_t allocation_rate = 256 * 1024 * 1024, size_t max_get_batch_size = 10'000,
+      size_t max_set_batch_size = 10'000,
       // Overflow handling related.
       bool refresh_time_after_fetch = false,
       size_t overflow_margin = std::numeric_limits<size_t>::max(),

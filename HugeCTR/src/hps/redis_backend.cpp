@@ -53,7 +53,8 @@ RedisClusterBackend<TKey>::RedisClusterBackend(
     const size_t num_partitions, const size_t max_get_batch_size, const size_t max_set_batch_size,
     const bool refresh_time_after_fetch, const size_t overflow_margin,
     const DatabaseOverflowPolicy_t overflow_policy, const double overflow_resolution_target)
-    : TBase(refresh_time_after_fetch, overflow_margin, overflow_policy, overflow_resolution_target),
+    : TBase(overflow_margin, overflow_policy, overflow_resolution_target),
+      refresh_time_after_fetch_(refresh_time_after_fetch),
       // Can switch to std::range in C++20.
       num_partitions_(num_partitions),
       max_get_batch_size_(max_get_batch_size),

@@ -207,12 +207,11 @@ We provide various volatile database implementations. Generally speaking, two ca
 ```python
 params = hugectr.inference.VolatileDatabaseParams(
 type = "redis_cluster",
-algorithm = hugectr.DatabaseHashMapAlgorithm_t.<enum_value>,
-num_partitions = <integer_value>,
 address = "<host_name_or_ip_address:port_number>",
 user_name = "<login_user_name>",
 password = "<login_password>",
 num_partitions = <int_value>,
+allocation_rate = <integer_value>,
 max_get_batch_size = <int_value>,
 max_set_batch_size = <int_value>,
 overflow_margin = <integer_value>,
@@ -229,12 +228,11 @@ update_filters = [ "<filter 0>", "<filter 1>", ... ]
 ```text
 "volatile_db": {
   "type": "redis_cluster",
-  "algorithm": "<enum_value>",
-  "num_partitions": <integer_value>,
   "address": "<host_name_or_ip_address:port_number>",
   "user_name":  "<login_user_name>",
   "password": "<login_password>",
   "num_partitions": <integer_value>,
+  "allocation_rate": <integer_value>,
   "max_get_batch_size": <integer_value>,
   "max_set_batch_size": <integer_value>,
   "overflow_margin": <integer_value>,
@@ -250,17 +248,13 @@ update_filters = [ "<filter 0>", "<filter 1>", ... ]
 **Arguments:**
 * `type`: use to specify which volatile database implementation to use. The `<enum_value>` is either:
     * `disabled`: Do not use this kind of database.
-    * `hash_map`: Hash-map based CPU memory database implementation.
-    * `parallel_hash_map`: Hash-map based CPU memory database implementation with multi threading support **(default)**.
+    * `hash_map` or `parallel_hash_map`: Hash-map based CPU memory database implementation with multi threading support **(default)**.
     * `redis_cluster`: Connect to an existing Redis cluster deployment (Distributed CPU memory database implementation).
 
 **The followings are Hashmap/Parallel Hashmap related parameters:**
-* `algorithm`: use to specify the hashmap algorithm. Only for `hash_map` and `parallel_hash_map`. The `<enum_value>` is either:
-    * `stl`: Use C++ standard template library-based hash-maps. This is a fallback implementation, that is generally less memory efficient and slower than `phm`. Use this, if you experience stability issues or problems with `phm`.
-    * `phm`: Use use an [performance optimized hash-map implementation](https://greg7mdp.github.io/parallel-hashmap) **(default)**.
+* `num_partitions`: integer. Only for `hash_map` and `parallel_hash_map`. Use to control the degree of parallelism. Parallel hash-map implementations split your embedding tables into roughly evenly sized partitions and parallelizes look-up and insert operations accordingly. The **default value** is the equivalent to `min(number_of_cpu_cores, 16)` of the system that you used to build the HugeCTR binaries.
 
-* `num_partitions`: integer. Only for `hash_map` and `parallel_hash_map`. Use to control the degree of parallelism. Parallel hash-map implementations split your embedding tables into roughly evenly sized partitions and parallelizes look-up and insert operations accordingly.
-The **default value** is the equivalent to `min(number_of_cpu_cores, 16)` of the system that you used to build the HugeCTR binaries.
+* `allocation_rate`: integer. Only for `hash_map` and `parallel_hash_map`. Memory is allocated in chunks. This number denotes the maximum amount of bytes that will be allocated per allocation request. By **default** memory is allocated in chunks of 268,435,456 byte (=256 MiB).
 
 **The followings are Redis related parameters:**
 * `address`: string, only for `redis_cluster`, the address of one of servers of the Redis cluster. format `"host_name[:port_number]"`, **default**: `"127.0.0.1:7000"`

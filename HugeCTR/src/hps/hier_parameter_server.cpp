@@ -90,57 +90,11 @@ HierParameterServer<TypeHashKey>::HierParameterServer(
         break;  // No volatile database.
 
       case DatabaseType_t::HashMap:
-        HCTR_LOG_S(INFO, WORLD) << "Creating HashMap CPU database backend..." << std::endl;
-        if (conf.num_partitions > 1) {
-          HCTR_LOG(WARNING, WORLD,
-                   "Setting 'num_partitions' = %d is not supported by the non-parallelized "
-                   "HashTable backend and will be ignored.\n",
-                   conf.num_partitions);
-        }
-        switch (conf.algorithm) {
-          case DatabaseHashMapAlgorithm_t::STL:
-            volatile_db_ = std::make_unique<HCTR_DB_HASH_MAP_STL_(HashMapBackend, TypeHashKey)>(
-                conf.refresh_time_after_fetch, conf.overflow_margin, conf.overflow_policy,
-                conf.overflow_resolution_target);
-            break;
-          case DatabaseHashMapAlgorithm_t::PHM:
-            volatile_db_ = std::make_unique<HCTR_DB_HASH_MAP_PHM_(HashMapBackend, TypeHashKey)>(
-                conf.refresh_time_after_fetch, conf.overflow_margin, conf.overflow_policy,
-                conf.overflow_resolution_target);
-            break;
-          default:
-            HCTR_DIE("Selected algorithm (volatile_db.algorithm = %d) is not supported!",
-                     conf.type);
-            break;
-        }
-        break;
-
       case DatabaseType_t::ParallelHashMap:
-        HCTR_LOG_S(INFO, WORLD) << "Creating ParallelHashMap CPU database backend..." << std::endl;
-        if (conf.num_partitions < 2) {
-          HCTR_LOG(WARNING, WORLD,
-                   "ParallelHashMap configured with 'num_partitions' = %d, which will likely "
-                   "result in poor performance. Consider using 'HashMap' backend.\n",
-                   conf.num_partitions);
-        }
-        switch (conf.algorithm) {
-          case DatabaseHashMapAlgorithm_t::STL:
-            volatile_db_ =
-                std::make_unique<HCTR_DB_HASH_MAP_STL_(ParallelHashMapBackend, TypeHashKey)>(
-                    conf.num_partitions, conf.refresh_time_after_fetch, conf.overflow_margin,
-                    conf.overflow_policy, conf.overflow_resolution_target);
-            break;
-          case DatabaseHashMapAlgorithm_t::PHM:
-            volatile_db_ =
-                std::make_unique<HCTR_DB_HASH_MAP_PHM_(ParallelHashMapBackend, TypeHashKey)>(
-                    conf.num_partitions, conf.refresh_time_after_fetch, conf.overflow_margin,
-                    conf.overflow_policy, conf.overflow_resolution_target);
-            break;
-          default:
-            HCTR_DIE("Selected algorithm (volatile_db.algorithm = %d) is not supported!",
-                     conf.type);
-            break;
-        }
+        HCTR_LOG_S(INFO, WORLD) << "Creating HashMap CPU database backend..." << std::endl;
+        volatile_db_ = std::make_unique<HashMapBackend<TypeHashKey>>(
+            conf.num_partitions, conf.allocation_rate, conf.overflow_margin, conf.overflow_policy,
+            conf.overflow_resolution_target);
         break;
 
       case DatabaseType_t::RedisCluster:
