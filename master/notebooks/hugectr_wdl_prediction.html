@@ -60,12 +60,14 @@
 <li class="toctree-l2"><a class="reference internal" href="multi_gpu_offline_inference.html">Multi-GPU Offline Inference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hps_demo.html">Hierarchical Parameter Server Demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="training_with_hdfs.html">HugeCTR training with HDFS example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embedding_training_cache_example.html">Embedding Training Cache Example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="multi-modal-data/index.html">Multi-modal Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../additional_resources.html">Additional Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../release_notes.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hugectr_contributor_guide.html">Contributing to HugeCTR</a></li>
 </ul>
 
         </div>
@@ -193,14 +195,14 @@ wget is already the newest version (1.20.3-1ubuntu1).
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>wget -P <span class="nv">$train_path</span> http://azuremlsampleexperiments.blob.core.windows.net/criteo/day_0.gz
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>wget -P <span class="nv">$train_path</span> https://storage.googleapis.com/criteo-cail-datasets/day_0.gz
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>--2021-07-05 03:27:50--  http://azuremlsampleexperiments.blob.core.windows.net/criteo/day_0.gz
-Resolving azuremlsampleexperiments.blob.core.windows.net (azuremlsampleexperiments.blob.core.windows.net)... 20.60.140.36
-Connecting to azuremlsampleexperiments.blob.core.windows.net (azuremlsampleexperiments.blob.core.windows.net)|20.60.140.36|:80... connected.
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>--2022-06-16 03:27:50--  https://storage.googleapis.com/criteo-cail-datasets/day_0.gz
+Resolving storage.googleapis.com (storage.googleapis.com)... 142.250.191.80, 172.217.5.112, 142.250.189.208, ...
+Connecting to storage.googleapis.com (storage.googleapis.com)|142.250.191.80|:443... connected.
 HTTP request sent, awaiting response... 200 OK
 Length: 16309554343 (15G) [application/octet-stream]
 Saving to: ‘wdl_train/train/day_0.gz’
@@ -1506,6 +1508,8 @@ WDL multi-embedding table inference result is [0.019959857687354088, 0.025274723
     <dl>
       <dt>Tags</dt>
       <dd><a href="../../v3.5/index.html">v3.5</a></dd>
+      <dd><a href="../../v3.6/index.html">v3.6</a></dd>
+      <dd><a href="../../v3.7/index.html">v3.7</a></dd>
     </dl>
     <dl>
       <dt>Branches</dt>

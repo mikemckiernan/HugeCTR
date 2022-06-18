@@ -60,12 +60,14 @@
 <li class="toctree-l2"><a class="reference internal" href="multi_gpu_offline_inference.html">Multi-GPU Offline Inference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hps_demo.html">Hierarchical Parameter Server Demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="training_with_hdfs.html">HugeCTR training with HDFS example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embedding_training_cache_example.html">Embedding Training Cache Example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="multi-modal-data/index.html">Multi-modal Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../additional_resources.html">Additional Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../release_notes.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hugectr_contributor_guide.html">Contributing to HugeCTR</a></li>
 </ul>
 
         </div>
@@ -107,7 +109,7 @@ For more details of the usage of this converter, refer to the HugeCTR to ONNX Co
 </div>
 <div class="section" id="access-the-hugectr-to-onnx-converter">
 <h2>Access the HugeCTR to ONNX Converter<a class="headerlink" href="#access-the-hugectr-to-onnx-converter" title="Permalink to this headline"></a></h2>
-<p>Make sure that you start the notebook inside a running 22.05 or later NGC docker container: <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-training:22.05</span></code>.
+<p>Make sure that you start the notebook inside a running 22.06 or later NGC docker container: <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-hugectr:22.06</span></code>.
 The module of the ONNX converter is installed to the path <code class="docutils literal notranslate"><span class="pre">/usr/local/lib/python3.8/dist-packages</span></code>.
 As for HugeCTR Python interface, a dynamic link to the <code class="docutils literal notranslate"><span class="pre">hugectr.so</span></code> library is installed to the path <code class="docutils literal notranslate"><span class="pre">/usr/local/hugectr/lib/</span></code>.
 You can access the ONNX converter as well as HugeCTR Python interface anywhere within the container.</p>
@@ -135,7 +137,7 @@ You can access the ONNX converter as well as HugeCTR Python interface anywhere w
 <ol>
 <li><p>Download the Criteo dataset using the following command:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">cd</span> <span class="si">${</span><span class="nv">project_root</span><span class="si">}</span>/tools
-$ wget http://azuremlsampleexperiments.blob.core.windows.net/criteo/day_1.gz
+$ wget https://storage.googleapis.com/criteo-cail-datasets/day_1.gz
 </pre></div>
 </div>
 <p>In preprocessing, we will further reduce the amounts of data to speedup the preprocessing, fill missing values, remove the feature values whose occurrences are very rare, etc. Here we choose pandas preprocessing method to make the dataset ready for HugeCTR training.</p>
@@ -566,6 +568,8 @@ FUNCTIONS
     <dl>
       <dt>Tags</dt>
       <dd><a href="../../v3.5/index.html">v3.5</a></dd>
+      <dd><a href="../../v3.6/index.html">v3.6</a></dd>
+      <dd><a href="../../v3.7/index.html">v3.7</a></dd>
     </dl>
     <dl>
       <dt>Branches</dt>
