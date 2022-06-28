@@ -24,8 +24,8 @@
                     4
                 ]
             ],
-            "sharding_id": 0,
-            "num_sharding": 2,
+            "shard_id": 0,
+            "shards_count": 2,
             "table_placement_strategy": "mp"
         }
     ],
@@ -54,8 +54,8 @@
                     4
                 ]
             ],
-            "sharding_id": 1,
-            "num_sharding": 2,
+            "shard_id": 1,
+            "shards_count": 2,
             "table_placement_strategy": "mp"
         }
     ]
