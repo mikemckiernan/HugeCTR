@@ -97,13 +97,13 @@
              
   <div class="tex2jax_ignore mathjax_ignore section" id="introduction-to-the-hugectr-embedding-collection">
 <h1>Introduction to the HugeCTR Embedding Collection<a class="headerlink" href="#introduction-to-the-hugectr-embedding-collection" title="Permalink to this headline"></a></h1>
-<div class="section" id="about-the-hugectr-embedding-collection">
-<h2>About the HugeCTR embedding collection<a class="headerlink" href="#about-the-hugectr-embedding-collection" title="Permalink to this headline"></a></h2>
+<div class="section" id="about-this-notebook">
+<h2>About this Notebook<a class="headerlink" href="#about-this-notebook" title="Permalink to this headline"></a></h2>
 <p>This notebook demonstrates the following:</p>
 <ul class="simple">
-<li><p>Introduce the API of the embedding collection.</p></li>
-<li><p>Introduce the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.</p></li>
-<li><p>Show how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
+<li><p>Introduces the API of the embedding collection.</p></li>
+<li><p>Introduces the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.</p></li>
+<li><p>Shows how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
 The notebook shows two different ETPS as reference.</p></li>
 </ul>
 </div>
@@ -117,8 +117,8 @@ The notebook shows two different ETPS as reference.</p></li>
 </ul>
 <p>For the concepts and API reference information about the classes and file, see the <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/master/hugectr_layer_book.html#overview-of-using-the-hugectr-embedding-collection">Overview of Using the HugeCTR Embedding Collection</a> in the HugeCTR Layer Classes and Methods information.</p>
 </div>
-<div class="section" id="use-an-embedding-colleciton-with-a-dlrm-model">
-<h2>Use an Embedding Colleciton with a DLRM Model<a class="headerlink" href="#use-an-embedding-colleciton-with-a-dlrm-model" title="Permalink to this headline"></a></h2>
+<div class="section" id="use-an-embedding-collection-with-a-dlrm-model">
+<h2>Use an Embedding Collection with a DLRM Model<a class="headerlink" href="#use-an-embedding-collection-with-a-dlrm-model" title="Permalink to this headline"></a></h2>
 <div class="section" id="prepare-the-data">
 <h3>Prepare the Data<a class="headerlink" href="#prepare-the-data" title="Permalink to this headline"></a></h3>
 <p>You can follow the instruction under <span class="xref myst">samples/deepfm/README.md#Preprocess the Dataset Through NVTabular</span> to prepare data.</p>
@@ -185,129 +185,237 @@ The notebook shows two different ETPS as reference.</p></li>
 </div>
 </div>
 </div>
-<p>We build our train script through embedding collection API. And we will use command argument to pass plan file and test different ETPS.</p>
+<p>The training script, <code class="docutils literal notranslate"><span class="pre">dlrm_train.py</span></code>, uses the the embedding collection API.
+The script accepts one command-line argument that specifies the plan file so we can run the script several times and evaluate different ETPS:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%writefile</span> dlrm_train.py
-<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">hugectr</span>
 
 <span class="n">plan_file</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="n">table_size_array</span> <span class="o">=</span> <span class="p">[</span><span class="mi">203931</span><span class="p">,</span> <span class="mi">18598</span><span class="p">,</span> <span class="mi">14092</span><span class="p">,</span> <span class="mi">7012</span><span class="p">,</span> <span class="mi">18977</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6385</span><span class="p">,</span> <span class="mi">1245</span><span class="p">,</span> <span class="mi">49</span><span class="p">,</span> <span class="mi">186213</span><span class="p">,</span> <span class="mi">71328</span><span class="p">,</span> <span class="mi">67288</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">2168</span><span class="p">,</span> <span class="mi">7338</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">932</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">204515</span><span class="p">,</span> <span class="mi">141526</span><span class="p">,</span> <span class="mi">199433</span><span class="p">,</span> <span class="mi">60919</span><span class="p">,</span> <span class="mi">9137</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">34</span><span class="p">]</span>
+<span class="n">slot_size_array</span> <span class="o">=</span> <span class="p">[</span><span class="mi">203931</span><span class="p">,</span> <span class="mi">18598</span><span class="p">,</span> <span class="mi">14092</span><span class="p">,</span> <span class="mi">7012</span><span class="p">,</span> <span class="mi">18977</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6385</span><span class="p">,</span> <span class="mi">1245</span><span class="p">,</span> <span class="mi">49</span><span class="p">,</span>
+                   <span class="mi">186213</span><span class="p">,</span> <span class="mi">71328</span><span class="p">,</span> <span class="mi">67288</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">2168</span><span class="p">,</span> <span class="mi">7338</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">932</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span>
+                   <span class="mi">204515</span><span class="p">,</span> <span class="mi">141526</span><span class="p">,</span> <span class="mi">199433</span><span class="p">,</span> <span class="mi">60919</span><span class="p">,</span> <span class="mi">9137</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">34</span><span class="p">]</span>
 
-<span class="n">solver</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">CreateSolver</span><span class="p">(</span><span class="n">max_eval_batches</span> <span class="o">=</span> <span class="mi">70</span><span class="p">,</span>
-                              <span class="n">batchsize_eval</span> <span class="o">=</span> <span class="mi">65536</span><span class="p">,</span>
-                              <span class="n">batchsize</span> <span class="o">=</span> <span class="mi">65536</span><span class="p">,</span>
-                              <span class="n">lr</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-                              <span class="n">warmup_steps</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
-                              <span class="n">vvgpu</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">]],</span>
-                              <span class="n">repeat_dataset</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-                              <span class="n">i64_input_key</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-                              <span class="n">metrics_spec</span> <span class="o">=</span> <span class="p">{</span><span class="n">hugectr</span><span class="o">.</span><span class="n">MetricsType</span><span class="o">.</span><span class="n">AverageLoss</span><span class="p">:</span><span class="mf">0.0</span><span class="p">},</span>
-                              <span class="n">use_embedding_collection</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
-<span class="n">reader</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderParams</span><span class="p">(</span><span class="n">data_reader_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderType_t</span><span class="o">.</span><span class="n">Parquet</span><span class="p">,</span>
-                                  <span class="n">source</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;./deepfm_data_nvt/train/_file_list.txt&quot;</span><span class="p">],</span>
-                                  <span class="n">eval_source</span> <span class="o">=</span> <span class="s2">&quot;./deepfm_data_nvt/val/_file_list.txt&quot;</span><span class="p">,</span>
-                                  <span class="n">check_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Check_t</span><span class="o">.</span><span class="n">Non</span><span class="p">,</span>
-                                  <span class="n">slot_size_array</span> <span class="o">=</span> <span class="n">table_size_array</span><span class="p">)</span>
-<span class="n">optimizer</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">CreateOptimizer</span><span class="p">(</span><span class="n">optimizer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Optimizer_t</span><span class="o">.</span><span class="n">SGD</span><span class="p">,</span>
-                                    <span class="n">update_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Update_t</span><span class="o">.</span><span class="n">Local</span><span class="p">,</span>
-                                    <span class="n">atomic_update</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">CreateSolver</span><span class="p">(</span>
+    <span class="n">max_eval_batches</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span>
+    <span class="n">batchsize_eval</span><span class="o">=</span><span class="mi">65536</span><span class="p">,</span>
+    <span class="n">batchsize</span><span class="o">=</span><span class="mi">65536</span><span class="p">,</span>
+    <span class="n">lr</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">warmup_steps</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+    <span class="n">vvgpu</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]],</span>
+    <span class="n">repeat_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">i64_input_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">metrics_spec</span><span class="o">=</span><span class="p">{</span><span class="n">hugectr</span><span class="o">.</span><span class="n">MetricsType</span><span class="o">.</span><span class="n">AverageLoss</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+    <span class="n">use_embedding_collection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">reader</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderParams</span><span class="p">(</span>
+    <span class="n">data_reader_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderType_t</span><span class="o">.</span><span class="n">Parquet</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;./deepfm_data_nvt/train/_file_list.txt&quot;</span><span class="p">],</span>
+    <span class="n">eval_source</span><span class="o">=</span><span class="s2">&quot;./deepfm_data_nvt/val/_file_list.txt&quot;</span><span class="p">,</span>
+    <span class="n">check_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Check_t</span><span class="o">.</span><span class="n">Non</span><span class="p">,</span>
+    <span class="n">slot_size_array</span><span class="o">=</span><span class="n">slot_size_array</span>
+<span class="p">)</span>
+
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">CreateOptimizer</span><span class="p">(</span>
+    <span class="n">optimizer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Optimizer_t</span><span class="o">.</span><span class="n">SGD</span><span class="p">,</span>
+    <span class="n">update_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Update_t</span><span class="o">.</span><span class="n">Local</span><span class="p">,</span>
+    <span class="n">atomic_update</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
 <span class="n">model</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">reader</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span>
 
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Input</span><span class="p">(</span><span class="n">label_dim</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">label_name</span> <span class="o">=</span> <span class="s2">&quot;label&quot;</span><span class="p">,</span>
-                        <span class="n">dense_dim</span> <span class="o">=</span> <span class="mi">13</span><span class="p">,</span> <span class="n">dense_name</span> <span class="o">=</span> <span class="s2">&quot;dense&quot;</span><span class="p">,</span>
-                        <span class="n">data_reader_sparse_param_array</span> <span class="o">=</span> 
-                        <span class="p">[</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderSparseParam</span><span class="p">(</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">))]))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">Input</span><span class="p">(</span>
+        <span class="n">label_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">label_name</span><span class="o">=</span><span class="s2">&quot;label&quot;</span><span class="p">,</span>
+        <span class="n">dense_dim</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span>
+        <span class="n">dense_name</span><span class="o">=</span><span class="s2">&quot;dense&quot;</span><span class="p">,</span>
+        <span class="n">data_reader_sparse_param_array</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">hugectr</span><span class="o">.</span><span class="n">DataReaderSparseParam</span><span class="p">(</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">))</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+<span class="p">)</span>
 
-<span class="c1"># create embedding table</span>
+<span class="c1"># Create the embedding table.</span>
 <span class="n">embedding_table_list</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">)):</span>
-    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span><span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> 
-                                                             <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
-                                                             <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> 
-                                                             <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> 
-                                                             <span class="n">max_key</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
-<span class="c1"># create embedding planner and embedding collection</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">)):</span>
+    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span>
+            <span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+            <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+            <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">max_key</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+<span class="c1"># Create the embedding planner and embedding collection.</span>
 <span class="n">embedding_planner</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingPlanner</span><span class="p">()</span>
 <span class="n">emb_vec_list</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">)):</span>
-    <span class="n">embedding_planner</span><span class="o">.</span><span class="n">embedding_lookup</span><span class="p">(</span><span class="n">table_config</span><span class="o">=</span><span class="n">embedding_table_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
-                                       <span class="n">bottom_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> 
-                                       <span class="n">top_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;emb_vec</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> 
-                                       <span class="n">combiner</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">)):</span>
+    <span class="n">embedding_planner</span><span class="o">.</span><span class="n">embedding_lookup</span><span class="p">(</span>
+        <span class="n">table_config</span><span class="o">=</span><span class="n">embedding_table_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+        <span class="n">bottom_name</span><span class="o">=</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+        <span class="n">top_name</span><span class="o">=</span><span class="s2">&quot;emb_vec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+        <span class="n">combiner</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span>
+    <span class="p">)</span>
+
 <span class="n">embedding_collection</span> <span class="o">=</span> <span class="n">embedding_planner</span><span class="o">.</span><span class="n">create_embedding_collection</span><span class="p">(</span><span class="n">plan_file</span><span class="p">)</span>
 
 <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">embedding_collection</span><span class="p">)</span>
 <span class="c1"># need concat</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">Concat</span><span class="p">,</span>
-                              <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;emb_vec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">))],</span>
-                              <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sparse_embedding1&quot;</span><span class="p">],</span>
-                              <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">Concat</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;emb_vec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">))],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sparse_embedding1&quot;</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+<span class="p">)</span>
 
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dense&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc1&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">512</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc1&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu1&quot;</span><span class="p">]))</span>                           
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu1&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc2&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">256</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc2&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu2&quot;</span><span class="p">]))</span>                            
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu2&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc3&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">128</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc3&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu3&quot;</span><span class="p">]))</span>                              
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">Interaction</span><span class="p">,</span> <span class="c1"># interaction only support 3-D input</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu3&quot;</span><span class="p">,</span><span class="s2">&quot;sparse_embedding1&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;interaction1&quot;</span><span class="p">]))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;interaction1&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc4&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">1024</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc4&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu4&quot;</span><span class="p">]))</span>                              
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu4&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc5&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">1024</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc5&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu5&quot;</span><span class="p">]))</span>                              
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu5&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc6&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">512</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc6&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu6&quot;</span><span class="p">]))</span>                               
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu6&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc7&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">256</span><span class="p">))</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc7&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu7&quot;</span><span class="p">]))</span>                                                                              
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;relu7&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc8&quot;</span><span class="p">],</span>
-                            <span class="n">num_output</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>                                                                                           
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span><span class="n">layer_type</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">BinaryCrossEntropyLoss</span><span class="p">,</span>
-                            <span class="n">bottom_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;fc8&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">],</span>
-                            <span class="n">top_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">]))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;dense&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc1&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">512</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc1&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu1&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu1&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc2&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">256</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc2&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu2&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu2&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc3&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">128</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc3&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu3&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">Interaction</span><span class="p">,</span>  <span class="c1"># interaction only support 3-D input</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu3&quot;</span><span class="p">,</span> <span class="s2">&quot;sparse_embedding1&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;interaction1&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;interaction1&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc4&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc4&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu4&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu4&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc5&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc5&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu5&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu5&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc6&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc6&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu6&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu6&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc7&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span> <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc7&quot;</span><span class="p">],</span> <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu7&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">InnerProduct</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;relu7&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc8&quot;</span><span class="p">],</span>
+        <span class="n">num_output</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">hugectr</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">layer_type</span><span class="o">=</span><span class="n">hugectr</span><span class="o">.</span><span class="n">Layer_t</span><span class="o">.</span><span class="n">BinaryCrossEntropyLoss</span><span class="p">,</span>
+        <span class="n">bottom_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fc8&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">],</span>
+        <span class="n">top_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
 <span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
 <span class="n">model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">max_iter</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">eval_interval</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="mi">10000000</span><span class="p">,</span> <span class="n">snapshot_prefix</span> <span class="o">=</span> <span class="s2">&quot;dlrm&quot;</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">display</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">eval_interval</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">snapshot</span><span class="o">=</span><span class="mi">10000000</span><span class="p">,</span>
+    <span class="n">snapshot_prefix</span><span class="o">=</span><span class="s2">&quot;dlrm&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -318,59 +426,63 @@ The notebook shows two different ETPS as reference.</p></li>
 </div>
 </div>
 </div>
-<div class="section" id="etps-data-parallel-localized">
-<h3>ETPS: Data parallel + Localized<a class="headerlink" href="#etps-data-parallel-localized" title="Permalink to this headline"></a></h3>
-<p>We want to put small size table as data parallel while for other tables, each table will be on single GPU and different GPU will hold different table(The same way we we use in <code class="docutils literal notranslate"><span class="pre">hugectr.LocalizedHashEmbedding</span></code>).</p>
+<div class="section" id="embedding-table-placement-strategy-data-parallel-and-model-parallel">
+<h3>Embedding Table Placement Strategy: Data Parallel and Model Parallel<a class="headerlink" href="#embedding-table-placement-strategy-data-parallel-and-model-parallel" title="Permalink to this headline"></a></h3>
+<p>The following <code class="docutils literal notranslate"><span class="pre">generate_plan()</span></code> function shows how to configure small tables as data parallel and use model parallel for larger tables.
+Each table is on single GPU and different GPU will hold different table—the same way we work with data in <code class="docutils literal notranslate"><span class="pre">hugectr.LocalizedHashEmbedding</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">print_plan</span><span class="p">(</span><span class="n">plan</span><span class="p">):</span>
-    <span class="k">for</span> <span class="nb">id</span><span class="p">,</span><span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;single_gpu_plan index = </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+    <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;single_gpu_plan index = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">plan_attr</span> <span class="ow">in</span> <span class="n">single_gpu_plan</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">plan_attr</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">key</span> <span class="o">!=</span> <span class="s1">&#39;global_embedding_list&#39;</span><span class="p">):</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;global_embedding_list&quot;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">prefix_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-                    <span class="n">left_space_fill</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="n">prefix_len</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
-                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">])):</span>
-                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">left_space_fill</span><span class="p">,</span><span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">index</span><span class="p">]))</span>
+                    <span class="n">left_space_fill</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="n">prefix_len</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">])):</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">left_space_fill</span><span class="p">,</span> <span class="n">plan_attr</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">index</span><span class="p">]))</span>
 
-<span class="k">def</span> <span class="nf">generate_plan</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">,</span> <span class="n">num_gpus</span><span class="p">,</span> <span class="n">plan_file</span><span class="p">):</span>
-    
-    <span class="n">mp_table</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">))</span> <span class="k">if</span> <span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">6000</span><span class="p">]</span>
-    <span class="n">dp_table</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">))</span> <span class="k">if</span> <span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">6000</span><span class="p">]</span>
 
-    <span class="c1"># place table across all gpus</span>
+<span class="k">def</span> <span class="nf">generate_plan</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">,</span> <span class="n">gpu_count</span><span class="p">,</span> <span class="n">plan_file</span><span class="p">):</span>
+
+    <span class="n">mp_table</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">))</span> <span class="k">if</span> <span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">6000</span><span class="p">]</span>
+    <span class="n">dp_table</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">))</span> <span class="k">if</span> <span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">6000</span><span class="p">]</span>
+
+    <span class="c1"># Place the table across all GPUs.</span>
     <span class="n">plan</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">gpu_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">gpu_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">gpu_count</span><span class="p">):</span>
         <span class="n">single_gpu_plan</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">mp_plan</span> <span class="o">=</span> <span class="p">{</span>
-          <span class="s1">&#39;local_embedding_list&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">table_id</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">table_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mp_table</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">num_gpus</span> <span class="o">==</span> <span class="n">gpu_id</span><span class="p">],</span>
-          <span class="s1">&#39;table_placement_strategy&#39;</span><span class="p">:</span> <span class="s1">&#39;mp&#39;</span>
+            <span class="s2">&quot;local_embedding_list&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">table_id</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">table_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mp_table</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">gpu_count</span> <span class="o">==</span> <span class="n">gpu_id</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;table_placement_strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;mp&quot;</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="n">dp_plan</span> <span class="o">=</span> <span class="p">{</span>
-          <span class="s1">&#39;local_embedding_list&#39;</span><span class="p">:</span> <span class="n">dp_table</span><span class="p">,</span>
-          <span class="s1">&#39;table_placement_strategy&#39;</span><span class="p">:</span> <span class="s1">&#39;dp&#39;</span>
-        <span class="p">}</span>
+        <span class="n">dp_plan</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;local_embedding_list&quot;</span><span class="p">:</span> <span class="n">dp_table</span><span class="p">,</span> <span class="s2">&quot;table_placement_strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;dp&quot;</span><span class="p">}</span>
         <span class="n">single_gpu_plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mp_plan</span><span class="p">)</span>
         <span class="n">single_gpu_plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp_plan</span><span class="p">)</span>
         <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">)</span>
 
-    <span class="c1"># generate global view of table placement</span>
+    <span class="c1"># Generate the global view of table placement.</span>
     <span class="n">mp_global_embedding_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">dp_global_embedding_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-        <span class="n">mp_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;local_embedding_list&#39;</span><span class="p">])</span>
-        <span class="n">dp_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;local_embedding_list&#39;</span><span class="p">])</span>
+        <span class="n">mp_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;local_embedding_list&quot;</span><span class="p">])</span>
+        <span class="n">dp_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;local_embedding_list&quot;</span><span class="p">])</span>
     <span class="k">for</span> <span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;global_embedding_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mp_global_embedding_list</span>
-        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;global_embedding_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp_global_embedding_list</span>
+        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;global_embedding_list&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mp_global_embedding_list</span>
+        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;global_embedding_list&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp_global_embedding_list</span>
     <span class="n">print_plan</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
-    <span class="c1"># dump plan file</span>
+
+    <span class="c1"># Write the plan file to disk.</span>
     <span class="kn">import</span> <span class="nn">json</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">plan_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">plan_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -378,8 +490,40 @@ The notebook shows two different ETPS as reference.</p></li>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">table_size_array</span> <span class="o">=</span> <span class="p">[</span><span class="mi">203931</span><span class="p">,</span> <span class="mi">18598</span><span class="p">,</span> <span class="mi">14092</span><span class="p">,</span> <span class="mi">7012</span><span class="p">,</span> <span class="mi">18977</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6385</span><span class="p">,</span> <span class="mi">1245</span><span class="p">,</span> <span class="mi">49</span><span class="p">,</span> <span class="mi">186213</span><span class="p">,</span> <span class="mi">71328</span><span class="p">,</span> <span class="mi">67288</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">2168</span><span class="p">,</span> <span class="mi">7338</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">932</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">204515</span><span class="p">,</span> <span class="mi">141526</span><span class="p">,</span> <span class="mi">199433</span><span class="p">,</span> <span class="mi">60919</span><span class="p">,</span> <span class="mi">9137</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">34</span><span class="p">]</span>
-<span class="n">generate_plan</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;./dp_and_localized_plan.json&quot;</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">slot_size_array</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="mi">203931</span><span class="p">,</span>
+    <span class="mi">18598</span><span class="p">,</span>
+    <span class="mi">14092</span><span class="p">,</span>
+    <span class="mi">7012</span><span class="p">,</span>
+    <span class="mi">18977</span><span class="p">,</span>
+    <span class="mi">4</span><span class="p">,</span>
+    <span class="mi">6385</span><span class="p">,</span>
+    <span class="mi">1245</span><span class="p">,</span>
+    <span class="mi">49</span><span class="p">,</span>
+    <span class="mi">186213</span><span class="p">,</span>
+    <span class="mi">71328</span><span class="p">,</span>
+    <span class="mi">67288</span><span class="p">,</span>
+    <span class="mi">11</span><span class="p">,</span>
+    <span class="mi">2168</span><span class="p">,</span>
+    <span class="mi">7338</span><span class="p">,</span>
+    <span class="mi">61</span><span class="p">,</span>
+    <span class="mi">4</span><span class="p">,</span>
+    <span class="mi">932</span><span class="p">,</span>
+    <span class="mi">15</span><span class="p">,</span>
+    <span class="mi">204515</span><span class="p">,</span>
+    <span class="mi">141526</span><span class="p">,</span>
+    <span class="mi">199433</span><span class="p">,</span>
+    <span class="mi">60919</span><span class="p">,</span>
+    <span class="mi">9137</span><span class="p">,</span>
+    <span class="mi">71</span><span class="p">,</span>
+    <span class="mi">34</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">generate_plan</span><span class="p">(</span>
+    <span class="n">slot_size_array</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">,</span>
+    <span class="n">gpu_count</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">plan_file</span><span class="o">=</span><span class="s2">&quot;./dp_and_localized_plan.json&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -832,33 +976,39 @@ BinaryCrossEntropyLoss                  fc8                           loss
 </div>
 </div>
 </div>
-<div class="section" id="etps-distributed">
-<h3>ETPS: Distributed<a class="headerlink" href="#etps-distributed" title="Permalink to this headline"></a></h3>
-<p>We want to distributed all tables across all gpus(the same way we use in  <code class="docutils literal notranslate"><span class="pre">hugectr.DistributedHashEmbedding</span></code>).</p>
+<div class="section" id="embedding-table-placement-strategy-distributed">
+<h3>Embedding Table Placement Strategy: Distributed<a class="headerlink" href="#embedding-table-placement-strategy-distributed" title="Permalink to this headline"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">generate_distributed_plan()</span></code> function shows how to distribute all tables across all GPUs
+This strategy is similar to <code class="docutils literal notranslate"><span class="pre">hugectr.DistributedHashEmbedding</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generate_distributed_plan</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">,</span> <span class="n">num_gpus</span><span class="p">,</span> <span class="n">plan_file</span><span class="p">):</span>
-    <span class="c1"># place table across all gpus</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generate_distributed_plan</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">,</span> <span class="n">gpu_count</span><span class="p">,</span> <span class="n">plan_file</span><span class="p">):</span>
+    <span class="c1"># Place the table across all GPUs.</span>
     <span class="n">plan</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">gpu_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">gpu_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">gpu_count</span><span class="p">):</span>
         <span class="n">distributed_plan</span> <span class="o">=</span> <span class="p">{</span>
-          <span class="s1">&#39;local_embedding_list&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">table_id</span> <span class="k">for</span> <span class="n">table_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">))],</span>
-          <span class="s1">&#39;table_placement_strategy&#39;</span><span class="p">:</span> <span class="s1">&#39;mp&#39;</span><span class="p">,</span>
-          <span class="s1">&#39;shard_id&#39;</span><span class="p">:</span> <span class="n">gpu_id</span><span class="p">,</span>
-          <span class="s1">&#39;shards_count&#39;</span><span class="p">:</span> <span class="n">num_gpus</span>
+            <span class="s2">&quot;local_embedding_list&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">table_id</span> <span class="k">for</span> <span class="n">table_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">))</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;table_placement_strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;mp&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;shard_id&quot;</span><span class="p">:</span> <span class="n">gpu_id</span><span class="p">,</span>
+            <span class="s2">&quot;shards_count&quot;</span><span class="p">:</span> <span class="n">gpu_count</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">distributed_plan</span><span class="p">])</span>
 
-    <span class="c1"># generate global view of table placement</span>
+    <span class="c1"># Generate the global view of table placement.</span>
     <span class="n">distributed_global_embedding_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-        <span class="n">distributed_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;local_embedding_list&#39;</span><span class="p">])</span>
+        <span class="n">distributed_global_embedding_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;local_embedding_list&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
     <span class="k">for</span> <span class="n">single_gpu_plan</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;global_embedding_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">distributed_global_embedding_list</span>
+        <span class="n">single_gpu_plan</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;global_embedding_list&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">distributed_global_embedding_list</span>
     <span class="n">print_plan</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
-    <span class="c1"># dump plan file</span>
+
+    <span class="c1"># Write the plan file to disk.</span>
     <span class="kn">import</span> <span class="nn">json</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">plan_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">plan_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -866,10 +1016,40 @@ BinaryCrossEntropyLoss                  fc8                           loss
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">table_size_array</span> <span class="o">=</span> <span class="p">[</span><span class="mi">203931</span><span class="p">,</span> <span class="mi">18598</span><span class="p">,</span> <span class="mi">14092</span><span class="p">,</span> <span class="mi">7012</span><span class="p">,</span> <span class="mi">18977</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6385</span><span class="p">,</span> <span class="mi">1245</span><span class="p">,</span> <span class="mi">49</span><span class="p">,</span>
-                    <span class="mi">186213</span><span class="p">,</span> <span class="mi">71328</span><span class="p">,</span> <span class="mi">67288</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">2168</span><span class="p">,</span> <span class="mi">7338</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">932</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span>
-                    <span class="mi">204515</span><span class="p">,</span> <span class="mi">141526</span><span class="p">,</span> <span class="mi">199433</span><span class="p">,</span> <span class="mi">60919</span><span class="p">,</span> <span class="mi">9137</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">34</span><span class="p">]</span>
-<span class="n">generate_distributed_plan</span><span class="p">(</span><span class="n">table_size_array</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;./distributed_plan.json&quot;</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">slot_size_array</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="mi">203931</span><span class="p">,</span>
+    <span class="mi">18598</span><span class="p">,</span>
+    <span class="mi">14092</span><span class="p">,</span>
+    <span class="mi">7012</span><span class="p">,</span>
+    <span class="mi">18977</span><span class="p">,</span>
+    <span class="mi">4</span><span class="p">,</span>
+    <span class="mi">6385</span><span class="p">,</span>
+    <span class="mi">1245</span><span class="p">,</span>
+    <span class="mi">49</span><span class="p">,</span>
+    <span class="mi">186213</span><span class="p">,</span>
+    <span class="mi">71328</span><span class="p">,</span>
+    <span class="mi">67288</span><span class="p">,</span>
+    <span class="mi">11</span><span class="p">,</span>
+    <span class="mi">2168</span><span class="p">,</span>
+    <span class="mi">7338</span><span class="p">,</span>
+    <span class="mi">61</span><span class="p">,</span>
+    <span class="mi">4</span><span class="p">,</span>
+    <span class="mi">932</span><span class="p">,</span>
+    <span class="mi">15</span><span class="p">,</span>
+    <span class="mi">204515</span><span class="p">,</span>
+    <span class="mi">141526</span><span class="p">,</span>
+    <span class="mi">199433</span><span class="p">,</span>
+    <span class="mi">60919</span><span class="p">,</span>
+    <span class="mi">9137</span><span class="p">,</span>
+    <span class="mi">71</span><span class="p">,</span>
+    <span class="mi">34</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">generate_distributed_plan</span><span class="p">(</span>
+    <span class="n">slot_size_array</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">,</span>
+    <span class="n">gpu_count</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">plan_file</span><span class="o">=</span><span class="s2">&quot;./distributed_plan.json&quot;</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1258,9 +1438,12 @@ BinaryCrossEntropyLoss                  fc8                           loss
 </div>
 </div>
 </div>
-<div class="section" id="compare-performance-between-different-etps">
-<h3>Compare performance between different ETPS<a class="headerlink" href="#compare-performance-between-different-etps" title="Permalink to this headline"></a></h3>
-<p>We can see the iteration time for dataparallel + localized is 103.45s while for distributed is 190.85s, which means different ETPS can greatly affect the performance of embedding. So it’s better to put embedding table as data parallel or localized when the table can be fitted into single GPU.</p>
+<div class="section" id="performance-comparison-for-the-different-etps">
+<h3>Performance Comparison for the Different ETPS<a class="headerlink" href="#performance-comparison-for-the-different-etps" title="Permalink to this headline"></a></h3>
+<p>The iteration duration for the data parallel and model parallel strategy is <code class="docutils literal notranslate"><span class="pre">103.45s</span></code>.
+For the distributed strategy, the duration is <code class="docutils literal notranslate"><span class="pre">190.85s</span></code>.
+This comparison shows how different ETPS can greatly affect the performance of embedding.
+The results show that performance is better if you configure the embedding table as data parallel or localized when the table can fit on a single GPU.</p>
 </div>
 </div>
 </div>

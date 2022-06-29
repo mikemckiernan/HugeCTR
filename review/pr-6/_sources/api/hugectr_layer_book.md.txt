@@ -91,7 +91,7 @@ You must specify a value.
 It should be consistent with that of the sparse input.
 This parameter is used in `LocalizedSlotSparseEmbeddingHash` and `LocalizedSlotSparseEmbeddingOneHot`.
 The value you specify can help avoid wasting memory that is caused by an imbalanced vocabulary size.
-For more informtion, see [How to set workspace_size_per_gpu_in_mb and slot_size_array](../QAList.md#24-how-to-set-workspace_size_per_gpu_in_mb-and-slot_size_array).
+For more information, see [How to set workspace_size_per_gpu_in_mb and slot_size_array](../QAList.md#24-how-to-set-workspace_size_per_gpu_in_mb-and-slot_size_array).
 This argument does not have a default value.
 You must specify a value.
 
