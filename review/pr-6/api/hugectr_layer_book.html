@@ -971,11 +971,11 @@ You provide a plan JSON file and specify the table placement strategy that you w
 </div>
 <div class="section" id="sample-notebook">
 <h3>Sample Notebook<a class="headerlink" href="#sample-notebook" title="Permalink to this headline"></a></h3>
-<p>The <a class="reference internal" href="../notebooks/embedding_collection.html"><span class="doc std std-doc">Introduction to the HugeCTR Embedding Collection</span></a> sample notebook demonstrates the following:</p>
+<p>The <a class="reference internal" href="../notebooks/embedding_collection.html"><span class="doc std std-doc">HugeCTR Embedding Collection</span></a> sample notebook demonstrates the following:</p>
 <ul class="simple">
-<li><p>Introduce the API of the embedding collection.</p></li>
-<li><p>Introduce the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.</p></li>
-<li><p>Show how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
+<li><p>Introduces the API of the embedding collection.</p></li>
+<li><p>Introduces the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.</p></li>
+<li><p>Shows how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
 The notebook shows two different ETPS as reference.</p></li>
 </ul>
 </div>
@@ -1014,11 +1014,15 @@ If not specified, the embedding table uses the optimizer specified in <code clas
                    <span class="mi">204515</span><span class="p">,</span> <span class="mi">141526</span><span class="p">,</span> <span class="mi">199433</span><span class="p">,</span> <span class="mi">60919</span><span class="p">,</span> <span class="mi">9137</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">34</span><span class="p">]</span>
 <span class="n">embedding_table_list</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">):</span>
-    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span><span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-                                                             <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                                             <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-                                                             <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                                                             <span class="n">max_key</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span>
+            <span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+            <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+            <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">max_key</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1052,10 +1056,12 @@ You can use the <code class="docutils literal notranslate"><span class="pre">add
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">embedding_planner</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingPlanner</span><span class="p">()</span>
 <span class="n">emb_vec_list</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">)):</span>
-     <span class="n">embedding_planner</span><span class="o">.</span><span class="n">embedding_lookup</span><span class="p">(</span><span class="n">table_config</span><span class="o">=</span><span class="n">embedding_table_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                        <span class="n">bottom_name</span><span class="o">=</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
-                                        <span class="n">top_name</span><span class="o">=</span><span class="s2">&quot;emb_vec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
-                                        <span class="n">combiner</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
+     <span class="n">embedding_planner</span><span class="o">.</span><span class="n">embedding_lookup</span><span class="p">(</span>
+        <span class="n">table_config</span><span class="o">=</span><span class="n">embedding_table_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+        <span class="n">bottom_name</span><span class="o">=</span><span class="s2">&quot;data</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+        <span class="n">top_name</span><span class="o">=</span><span class="s2">&quot;emb_vec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+        <span class="n">combiner</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span>
+    <span class="p">)</span>
 <span class="n">embedding_collection</span> <span class="o">=</span> <span class="n">embedding_planner</span><span class="o">.</span><span class="n">create_embedding_collection</span><span class="p">(</span><span class="s2">&quot;./plan.json&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -1082,11 +1088,15 @@ This file is called a <em>plan file</em>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">slot_size_array</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">]</span>
 <span class="n">embedding_table_list</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_size_array</span><span class="p">)):</span>
-    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span><span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-                                                             <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                                             <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-                                                             <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                                                             <span class="n">max_key</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span>
+            <span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+            <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+            <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">max_key</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
 
 <span class="n">embedding_planner</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingPlanner</span><span class="p">()</span>
 <span class="n">embedding_planner</span><span class="o">.</span><span class="n">embedding_lookup</span><span class="p">(</span><span class="n">embedding_table_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;data0&quot;</span><span class="p">,</span> <span class="s2">&quot;emb_vec0&quot;</span><span class="p">,</span> <span class="s2">&quot;sum&quot;</span><span class="p">)</span> <span class="c1"># lookup 0</span>

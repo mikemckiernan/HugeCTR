@@ -5,7 +5,7 @@
    "id": "924efc61",
    "metadata": {},
    "source": [
-    "# Introduction to the HugeCTR Embedding Collection\n",
+    "# HugeCTR Embedding Collection\n",
     "\n",
     "## About this Notebook\n",
     "\n",
@@ -22,9 +22,9 @@
     "\n",
     "- `hugectr.EmbeddingTableConfig`\n",
     "- `hugectr.EmbeddingPlanner`\n",
-    "- JSON plan file for the ETPS.\n",
+    "- JSON plan file for the ETPS\n",
     "\n",
-    "For the concepts and API reference information about the classes and file, see the [Overview of Using the HugeCTR Embedding Collection](https://nvidia-merlin.github.io/HugeCTR/master/hugectr_layer_book.html#overview-of-using-the-hugectr-embedding-collection) in the HugeCTR Layer Classes and Methods information."
+    "For the concepts and API reference information about the classes and file, see the [Overview of Using the HugeCTR Embedding Collection](https://nvidia-merlin.github.io/HugeCTR/master/api/hugectr_layer_book.html#overview-of-using-the-hugectr-embedding-collection) in the HugeCTR Layer Classes and Methods information."
    ]
   },
   {
@@ -36,7 +36,7 @@
     "\n",
     "### Prepare the Data\n",
     "\n",
-    "You can follow the instruction under [samples/deepfm/README.md#Preprocess the Dataset Through NVTabular](../samples/deepfm/README.md#Preprocess_the_Dataset_Through_NVTabular) to prepare data.\n",
+    "Follow the instructions under heading \"Preprocess the Dataset through NVTabular\" from the README in the [samples/deepfm](https://github.com/NVIDIA-Merlin/HugeCTR/tree/master/samples/deepfm) directory of the repository to prepare data.\n",
     "\n",
     "### Prepare the Training Script\n",
     "\n",

@@ -945,11 +945,11 @@ You provide a plan JSON file and specify the table placement strategy that you w
 
 ### Sample Notebook
 
-The [Introduction to the HugeCTR Embedding Collection](../notebooks/embedding_collection.ipynb) sample notebook demonstrates the following:
+The [HugeCTR Embedding Collection](../notebooks/embedding_collection.ipynb) sample notebook demonstrates the following:
 
-* Introduce the API of the embedding collection.
-* Introduce the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.
-* Show how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
+* Introduces the API of the embedding collection.
+* Introduces the embedding table placement strategy (ETPS) and how to configure ETPS in embedding collection.
+* Shows how to use an embedding collection in a DLRM model with the Criteo dataset for training and evaluation.
 The notebook shows two different ETPS as reference.
 
 ### Overview of using the HugeCTR embedding collection
@@ -991,17 +991,22 @@ slot_size_array = [203931, 18598, 14092, 7012, 18977, 4, 6385, 1245, 49,
                    204515, 141526, 199433, 60919, 9137, 71, 34]
 embedding_table_list = []
 for i in range(len(slot_size_array):
-    embedding_table_list.append(hugectr.EmbeddingTableConfig(table_id=i,
-                                                             max_vocabulary_size=slot_size_array[i],
-                                                             ev_size=128,
-                                                             min_key=0,
-                                                             max_key=slot_size_array[i]))
+    embedding_table_list.append(
+        hugectr.EmbeddingTableConfig(
+            table_id=i,
+            max_vocabulary_size=slot_size_array[i],
+            ev_size=128,
+            min_key=0,
+            max_key=slot_size_array[i]
+        )
+    )
 ```
 
 ### EmbeddingPlanner
 
 Create a `hugectr.EmbeddingPlanner` instance to construct the lookup operation and create a `hugectr.EmbeddingCollection`.
 The constructor for the embedding planner class does not accept any parameters.
+
 #### embedding_lookup method
 
 The `embedding_lookup` method enables you to specify the lookup operations between the input data and an embedding table.
@@ -1031,10 +1036,12 @@ Example:
 embedding_planner = hugectr.EmbeddingPlanner()
 emb_vec_list = []
 for i in range(len(slot_size_array)):
-     embedding_planner.embedding_lookup(table_config=embedding_table_list[i],
-                                        bottom_name="data{}".format(i),
-                                        top_name="emb_vec{}".format(i),
-                                        combiner="sum")
+     embedding_planner.embedding_lookup(
+        table_config=embedding_table_list[i],
+        bottom_name="data{}".format(i),
+        top_name="emb_vec{}".format(i),
+        combiner="sum"
+    )
 embedding_collection = embedding_planner.create_embedding_collection("./plan.json")
 ```
 
@@ -1062,11 +1069,15 @@ For example, consider the following scenario that has four embedding tables and 
 slot_size_array = [...]
 embedding_table_list = []
 for i in range(len(slot_size_array)):
-    embedding_table_list.append(hugectr.EmbeddingTableConfig(table_id=i,
-                                                             max_vocabulary_size=table_size_array[i],
-                                                             ev_size=128,
-                                                             min_key=0,
-                                                             max_key=table_size_array[i]))
+    embedding_table_list.append(
+        hugectr.EmbeddingTableConfig(
+            table_id=i,
+            max_vocabulary_size=table_size_array[i],
+            ev_size=128,
+            min_key=0,
+            max_key=table_size_array[i]
+        )
+    )
 
 embedding_planner = hugectr.EmbeddingPlanner()
 embedding_planner.embedding_lookup(embedding_table_list[0], "data0", "emb_vec0", "sum") # lookup 0
