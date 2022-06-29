@@ -1091,10 +1091,10 @@ This file is called a <em>plan file</em>.</p>
     <span class="n">embedding_table_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
         <span class="n">hugectr</span><span class="o">.</span><span class="n">EmbeddingTableConfig</span><span class="p">(</span>
             <span class="n">table_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-            <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">max_vocabulary_size</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
             <span class="n">ev_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
             <span class="n">min_key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-            <span class="n">max_key</span><span class="o">=</span><span class="n">slot_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">max_key</span><span class="o">=</span><span class="n">table_size_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="p">)</span>
     <span class="p">)</span>
 
