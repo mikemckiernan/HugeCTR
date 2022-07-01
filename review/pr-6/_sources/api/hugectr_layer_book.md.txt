@@ -1072,19 +1072,19 @@ for i in range(len(slot_size_array)):
     embedding_table_list.append(
         hugectr.EmbeddingTableConfig(
             table_id=i,
-            max_vocabulary_size=table_size_array[i],
+            max_vocabulary_size=slot_size_array[i],
             ev_size=128,
             min_key=0,
-            max_key=table_size_array[i]
+            max_key=slot_size_array[i]
         )
     )
 
 embedding_planner = hugectr.EmbeddingPlanner()
-embedding_planner.embedding_lookup(embedding_table_list[0], "data0", "emb_vec0", "sum") # lookup 0
-embedding_planner.embedding_lookup(embedding_table_list[1], "data1", "emb_vec1", "sum") # lookup 1
-embedding_planner.embedding_lookup(embedding_table_list[2], "data2", "emb_vec2", "sum") # lookup 2
-embedding_planner.embedding_lookup(embedding_table_list[1], "data3", "emb_vec3", "sum") # lookup 3
-embedding_planner.embedding_lookup(embedding_table_list[3], "data4", "emb_vec4", "sum") # lookup 4
+embedding_planner.embedding_lookup(embedding_table_list[0], "data0", "emb_vec0", "sum") # lookup 0, table 0
+embedding_planner.embedding_lookup(embedding_table_list[1], "data1", "emb_vec1", "sum") # lookup 1, table 1
+embedding_planner.embedding_lookup(embedding_table_list[2], "data2", "emb_vec2", "sum") # lookup 2, table 2
+embedding_planner.embedding_lookup(embedding_table_list[1], "data3", "emb_vec3", "sum") # lookup 3, table 1
+embedding_planner.embedding_lookup(embedding_table_list[3], "data4", "emb_vec4", "sum") # lookup 4, table 3
 ```
 
 The next step is to configure the ETPS through a plan file.
