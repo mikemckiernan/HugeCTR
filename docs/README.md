@@ -18,6 +18,8 @@ cd HugeCTR/docs
 pip install -r requirements-doc.txt
 ```
 
+3. FIXME add a step three.
+
 4. Build the documentation:
 
 `make clean html`
