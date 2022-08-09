@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HugeCTR Hierarchical Parameter Server Database Backend &mdash; Merlin HugeCTR  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <title>Hierarchical Parameter Server Database Backend &mdash; Merlin HugeCTR  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/togglebutton.css" type="text/css" />
       <link rel="stylesheet" href="_static/mystnb.css" type="text/css" />
+      <link rel="stylesheet" href="_static/togglebutton.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -22,8 +22,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="HugeCTR Example Notebooks" href="notebooks/index.html" />
-    <link rel="prev" title="HugeCTR Embedding Training Cache" href="hugectr_embedding_training_cache.html" /> 
+    <link rel="next" title="Hierarchical Parameter Server Plugin for TensorFlow" href="hierarchical_parameter_server/hps_tf_user_guide.html" />
+    <link rel="prev" title="Hierarchical Parameter Server" href="hierarchical_parameter_server/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,15 +41,17 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption"><span class="caption-text">HUGECTR</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="hugectr_user_guide.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hugectr_core_features.html">Core Features</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="hugectr_feature_details_intro.html">Features in Detail</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="hugectr_embedding_training_cache.html">Embedding Training Cache</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Hierarchical Parameter Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hugectr_embedding_training_cache.html">Embedding Training Cache</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="hierarchical_parameter_server/index.html">Hierarchical Parameter Server</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">HPS Database Backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hierarchical_parameter_server/hps_tf_user_guide.html">HPS Plugin for TensorFlow</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/index.html">Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/multi-modal-data/index.html">Multi-modal Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Documentation</a></li>
@@ -72,8 +74,8 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="hugectr_feature_details_intro.html">HugeCTR Features in Detail</a> &raquo;</li>
-      <li>HugeCTR Hierarchical Parameter Server Database Backend</li>
+          <li><a href="hierarchical_parameter_server/index.html">Hierarchical Parameter Server</a> &raquo;</li>
+      <li>Hierarchical Parameter Server Database Backend</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -82,11 +84,34 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="tex2jax_ignore mathjax_ignore section" id="hugectr-hierarchical-parameter-server-database-backend">
-<h1>HugeCTR Hierarchical Parameter Server Database Backend<a class="headerlink" href="#hugectr-hierarchical-parameter-server-database-backend" title="Permalink to this headline"></a></h1>
-<div class="section" id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline"></a></h2>
-<p>The hierarchical parameter server database backend (HPS database backend) allows HugeCTR to use models with huge embedding tables by extending HugeCTRs storage space beyond the constraints of GPU memory through utilizing various memory resources across you cluster. Further, it grants the ability to permanently store embedding tables in a structured manner. For an end-to-end demo on how to use the HPS database backend, please refer to <a class="reference external" href="https://github.com/triton-inference-server/hugectr_backend/tree/main/samples/hierarchical_deployment">samples</a>.</p>
+  <div class="tex2jax_ignore mathjax_ignore section" id="hierarchical-parameter-server-database-backend">
+<h1>Hierarchical Parameter Server Database Backend<a class="headerlink" href="#hierarchical-parameter-server-database-backend" title="Permalink to this headline"></a></h1>
+<div class="contents local topic" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#introduction-to-the-hps-database-backend" id="id1">Introduction to the HPS Database Backend</a></p></li>
+<li><p><a class="reference internal" href="#background" id="id2">Background</a></p></li>
+<li><p><a class="reference internal" href="#architecture" id="id3">Architecture</a></p></li>
+<li><p><a class="reference internal" href="#training-and-iterative-model-updates" id="id4">Training and Iterative Model Updates</a></p></li>
+<li><p><a class="reference internal" href="#execution" id="id5">Execution</a></p>
+<ul>
+<li><p><a class="reference internal" href="#inference" id="id6">Inference</a></p></li>
+<li><p><a class="reference internal" href="#training" id="id7">Training</a></p></li>
+<li><p><a class="reference internal" href="#lookup-optimization" id="id8">Lookup Optimization</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#configuration" id="id9">Configuration</a></p>
+<ul>
+<li><p><a class="reference internal" href="#inference-parameters-and-embedding-cache-configuration" id="id10">Inference Parameters and Embedding Cache Configuration</a></p></li>
+<li><p><a class="reference internal" href="#volatile-database-configuration" id="id11">Volatile Database Configuration</a></p></li>
+<li><p><a class="reference internal" href="#persistent-database-configuration" id="id12">Persistent Database Configuration</a></p></li>
+<li><p><a class="reference internal" href="#update-source-configuration" id="id13">Update Source Configuration</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="introduction-to-the-hps-database-backend">
+<h2>Introduction to the HPS Database Backend<a class="headerlink" href="#introduction-to-the-hps-database-backend" title="Permalink to this headline"></a></h2>
+<p>The Hierarchical Parameter Server database backend (HPS database backend) allows HugeCTR to use models with huge embedding tables by extending HugeCTRs storage space beyond the constraints of GPU memory through utilizing various memory resources across you cluster. Further, it grants the ability to permanently store embedding tables in a structured manner. For an end-to-end demo on how to use the HPS database backend, please refer to <a class="reference external" href="https://github.com/triton-inference-server/hugectr_backend/tree/main/samples/hierarchical_deployment">samples</a>.</p>
 </div>
 <div class="section" id="background">
 <h2>Background<a class="headerlink" href="#background" title="Permalink to this headline"></a></h2>
@@ -97,7 +122,7 @@
 <div class="section" id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline"></a></h2>
 <p>As of version 3.3, the HugeCTR hierarchical parameter server database backend defines 3 storage layers.</p>
-<ol>
+<ol class="arabic">
 <li><p>The <strong>CPU Memory Database</strong> layer utilizes volatile CPU addressable RAM memory to cache embeddings.
 This database is created and maintained separately by each machine that runs HugeCTR in your cluster.</p></li>
 <li><p>The <strong>Distributed Database</strong> layer allows utilizing Redis cluster deployments to store and retrieve embeddings in and from the RAM memory that is available in your cluster.
@@ -117,65 +142,58 @@ As a result, if your model exceeds even the total RAM capacity of your entire cl
 <p>The following table provides an overview of the typical properties for the different parameter database layers and the embedding cache.
 We emphasize that this table provides rough guidelines.
 Properties for production deployments are often different.</p>
-<table border="1" class="docutils">
+<table class="colwidths-auto docutils align-default">
 <thead>
-<tr>
-<th></th>
-<th>GPU Embedding Cache</th>
-<th>CPU Memory Database</th>
-<th>Distributed Database (InfiniBand)</th>
-<th>Distributed Database (Ethernet)</th>
-<th>Persistent Database</th>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>GPU Embedding Cache</p></th>
+<th class="head"><p>CPU Memory Database</p></th>
+<th class="head"><p>Distributed Database (InfiniBand)</p></th>
+<th class="head"><p>Distributed Database (Ethernet)</p></th>
+<th class="head"><p>Persistent Database</p></th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Mean Latency</td>
-<td>ns ~ us</td>
-<td>us ~ ms</td>
-<td>us ~ ms</td>
-<td>several ms</td>
-<td>ms ~ s</td>
+<tr class="row-even"><td><p>Mean Latency</p></td>
+<td><p>ns ~ us</p></td>
+<td><p>us ~ ms</p></td>
+<td><p>us ~ ms</p></td>
+<td><p>several ms</p></td>
+<td><p>ms ~ s</p></td>
 </tr>
-<tr>
-<td>Capacity (relative)</td>
-<td>++</td>
-<td>+++</td>
-<td>+++++</td>
-<td>+++++</td>
-<td>+++++++</td>
+<tr class="row-odd"><td><p>Capacity (relative)</p></td>
+<td><p>++</p></td>
+<td><p>+++</p></td>
+<td><p>+++++</p></td>
+<td><p>+++++</p></td>
+<td><p>+++++++</p></td>
 </tr>
-<tr>
-<td>Capacity (range in practice)</td>
-<td>10 GBs ~ few TBs</td>
-<td>100 GBs ~ several TBs</td>
-<td>several TBs</td>
-<td>several TBs</td>
-<td>up to 100s of TBs</td>
+<tr class="row-even"><td><p>Capacity (range in practice)</p></td>
+<td><p>10 GBs ~ few TBs</p></td>
+<td><p>100 GBs ~ several TBs</p></td>
+<td><p>several TBs</p></td>
+<td><p>several TBs</p></td>
+<td><p>up to 100s of TBs</p></td>
 </tr>
-<tr>
-<td>Cost / Capacity</td>
-<td>++++</td>
-<td>+++</td>
-<td>++++</td>
-<td>++++</td>
-<td>+</td>
+<tr class="row-odd"><td><p>Cost / Capacity</p></td>
+<td><p>++++</p></td>
+<td><p>+++</p></td>
+<td><p>++++</p></td>
+<td><p>++++</p></td>
+<td><p>+</p></td>
 </tr>
-<tr>
-<td>Volatile</td>
-<td>yes</td>
-<td>yes</td>
-<td>configuration dependent</td>
-<td>configuration dependent</td>
-<td>no</td>
+<tr class="row-even"><td><p>Volatile</p></td>
+<td><p>yes</p></td>
+<td><p>yes</p></td>
+<td><p>configuration dependent</p></td>
+<td><p>configuration dependent</p></td>
+<td><p>no</p></td>
 </tr>
-<tr>
-<td>Configuration / maintenance complexity</td>
-<td>low</td>
-<td>low</td>
-<td>high</td>
-<td>high</td>
-<td>low</td>
+<tr class="row-odd"><td><p>Configuration / maintenance complexity</p></td>
+<td><p>low</p></td>
+<td><p>low</p></td>
+<td><p>high</p></td>
+<td><p>high</p></td>
+<td><p>low</p></td>
 </tr>
 </tbody>
 </table>
@@ -194,7 +212,7 @@ This ability provides zero-downtime online model retraining.</p>
 <li><p>Whenever the HugeCTR inference engine receives a batch of model input parameters for inference, the inference engine first determines the associated unique embedding keys and tries to resolve these embeddings using the embedding cache.</p></li>
 <li><p>When there is a cache miss, the inference engine then turns to the HPS database backend to determine the embedding representations.</p></li>
 <li><p>The HPS database backend queries its configured backends in the following order to fill in the missing embeddings:</p>
-<ol class="simple">
+<ol class="arabic simple">
 <li><p>Local and remote CPU memory locations.</p></li>
 <li><p>Persistent storage.</p></li>
 </ol>
@@ -265,6 +283,7 @@ The most common reason to vary the configuration by node is for heterogeneous cl
   <span class="n">use_cuda_graph</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
   <span class="n">number_of_worker_buffers_in_pool</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
   <span class="n">number_of_refresh_buffers_in_pool</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+  <span class="n">thread_pool_size</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
   <span class="n">cache_refresh_percentage_per_iteration</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
   <span class="n">deployed_devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
   <span class="n">default_value_for_each_table</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">float</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
@@ -330,6 +349,13 @@ The default value is <code class="docutils literal notranslate"><span class="pre
 HPS uses the refresh memory pool to support online updates of incremental models.
 Specify larger values if model updates occur at a high-frequency or you have a large volume of incremental model updates.
 The default value is <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">thread_pool_size</span></code>: Integer, specifies the size of the thread pool. The thread pool is used by the GPU embedding cache to perform asynchronous insertion of missing keys.
+The actual thread pool size is set to the maximum of the value that you specify and the value returned by <code class="docutils literal notranslate"><span class="pre">std::thread::hardware_concurrency()</span></code>.
+The default value is <code class="docutils literal notranslate"><span class="pre">16</span></code>.</p></li>
+</ul>
+<p>The actual thread pool size will be set as the maximum value of this configured one and <code class="docutils literal notranslate"><span class="pre">std::thread::hardware_concurrency()</span></code>.
+The default value is <code class="docutils literal notranslate"><span class="pre">16</span></code>.</p>
+<ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">cache_refresh_percentage_per_iteration</span></code>: Float, specifies the percentage of the embedding cache to refresh during each iteration.
 To avoid reducing the performance of the GPU cache during online updating, you can configure the update percentage of GPU embedding cache.
 For example, if you specify <code class="docutils literal notranslate"><span class="pre">cache_refresh_percentage_per_iteration</span> <span class="pre">=</span> <span class="pre">0.2</span></code>, the entire GPU embedding cache is refreshed during 5 iterations.
@@ -716,8 +742,8 @@ The default value is <code class="docutils literal notranslate"><span class="pre
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="hugectr_embedding_training_cache.html" class="btn btn-neutral float-left" title="HugeCTR Embedding Training Cache" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="notebooks/index.html" class="btn btn-neutral float-right" title="HugeCTR Example Notebooks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="hierarchical_parameter_server/index.html" class="btn btn-neutral float-left" title="Hierarchical Parameter Server" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hierarchical_parameter_server/hps_tf_user_guide.html" class="btn btn-neutral float-right" title="Hierarchical Parameter Server Plugin for TensorFlow" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
