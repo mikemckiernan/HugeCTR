@@ -43,4 +43,5 @@ RUN git clone --branch v"${RDKAFKA_VER}" --depth 1 https://github.com/edenhill/l
 
 RUN apt update -y --fix-missing && \
     apt install -y --no-install-recommends \
-       libxxhash-dev
+       libxxhash-dev \
+       libgflags-dev
