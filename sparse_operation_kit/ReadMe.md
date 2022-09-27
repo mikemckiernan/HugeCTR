@@ -33,7 +33,7 @@ You can install SOK using the following command:
 pip install sparse_operation_kit
 ```
 
-### Building SOK from source ### 
+### Building SOK from source ###
 You can also build the SOK module from souce code. Here are the steps to follow: <br>
 + **Download the source code**
     ```shell
@@ -44,6 +44,15 @@ You can also build the SOK module from souce code. Here are the steps to follow:
     $ cd hugectr/sparse_operation_kit/
     $ python setup.py install
     ```
+
+## Experiment Features
+Currently, most of the algorithm ideas in SOK are extracted from HugeCTR, but it doesn't share the same code base with HugeCTR, which means it cannot be automatically updated when HugeCTR introduces new algorithm/optimization. So we plan to introduce a new mechanism to let SOK and HugeCTR share the same code base. We put our attempts under the `sok.experiment` namespace, you can use the following command to import these new features.
+```python
+from sparse_operation_kit import experiment as sok
+```
+Note that any components under `sok.experiment` are not compatible with components outside of `sok.experiment`. They are all redesigned and share the same code base with HugeCTR. In the future, when the components in `sok.experiment` are stable enough, we will replace other components in SOK with this new version SOK (things under `sok.experiment`) and deprecate the old version.
+
+You can find the experiment api at [api/experiment]().
 
 ## Documents ##
 Want to find more about SparseOperationKit? Take a look at the [SparseOperationKit documentation](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/index.html)!
