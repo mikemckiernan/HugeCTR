@@ -52,7 +52,7 @@ from sparse_operation_kit import experiment as sok
 ```
 Note that any components under `sok.experiment` are not compatible with components outside of `sok.experiment`. They are all redesigned and share the same code base with HugeCTR. In the future, when the components in `sok.experiment` are stable enough, we will replace other components in SOK with this new version SOK (things under `sok.experiment`) and deprecate the old version.
 
-You can find the experiment api at [api/experiment]().
+You can find the experiment api at [API Docs] -> [Experiment] and find the examples at [Examples&Tutorials] -> [Experiment Feature].
 
 ## Documents ##
 Want to find more about SparseOperationKit? Take a look at the [SparseOperationKit documentation](https://nvidia-merlin.github.io/HugeCTR/sparse_operation_kit/master/index.html)!

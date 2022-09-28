@@ -46,7 +46,7 @@ def Variable(*args, **kwargs):
 
         sok.init()
 
-        # If there are 2 GPUs in total, the shape of on GPU0 will be [2, 3] and the shape
+        # If there are 2 GPUs in total, the shape on GPU0 will be [2, 3] and the shape
         # on GPU1 will be [2, 3]
         v = sok.Variable(np.arange(4 * 3).reshape(4, 3), dtype=tf.float32)
 
@@ -74,15 +74,16 @@ def Variable(*args, **kwargs):
 
         sok.init()
 
-        # If there are 2 GPUs in total, the shape of on GPU0 will be [5, 3] and the shape
+        # If there are 2 GPUs in total, the shape on GPU0 will be [5, 3] and the shape
         # on GPU1 will be [0, 3]
         v = sok.Variable(
             np.arange(5 * 3).reshape(5, 3), dtype=tf.float32, mode="localized:0"
         )
         print(v.shape)
 
-    As shown in the two examples above, variables on different GPUs form a complete variable together,
-    Which allows to allocate variable that larger than one GPU's memory.
+    As shown in the two examples above, when you need to store different parts of a variable on different
+    GPUs (that is, allocating a model-parallel variable), this function can help you allocate the required
+    memory on each GPU.
 
     Parameters
     ----------
@@ -93,12 +94,15 @@ def Variable(*args, **kwargs):
         compatible with tf.Variable.
 
     mode: string
-        a string to specify which model-parallel mode to use.
+        a string to specify which model-parallel mode to use. Default value is "distributed", which stands
+        for the Distributed Variable that mentioned above. Another option is "localized:#", which stands
+        for Localized Variable, where # indicates which GPU you want to put this variable on. See the
+        explanation above for specific examples.
 
     Returns
     -------
     variable: tf.Variable
-            a tf.Variable that represents part of the original variable.
+            a tf.Variable that represents a part of the model-parallel variable.
     """
     mode = kwargs.pop("mode") if "mode" in kwargs else None
 

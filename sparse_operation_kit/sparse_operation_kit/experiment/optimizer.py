@@ -30,7 +30,7 @@ def OptimizerWrapper(optimizer):
     Parameters
     ----------
     optimizer: tensorflow optimizer
-        The original optimizer of tensorflow.
+        The original tensorflow optimizer.
 
     Example
     -------

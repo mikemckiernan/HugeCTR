@@ -2,7 +2,7 @@
 The release notes for SparseOperationKit.
 
 ## What's new in Version 1.1.4 ##
-+ Add SOK Experiment Feature.
++ Add SOK experiment features.
 
 ## What's new in Version 1.1.3 ##
 + Update pip install instruction and fix some bugs.

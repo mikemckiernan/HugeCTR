@@ -34,18 +34,22 @@ class DynamicVariable(ResourceVariable):
     Parameters
     ----------
     dimension: int
-        The last dimension of this variable.
+        The last dimension of this variable(that is, the embedding vector
+        size of embedding table).
 
     initializer: string
         a string to specify how to initialize this variable.
-        Currently, only support "random" or string of float
-        value(meaning const initializer)
+        Currently, only support "random" or string of a float
+        value(meaning const initializer). Default value is "random".
 
     key_type: dtype
-        specify the data type of indices.
+        specify the data type of indices. Unlike the static variable of
+        tensorflow, this variable is dyanmically allocated and contains
+        a hash table inside it. So the data type of indices must be
+        specified to construct the hash table. Default value is tf.int64.
 
     dtype: dtype
-        specify the data type of values.
+        specify the data type of values. Default value is tf.float32.
 
     Example
     -------
@@ -67,6 +71,7 @@ class DynamicVariable(ResourceVariable):
         print("v.shape:", v.shape)
         print("v.size:", v.size)
     """
+
     def __init__(
         self,
         dimension,

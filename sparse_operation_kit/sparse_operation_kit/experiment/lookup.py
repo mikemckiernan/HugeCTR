@@ -276,15 +276,8 @@ def lookup_sparse(params, sp_ids, hotness, combiners):
 
         sok.init()
 
-        # Default mode of sok.Variable is Distributed mode
-        # If there are 2 GPUs in total, the shape of v1 on GPU0 will be [9, 3] and the shape
-        # on GPU1 will be [8, 3]
         v1 = sok.Variable(np.arange(17 * 3).reshape(17, 3), dtype=tf.float32)
-        # If there are 2 GPUs in total, the shape of v2 on GPU0 will be [4, 5] and the shape
-        # on GPU1 will be [3, 5]
         v2 = sok.Variable(np.arange(7 * 5).reshape(7, 5), dtype=tf.float32)
-        print("v1.shape=", v1.shape, "on GPU%d"%hvd.rank())
-        print("v2.shape=", v2.shape, "on GPU%d"%hvd.rank())
 
         indices1 = tf.SparseTensor(
             indices=[[0, 0], [0, 1], [1, 0], [1, 1], [1, 2]],
