@@ -58,7 +58,6 @@
 <li class="toctree-l2"><a class="reference internal" href="news-example.html">NVIDIA Merlin on Microsoft’s News Dataset (MIND)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multi_gpu_offline_inference.html">Multi-GPU Offline Inference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hps_demo.html">Hierarchical Parameter Server Demo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="training_with_hdfs.html">HugeCTR training with HDFS example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="embedding_training_cache_example.html">Embedding Training Cache Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="embedding_collection.html">HugeCTR Embedding Collection</a></li>
 </ul>
@@ -105,11 +104,11 @@ If you prefer to build the HugeCTR Docker image on your own, refer to <a class="
 <div class="section" id="pull-the-ngc-docker">
 <h3>Pull the NGC Docker<a class="headerlink" href="#pull-the-ngc-docker" title="Permalink to this headline"></a></h3>
 <p>Pull the container using the following command:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker pull nvcr.io/nvidia/merlin/merlin-hugectr:22.07
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker pull nvcr.io/nvidia/merlin/merlin-hugectr:22.09
 </pre></div>
 </div>
 <blockquote>
-<div><p>To run the Sparse Operation Kit notebooks, pull the <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-tensorflow:22.07</span></code> container.</p>
+<div><p>To run the Sparse Operation Kit notebooks, pull the <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-tensorflow:22.09</span></code> container.</p>
 </div></blockquote>
 </div>
 <div class="section" id="clone-the-hugectr-repository">
@@ -123,11 +122,11 @@ If you prefer to build the HugeCTR Docker image on your own, refer to <a class="
 <h3>Start the Jupyter Notebook<a class="headerlink" href="#start-the-jupyter-notebook" title="Permalink to this headline"></a></h3>
 <ol class="arabic">
 <li><p>Launch the container in interactive mode (mount the HugeCTR root directory into the container for your convenience) by running this command:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker run --runtime<span class="o">=</span>nvidia --rm -it --cap-add SYS_NICE --ipc<span class="o">=</span>host --ulimit <span class="nv">memlock</span><span class="o">=</span>-1 --ulimit <span class="nv">stack</span><span class="o">=</span><span class="m">67108864</span> -u <span class="k">$(</span>id -u<span class="k">)</span>:<span class="k">$(</span>id -g<span class="k">)</span> -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/hugectr -w /hugectr -p <span class="m">8888</span>:8888 nvcr.io/nvidia/merlin/merlin-hugectr:22.07
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>docker run --runtime<span class="o">=</span>nvidia --rm -it --cap-add SYS_NICE --ipc<span class="o">=</span>host --ulimit <span class="nv">memlock</span><span class="o">=</span>-1 --ulimit <span class="nv">stack</span><span class="o">=</span><span class="m">67108864</span> -u <span class="k">$(</span>id -u<span class="k">)</span>:<span class="k">$(</span>id -g<span class="k">)</span> -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/hugectr -w /hugectr -p <span class="m">8888</span>:8888 nvcr.io/nvidia/merlin/merlin-hugectr:22.09
 </pre></div>
 </div>
 <blockquote>
-<div><p>To run the  Sparse Operation Kit notebooks, specify the <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-tensorflow:22.07</span></code> container.</p>
+<div><p>To run the  Sparse Operation Kit notebooks, specify the <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-tensorflow:22.09</span></code> container.</p>
 </div></blockquote>
 </li>
 <li><p>Start Jupyter using these commands:</p>
@@ -166,7 +165,7 @@ See <a class="reference external" href="https://nvidia-merlin.github.io/HugeCTR/
 <li><p><a class="reference internal" href="news-example.html"><span class="doc std std-doc">news-example.ipynb</span></a>: Tutorial to demonstrate NVTabular for ETL the data and HugeCTR for training Deep Neural Network models on MIND dataset.</p></li>
 <li><p><a class="reference internal" href="multi_gpu_offline_inference.html"><span class="doc std std-doc">multi_gpu_offline_inference.ipynb</span></a>: Explain how to do multi-GPU offline inference with HugeCTR Python APIs.</p></li>
 <li><p><a class="reference internal" href="hps_demo.html"><span class="doc std std-doc">hps_demo.ipynb</span></a>: Demonstrate how to utilize HPS Python APIs together with ONNX Runtime APIs to create an ensemble inference model.</p></li>
-<li><p><a class="reference internal" href="training_with_hdfs.html"><span class="doc std std-doc">training_with_hdfs.ipynb</span></a>: Demonstrates how to train a model with data that is stored in Hadoop HDFS.</p></li>
+<li><p><span class="xref myst">training_with_hdfs.ipynb</span>: Demonstrates how to train a model with data that is stored in Hadoop HDFS.</p></li>
 </ul>
 <p>The <a class="reference internal" href="multi-modal-data/index.html"><span class="xref myst">multi-modal-data</span></a> series of notebooks demonstrate how to use of multi-modal data such as text and images for the task of movie recommendation.
 The notebooks use the Movielens-25M dataset.</p>
@@ -286,9 +285,12 @@ The notebooks use the Movielens-25M dataset.</p>
   <div class="rst-other-versions">
     <dl>
       <dt>Tags</dt>
-      <dd><a href="../../v3.5/index.html">v3.5</a></dd>
       <dd><a href="../../v3.6/index.html">v3.6</a></dd>
       <dd><a href="../../v3.7/index.html">v3.7</a></dd>
+      <dd><a href="../../v3.8/index.html">v3.8</a></dd>
+      <dd><a href="../../v3.9/index.html">v3.9</a></dd>
+      <dd><a href="../../v3.9.1/index.html">v3.9.1</a></dd>
+      <dd><a href="../../v4.0/index.html">v4.0</a></dd>
     </dl>
     <dl>
       <dt>Branches</dt>
