@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/mystnb.css" type="text/css" />
       <link rel="stylesheet" href="_static/togglebutton.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="canonical" href="https://nvidia-merlin.github.io/HugeCTR/main/hugectr_parameter_server.html" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -26,7 +28,14 @@
     <link rel="prev" title="Hierarchical Parameter Server" href="hierarchical_parameter_server/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav"> 
+<body class="wy-body-for-nav">
+  <div class="banner">
+    <p class="banner">
+      Beginning in January 2023, versions for all NVIDIA Merlin projects
+      will change from semantic versioning like <code>4.0</code>
+      to calendar versioning like <code>23.01</code>.</p>
+  </div>
+
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
@@ -457,12 +466,15 @@ The assignment of which nodes update specific partition can change at runtime.</
   <span class="n">user_name</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
   <span class="n">password</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
   <span class="n">num_partitions</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span>
-  <span class="n">allocation_rate</span> <span class="o">=</span> <span class="mi">268435456</span><span class="p">,</span>
+  <span class="n">allocation_rate</span> <span class="o">=</span> <span class="mi">268435456</span><span class="p">,</span>  <span class="c1"># 256 MiB</span>
+  <span class="n">shared_memory_size</span> <span class="o">=</span> <span class="mi">17179869184</span><span class="p">,</span>  <span class="c1"># 16 GiB</span>
+  <span class="n">shared_memory_name</span> <span class="o">=</span> <span class="s2">&quot;hctr_mp_hash_map_database&quot;</span><span class="p">,</span>
   <span class="n">max_get_batch_size</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
   <span class="n">max_set_batch_size</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
   <span class="n">overflow_margin</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span>
   <span class="n">overflow_policy</span> <span class="o">=</span> <span class="n">hugectr</span><span class="o">.</span><span class="n">DatabaseOverflowPolicy_t</span><span class="o">.&lt;</span><span class="n">enum_value</span><span class="o">&gt;</span><span class="p">,</span>
   <span class="n">overflow_resolution_target</span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span>
+  <span class="n">initialize_after_startup</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
   <span class="n">initial_cache_rate</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
   <span class="n">refresh_time_after_fetch</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
   <span class="n">cache_missed_embeddings</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -480,12 +492,15 @@ The assignment of which nodes update specific partition can change at runtime.</
 <span class="w">  </span><span class="nt">&quot;user_name&quot;</span><span class="p">:</span><span class="w">  </span><span class="s2">&quot;default&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;num_partitions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;allocation_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">268435456</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="nt">&quot;allocation_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">268435456</span><span class="p">,</span><span class="w">  </span><span class="c1">// 256 MiB</span><span class="w"></span>
+<span class="w">  </span><span class="nt">&quot;shared_memory_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">17179869184</span><span class="p">,</span><span class="w">  </span><span class="c1">// 16 GiB</span><span class="w"></span>
+<span class="w">  </span><span class="nt">&quot;shared_memory_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hctr_mp_hash_map_database&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;max_get_batch_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;max_set_batch_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;overflow_margin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;overflow_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;evict_oldest&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;overflow_resolution_target&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="nt">&quot;initialize_after_startup&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;initial_cache_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;cache_missed_embeddings&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="nt">&quot;update_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;.+&quot;</span><span class="p">]</span><span class="w"></span>
@@ -500,6 +515,7 @@ The assignment of which nodes update specific partition can change at runtime.</
 Specify one of the following:</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">hash_map</span></code>: Hash-map based CPU memory database implementation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">multi_process_hash_map</span></code>: A hash-map that can be shared by multiple processes. This hash map lives in your operating system’s shared memory (i.e., <code class="docutils literal notranslate"><span class="pre">/dev/shm</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">parallel_hash_map</span></code>: Hash-map based CPU memory database implementation with multi threading support. This is the default value.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">redis_cluster</span></code>: Connect to an existing Redis cluster deployment (Distributed CPU memory database implementation).</p></li>
 </ul>
@@ -512,6 +528,11 @@ Parallel hashmap implementations split your embedding tables into approximately 
 The default value is calculated as <code class="docutils literal notranslate"><span class="pre">min(number_of_cpu_cores,</span> <span class="pre">16)</span></code> of the system that you used to build the HugeCTR binaries.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">allocation_rate</span></code>: Integer, specifies the maximum number of bytes to allocate for each memory allocation request.
 The default value is <code class="docutils literal notranslate"><span class="pre">268435456</span></code> bytes, 256 MiB.</p></li>
+</ul>
+<p>The following parameters apply when you set <code class="docutils literal notranslate"><span class="pre">type=&quot;multi_process_hash_map&quot;</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">shared_memory_size</span></code>: Integer, denotes the amount of shared memory that should be reserved in the operating system. In other words, this value determines the size of the memory mapped file that will be created in <code class="docutils literal notranslate"><span class="pre">/dev/shm</span></code>. The upper bound size of <code class="docutils literal notranslate"><span class="pre">/dev/shm</span></code> is determined by your hardware and operating system  configuration. The latter of which may need to be adjusted to share large embedding tables between processes. This is particularly true when running HugeCTR in a Docker image. By default, Docker will only allocate 64 MiB for <code class="docutils literal notranslate"><span class="pre">/dev/shm</span></code>, which is insufficient for most recommendation models. You can try starting your docker deployment with <code class="docutils literal notranslate"><span class="pre">--shm-size=...</span></code> to reserve more shared memory of the native OS for the respective docker container (see also <a class="reference external" href="https://docs.docker.com/engine/reference/run">docs.docker.com/engine/reference/run</a>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">shared_memory_name</span></code>: String, the symbolic name of the shared memory. System-unique, and must be the same for all processes that attach to the smae shared memory.</p></li>
 </ul>
 <p>The following parameters apply when you set <code class="docutils literal notranslate"><span class="pre">type=&quot;redis_cluster&quot;</span></code>:</p>
 <ul class="simple">
@@ -568,12 +589,13 @@ However, <code class="docutils literal notranslate"><span class="pre">evict_olde
 Specify a value between <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>, but not exactly <code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>.
 The default value is <code class="docutils literal notranslate"><span class="pre">0.8</span></code> and indicates to evict embeddings from a partition until it is shrunk to 80% of its maximum size.
 In other words, when the partition size surpasses <code class="docutils literal notranslate"><span class="pre">overflow_margin</span></code> embeddings, 20% of the embeddings are evicted according to the specified <code class="docutils literal notranslate"><span class="pre">overflow_policy</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">initialize_after_startup</span></code>: Boolean,when set to <code class="docutils literal notranslate"><span class="pre">True</span></code> <em>(default)</em>, the contents of the sparse model files are used to initialize this database. This is useful if multiple processes should connect to the same databse, or if restarting processes connect to a previously-initialized database that retains its state between inference process restarts. For example, if you reconnect to an existing RocksDB or Redis deployment, or an already materialized multi-process hashmap.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">initial_cache_rate</span></code>: Double, specifies the fraction of the embeddings to initially attempt to cache.
 Specify a value in the range <code class="docutils literal notranslate"><span class="pre">[0.0,</span> <span class="pre">1.0]</span></code>.
 HugeCTR attempts to cache the specified fraction of the dataset immediately upon startup of the HPS database backend.
 For example, a value of <code class="docutils literal notranslate"><span class="pre">0.5</span></code> causes the HugeCTR HPS database backend to attempt to cache up to 50% of your dataset using the volatile database after initialization.
 The default value is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">refresh_time_after_fetch</span></code>: Bool, when set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, the timestamp for an embedding is updated after the embedding is accessed.
+<li><p><code class="docutils literal notranslate"><span class="pre">refresh_time_after_fetch</span></code>: Boolean, when set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, the timestamp for an embedding is updated after the embedding is accessed.
 The timestamp update can be performed asynchronously and experience some delay.
 Some algorithms for overflow and eviction take time into account.
 To evaluate the affected embeddings, HugeCTR records the time when an embedding is overwritten.
@@ -789,7 +811,18 @@ The default value is <code class="docutils literal notranslate"><span class="pre
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NVJ1Y1YJHK"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-NVJ1Y1YJHK', {
+          'anonymize_ip': false,
+      });
+    </script> 
 
 </body>
 </html>
