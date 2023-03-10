@@ -117,7 +117,7 @@
 <h2>Get HugeCTR from NGC<a class="headerlink" href="#get-hugectr-from-ngc" title="Permalink to this headline"></a></h2>
 <p>The HugeCTR Python module is preinstalled in the 22.07 and later <a class="reference external" href="https://ngc.nvidia.com/catalog/containers/nvidia:merlin:merlin-hugectr">Merlin Training Container</a>: <code class="docutils literal notranslate"><span class="pre">nvcr.io/nvidia/merlin/merlin-hugectr:22.07</span></code>.</p>
 <p>You can check the existence of required libraries by running the following Python code after launching the container.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python3 -c <span class="s2">&quot;import hugectr&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import hugectr&quot;</span>
 </pre></div>
 </div>
 <blockquote>
@@ -132,24 +132,24 @@ documentation.</p>
 <h3>Download and Install Hadoop<a class="headerlink" href="#download-and-install-hadoop" title="Permalink to this headline"></a></h3>
 <ol class="arabic">
 <li><p>Download a JDK:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget https://download.java.net/java/GA/jdk16.0.2/d4a915d82b4c4fbb9bde534da945d746/7/GPL/openjdk-16.0.2_linux-x64_bin.tar.gz
-tar -zxvf openjdk-16.0.2_linux-x64_bin.tar.gz
-mv jdk-16.0.2 /usr/local
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://download.java.net/java/GA/jdk16.0.2/d4a915d82b4c4fbb9bde534da945d746/7/GPL/openjdk-16.0.2_linux-x64_bin.tar.gz
+tar<span class="w"> </span>-zxvf<span class="w"> </span>openjdk-16.0.2_linux-x64_bin.tar.gz
+mv<span class="w"> </span>jdk-16.0.2<span class="w"> </span>/usr/local
 </pre></div>
 </div>
 </li>
 <li><p>Set Java environmental variables:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">JAVA_HOME</span><span class="o">=</span>/usr/local/jdk-16.0.2
-<span class="nb">export</span> <span class="nv">JRE_HOME</span><span class="o">=</span><span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/jre
-<span class="nb">export</span> <span class="nv">CLASSPATH</span><span class="o">=</span>.:<span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/lib:<span class="si">${</span><span class="nv">JRE_HOME</span><span class="si">}</span>/lib
-<span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span>.:<span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/bin:<span class="nv">$PATH</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">JAVA_HOME</span><span class="o">=</span>/usr/local/jdk-16.0.2
+<span class="nb">export</span><span class="w"> </span><span class="nv">JRE_HOME</span><span class="o">=</span><span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/jre
+<span class="nb">export</span><span class="w"> </span><span class="nv">CLASSPATH</span><span class="o">=</span>.:<span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/lib:<span class="si">${</span><span class="nv">JRE_HOME</span><span class="si">}</span>/lib
+<span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span>.:<span class="si">${</span><span class="nv">JAVA_HOME</span><span class="si">}</span>/bin:<span class="nv">$PATH</span>
 </pre></div>
 </div>
 </li>
 <li><p>Download and install Hadoop:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/hadoop-3.3.1.tar.gz
-tar -zxvf hadoop-3.3.1.tar.gz
-mv hadoop-3.3.1 /usr/local
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/hadoop-3.3.1.tar.gz
+tar<span class="w"> </span>-zxvf<span class="w"> </span>hadoop-3.3.1.tar.gz
+mv<span class="w"> </span>hadoop-3.3.1<span class="w"> </span>/usr/local
 </pre></div>
 </div>
 </li>
@@ -158,60 +158,60 @@ mv hadoop-3.3.1 /usr/local
 <div class="section" id="hadoop-configuration">
 <h3>Hadoop configuration<a class="headerlink" href="#hadoop-configuration" title="Permalink to this headline"></a></h3>
 <p>Set Hadoop environment variables:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">HDFS_NAMENODE_USER</span><span class="o">=</span>root
-<span class="nb">export</span> <span class="nv">HDFS_DATANODE_USER</span><span class="o">=</span>root
-<span class="nb">export</span> <span class="nv">HDFS_SECONDARYNAMENODE_USER</span><span class="o">=</span>root
-<span class="nb">export</span> <span class="nv">YARN_RESOURCEMANAGER_USER</span><span class="o">=</span>root
-<span class="nb">export</span> <span class="nv">YARN_NODEMANAGER_USER</span><span class="o">=</span>root
-<span class="nb">echo</span> ‘export <span class="nv">JAVA_HOME</span><span class="o">=</span>/usr/local/jdk-16.0.2’ &gt;&gt; /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">HDFS_NAMENODE_USER</span><span class="o">=</span>root
+<span class="nb">export</span><span class="w"> </span><span class="nv">HDFS_DATANODE_USER</span><span class="o">=</span>root
+<span class="nb">export</span><span class="w"> </span><span class="nv">HDFS_SECONDARYNAMENODE_USER</span><span class="o">=</span>root
+<span class="nb">export</span><span class="w"> </span><span class="nv">YARN_RESOURCEMANAGER_USER</span><span class="o">=</span>root
+<span class="nb">export</span><span class="w"> </span><span class="nv">YARN_NODEMANAGER_USER</span><span class="o">=</span>root
+<span class="nb">echo</span><span class="w"> </span>‘export<span class="w"> </span><span class="nv">JAVA_HOME</span><span class="o">=</span>/usr/local/jdk-16.0.2’<span class="w"> </span>&gt;&gt;<span class="w"> </span>/usr/local/hadoop/etc/hadoop/hadoop-env.sh
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">core-site.xml</span></code> config:</p>
 <div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;property&gt;</span>
-    <span class="nt">&lt;name&gt;</span>fs.defaultFS<span class="nt">&lt;/name&gt;</span>
-    <span class="nt">&lt;value&gt;</span>hdfs://namenode:9000<span class="nt">&lt;/value&gt;</span>
+<span class="w">    </span><span class="nt">&lt;name&gt;</span>fs.defaultFS<span class="nt">&lt;/name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;value&gt;</span>hdfs://namenode:9000<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-    <span class="nt">&lt;name&gt;</span>hadoop.tmp.dir<span class="nt">&lt;/name&gt;</span>
-    <span class="nt">&lt;value&gt;</span>/usr/local/hadoop/tmp<span class="nt">&lt;/value&gt;</span>
+<span class="w">    </span><span class="nt">&lt;name&gt;</span>hadoop.tmp.dir<span class="nt">&lt;/name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;value&gt;</span>/usr/local/hadoop/tmp<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">hdfs-site.xml</span></code> for name node:</p>
 <div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.replication<span class="nt">&lt;/name&gt;</span>
-     <span class="nt">&lt;value&gt;</span>4<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.replication<span class="nt">&lt;/name&gt;</span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>4<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.namenode.name.dir<span class="nt">&lt;/name&gt;</span>
-     <span class="nt">&lt;value&gt;</span>file:/usr/local/hadoop/hdfs/name<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.namenode.name.dir<span class="nt">&lt;/name&gt;</span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>file:/usr/local/hadoop/hdfs/name<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.enable<span class="nt">&lt;/name&gt;</span>         
-     <span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.enable<span class="nt">&lt;/name&gt;</span><span class="w">         </span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-    <span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.policy<span class="nt">&lt;/name&gt;</span>
-    <span class="nt">&lt;value&gt;</span>NEVER<span class="nt">&lt;/value&gt;</span>
+<span class="w">    </span><span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.policy<span class="nt">&lt;/name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;value&gt;</span>NEVER<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">hdfs-site.xml</span></code> for data node:</p>
 <div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.replication<span class="nt">&lt;/name&gt;</span>
-     <span class="nt">&lt;value&gt;</span>4<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.replication<span class="nt">&lt;/name&gt;</span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>4<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.datanode.data.dir<span class="nt">&lt;/name&gt;</span>
-     <span class="nt">&lt;value&gt;</span>file:/usr/local/hadoop/hdfs/data<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.datanode.data.dir<span class="nt">&lt;/name&gt;</span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>file:/usr/local/hadoop/hdfs/data<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-     <span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.enable<span class="nt">&lt;/name&gt;</span>         
-     <span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+<span class="w">     </span><span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.enable<span class="nt">&lt;/name&gt;</span><span class="w">         </span>
+<span class="w">     </span><span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 <span class="nt">&lt;property&gt;</span>
-    <span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.policy<span class="nt">&lt;/name&gt;</span>
-    <span class="nt">&lt;value&gt;</span>NEVER<span class="nt">&lt;/value&gt;</span>
+<span class="w">    </span><span class="nt">&lt;name&gt;</span>dfs.client.block.write.replace-datanode-on-failure.policy<span class="nt">&lt;/name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;value&gt;</span>NEVER<span class="nt">&lt;/value&gt;</span>
 <span class="nt">&lt;/property&gt;</span>
 </pre></div>
 </div>
@@ -227,19 +227,19 @@ worker4
 <h3>Start HDFS<a class="headerlink" href="#start-hdfs" title="Permalink to this headline"></a></h3>
 <ol class="arabic">
 <li><p>Enable ssh connection:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh-keygen -t rsa -P <span class="s1">&#39;&#39;</span> -f ~/.ssh/id_rsa
-cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
-/etc/init.d/ssh start
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh-keygen<span class="w"> </span>-t<span class="w"> </span>rsa<span class="w"> </span>-P<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span>-f<span class="w"> </span>~/.ssh/id_rsa
+cat<span class="w"> </span>~/.ssh/id_rsa.pub<span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.ssh/authorized_keys
+/etc/init.d/ssh<span class="w"> </span>start
 </pre></div>
 </div>
 </li>
 <li><p>Format the NameNode:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/usr/local/hadoop/bin/hdfs namenode -format
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/usr/local/hadoop/bin/hdfs<span class="w"> </span>namenode<span class="w"> </span>-format
 </pre></div>
 </div>
 </li>
 <li><p>Format the DataNodes:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/usr/local/hadoop/bin/hdfs datanode -format
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/usr/local/hadoop/bin/hdfs<span class="w"> </span>datanode<span class="w"> </span>-format
 </pre></div>
 </div>
 </li>
@@ -374,7 +374,7 @@ make sure that you installed Hadoop and set the proper environment variables as 
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>python train_with_hdfs.py
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>python<span class="w"> </span>train_with_hdfs.py
 </pre></div>
 </div>
 </div>
